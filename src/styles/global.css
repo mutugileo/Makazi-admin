@@ -113,3 +113,90 @@ body {
   }
 }
 
+/* ==========================================================================
+   Collapsible Sidebar System & Modern Visual Dynamics
+   ========================================================================== */
+
+#app-sidebar {
+  width: 18rem; /* 288px default */
+  transition: width 240ms cubic-bezier(0.16, 1, 0.3, 1), transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  background: radial-gradient(130% 40% at 50% 0%, rgba(198, 238, 88, 0.08) 0%, rgba(10, 38, 31, 0) 100%),
+              linear-gradient(180deg, #0C2E25 0%, #0A261F 35%, #061A14 100%);
+}
+
+#dashboard-main-canvas {
+  padding-left: 0;
+  transition: padding-left 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (min-width: 1024px) {
+  #dashboard-main-canvas {
+    padding-left: 18rem;
+  }
+
+  html.sidebar-is-collapsed #app-sidebar {
+    width: 5.25rem; /* 84px compact mode */
+  }
+
+  html.sidebar-is-collapsed #dashboard-main-canvas {
+    padding-left: 5.25rem;
+  }
+
+  /* Labels hide cleanly when collapsed */
+  html.sidebar-is-collapsed .sidebar-text-label,
+  html.sidebar-is-collapsed .sidebar-pill-badge,
+  html.sidebar-is-collapsed .sidebar-header-details,
+  html.sidebar-is-collapsed .sidebar-user-details,
+  html.sidebar-is-collapsed .sidebar-workspace-label,
+  html.sidebar-is-collapsed .sidebar-signout-btn {
+    display: none !important;
+  }
+
+  /* Dots appear on collapsed badges */
+  html.sidebar-is-collapsed .sidebar-dot-badge {
+    display: block !important;
+  }
+
+  /* Center nav items and brand */
+  html.sidebar-is-collapsed .sidebar-nav-item {
+    justify-content: center !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  html.sidebar-is-collapsed .sidebar-brand-wrapper {
+    justify-content: center !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  html.sidebar-is-collapsed .sidebar-user-card {
+    justify-content: center !important;
+    padding: 0.5rem !important;
+  }
+
+  /* Hover tooltips in collapsed mode */
+  html.sidebar-is-collapsed .sidebar-item-tooltip {
+    display: none;
+  }
+
+  html.sidebar-is-collapsed .sidebar-nav-item:hover .sidebar-item-tooltip {
+    display: flex;
+    position: fixed;
+    left: 5.75rem;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: #08241D;
+    color: #FFFFFF;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.45rem 0.85rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(198, 238, 88, 0.28);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 14px rgba(198, 238, 88, 0.15);
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 60;
+  }
+}
+

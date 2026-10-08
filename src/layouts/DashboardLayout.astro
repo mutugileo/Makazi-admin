@@ -43,6 +43,14 @@ const {
     <meta name="robots" content="noindex" />
     <title>{title}</title>
     <ClientRouter />
+    <!-- Restore sidebar collapsed state immediately before paint to prevent layout flash -->
+    <script is:inline>
+      try {
+        if (localStorage.getItem('makazi_sidebar_collapsed') === 'true') {
+          document.documentElement.classList.add('sidebar-is-collapsed');
+        }
+      } catch (e) {}
+    </script>
     <!-- Opt in to bar animations only when JS runs and motion is allowed, so
          bars are never left at zero width. -->
     <script is:inline>
@@ -62,8 +70,8 @@ const {
     <!-- Desktop & Mobile Sidebar Navigation -->
     <Sidebar currentPath={currentPath} />
 
-    <!-- Main Content Canvas (stable padding, zero layout shift) -->
-    <div class="flex-1 flex flex-col min-w-0 lg:pl-72">
+    <!-- Main Content Canvas (collapsible desktop padding, zero layout shift) -->
+    <div id="dashboard-main-canvas" class="flex-1 flex flex-col min-w-0">
       <!-- Top Sticky Header -->
       <Header />
 
@@ -189,27 +197,60 @@ const {
           const href = link.getAttribute('data-nav-href');
           const isActive = (href === '/' && currentPath === '/') || (href !== '/' && currentPath.startsWith(href!));
           const icon = link.querySelector('svg');
+          const indicator = link.querySelector('.sidebar-active-indicator');
           if (isActive) {
-            link.classList.remove('text-[#8FA69C]', 'hover:bg-[#10342A]');
-            link.classList.add('bg-[#153F33]', 'text-white', 'shadow-sm');
+            link.classList.remove('text-[#93AEA2]', 'hover:bg-[#10342A]/80');
+            link.classList.add('bg-gradient-to-r', 'from-[#174639]', 'via-[#143E33]', 'to-[#10352B]', 'text-white', 'shadow-sm', 'border', 'border-[#26634F]/70');
+            if (indicator) {
+              indicator.classList.remove('opacity-0');
+              indicator.classList.add('opacity-100');
+            }
             if (icon) {
-              icon.classList.remove('text-[#729285]', 'group-hover:text-white');
+              icon.classList.remove('text-[#6C8E80]');
               icon.classList.add('text-[#C6EE58]');
             }
           } else {
-            link.classList.remove('bg-[#153F33]', 'text-white', 'shadow-sm');
-            link.classList.add('text-[#8FA69C]', 'hover:bg-[#10342A]');
+            link.classList.remove('bg-gradient-to-r', 'from-[#174639]', 'via-[#143E33]', 'to-[#10352B]', 'text-white', 'shadow-sm', 'border', 'border-[#26634F]/70');
+            link.classList.add('text-[#93AEA2]', 'hover:bg-[#10342A]/80');
+            if (indicator) {
+              indicator.classList.remove('opacity-100');
+              indicator.classList.add('opacity-0');
+            }
             if (icon) {
               icon.classList.remove('text-[#C6EE58]');
-              icon.classList.add('text-[#729285]', 'group-hover:text-white');
+              icon.classList.add('text-[#6C8E80]');
             }
           }
         });
       }
 
+      function updateCollapseButtonIcon(isCollapsed: boolean) {
+        const openIcon = document.getElementById('collapse-icon-open');
+        const closeIcon = document.getElementById('collapse-icon-close');
+        if (openIcon && closeIcon) {
+          openIcon.classList.toggle('hidden', !isCollapsed);
+          closeIcon.classList.toggle('hidden', isCollapsed);
+        }
+      }
+
+      function toggleSidebarCollapse() {
+        const isCollapsed = document.documentElement.classList.toggle('sidebar-is-collapsed');
+        try {
+          localStorage.setItem('makazi_sidebar_collapsed', isCollapsed ? 'true' : 'false');
+        } catch (e) {}
+        updateCollapseButtonIcon(isCollapsed);
+      }
+
       function setupPageListeners() {
         const sidebar = document.getElementById('app-sidebar');
         const backdrop = document.getElementById('sidebar-backdrop');
+
+        // Collapsible sidebar toggle (Desktop)
+        const collapseBtn = document.getElementById('sidebar-collapse-toggle');
+        if (collapseBtn) {
+          collapseBtn.onclick = toggleSidebarCollapse;
+        }
+        updateCollapseButtonIcon(document.documentElement.classList.contains('sidebar-is-collapsed'));
 
         // Close mobile drawer on route load
         if (sidebar && backdrop && !backdrop.classList.contains('hidden')) {
@@ -372,7 +413,7 @@ const {
         document.addEventListener('DOMContentLoaded', onPageReady);
       }
 
-      // Global Keyboard Shortcut: ⌘K or Ctrl+K & ESC (attached once per session)
+      // Global Keyboard Shortcuts: ⌘K (Search), ⌘B (Toggle Sidebar), ESC (Close Modals)
       if (!(window as any).__makaziKeydownAttached) {
         (window as any).__makaziKeydownAttached = true;
         document.addEventListener('keydown', (e) => {
@@ -381,6 +422,10 @@ const {
             showModal('command-palette-modal');
             const commandInput = document.getElementById('command-search-input') as HTMLInputElement | null;
             setTimeout(() => commandInput?.focus(), 50);
+          }
+          if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
+            e.preventDefault();
+            toggleSidebarCollapse();
           }
           if (e.key === 'Escape') {
             hideAllModals();

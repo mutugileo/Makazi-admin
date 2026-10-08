@@ -4,14 +4,16 @@ import {
   Building2, 
   Users, 
   FileText, 
- CreditCard,
+  CreditCard,
   ReceiptText, 
   AlertTriangle, 
   Wrench, 
   MessageSquare, 
   BarChart2,
   Settings, 
-  LogOut
+  LogOut,
+  PanelLeftClose,
+  PanelLeftOpen
 } from '@lucide/astro';
 import { getPortfolio } from '../../data/portfolio';
 import { FEATURES } from '../../config/features';
@@ -53,57 +55,110 @@ const navItems = [
 <aside 
   id="app-sidebar"
   transition:persist="sidebar"
-  class="fixed inset-y-0 left-0 z-40 w-64 lg:w-72 bg-[#0A261F] text-[#8FA69C] flex flex-col justify-between transition-transform duration-300 -translate-x-full lg:translate-x-0 border-r border-[#143B30]/60 select-none"
+  class="fixed inset-y-0 left-0 z-40 bg-[#0A261F] text-[#8FA69C] flex flex-col justify-between -translate-x-full lg:translate-x-0 border-r border-[#164436]/70 shadow-[4px_0_24px_rgba(0,0,0,0.28)] select-none"
 >
-  <div class="flex flex-col flex-1 overflow-y-auto px-4 py-6">
-    <!-- Brand Logo -->
-    <div class="flex items-center gap-3 px-2 mb-8">
-      <div class="h-10 w-10 rounded-xl bg-[#C6EE58] text-[#0A261F] font-bold text-xl flex items-center justify-center shadow-lg shadow-[#C6EE58]/10 flex-shrink-0">
-        M
-      </div>
-      <div class="min-w-0">
-        <h1 class="font-editorial text-2xl font-normal text-white tracking-wide leading-tight">
-          Makazi
-        </h1>
-        <p class="text-xs text-[#7F9C90] truncate font-medium">
-          {company.name}
-        </p>
-      </div>
+  <div class="flex flex-col flex-1 overflow-y-auto px-3.5 py-5 scrollbar-thin">
+    <!-- Brand Logo & Collapse Toggle -->
+    <div class="sidebar-brand-wrapper flex items-center justify-between gap-3 px-1.5 mb-7">
+      <a href="/" class="flex items-center gap-3 min-w-0 group" title={`${company.name} · Makazi HQ`}>
+        <!-- Glowing Lime Emblem -->
+        <div class="h-10 w-10 rounded-2xl bg-gradient-to-br from-[#D4F772] via-[#C6EE58] to-[#AEE034] text-[#0A261F] font-extrabold text-xl flex items-center justify-center shadow-[0_0_18px_rgba(198,238,88,0.28)] border border-[#E9FFA8]/60 flex-shrink-0 transition-transform duration-200 group-hover:scale-105">
+          M
+        </div>
+        <div class="sidebar-header-details min-w-0">
+          <div class="flex items-center gap-1.5">
+            <span class="font-editorial text-2xl font-normal text-white tracking-wide leading-none">
+              Makazi
+            </span>
+            <span class="inline-flex items-center px-1.5 py-0.5 rounded-full bg-[#C6EE58]/15 border border-[#C6EE58]/30 text-[9px] font-bold text-[#C6EE58] uppercase tracking-wider">
+              Admin
+            </span>
+          </div>
+          <p class="text-xs text-[#8EA69B] truncate font-medium flex items-center gap-1.5 mt-1">
+            <span class="relative flex h-2 w-2 flex-shrink-0">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#C6EE58] opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-[#C6EE58]"></span>
+            </span>
+            <span class="truncate">{company.name}</span>
+          </p>
+        </div>
+      </a>
+
+      <!-- Collapsible Sidebar Button (Desktop) -->
+      <button 
+        id="sidebar-collapse-toggle"
+        type="button"
+        class="hidden lg:flex p-1.5 rounded-xl text-[#7F9C90] hover:text-[#C6EE58] hover:bg-[#133F33] border border-transparent hover:border-[#1F5444] transition-all cursor-pointer flex-shrink-0"
+        aria-label="Toggle sidebar collapse (⌘B)"
+        title="Toggle sidebar collapse (⌘B)"
+      >
+        <span id="collapse-icon-close">
+          <PanelLeftClose class="w-4 h-4" />
+        </span>
+        <span id="collapse-icon-open" class="hidden">
+          <PanelLeftOpen class="w-4 h-4" />
+        </span>
+      </button>
     </div>
 
     <!-- Workspace Navigation -->
     <div class="space-y-6">
       <div>
-        <p class="px-3 text-[11px] font-semibold uppercase tracking-widest text-[#5C796E] mb-2.5">
-          WORKSPACE
-        </p>
-        <nav class="space-y-1">
+        <div class="px-2 mb-2 flex items-center justify-between">
+          <p class="sidebar-workspace-label text-[10px] font-bold uppercase tracking-widest text-[#527768]">
+            WORKSPACE
+          </p>
+        </div>
+        <nav class="space-y-1.5">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
               <a
                 href={item.href}
                 data-nav-href={item.href}
-                class={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all group ${
+                class={`sidebar-nav-item relative flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-sm font-medium transition-all group ${
                   item.active 
-                    ? 'bg-[#153F33] text-white shadow-sm' 
-                    : 'text-[#8FA69C] hover:bg-[#10342A] hover:text-white'
+                    ? 'bg-gradient-to-r from-[#174639] via-[#143E33] to-[#10352B] text-white shadow-sm border border-[#26634F]/70' 
+                    : 'text-[#93AEA2] hover:bg-[#10342A]/80 hover:text-white hover:translate-x-0.5'
                 }`}
               >
+                <!-- Glowing Active Neon Accent Pill -->
+                <span class={`sidebar-active-indicator absolute left-1 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-[#C6EE58] shadow-[0_0_8px_#C6EE58] transition-opacity duration-200 ${item.active ? 'opacity-100' : 'opacity-0'}`}></span>
+
                 <div class="flex items-center gap-3 min-w-0">
-                  <Icon class={`w-4 h-4 flex-shrink-0 transition-colors ${item.active ? 'text-[#C6EE58]' : 'text-[#729285] group-hover:text-white'}`} />
-                  <span class="truncate">{item.name}</span>
+                  <div class="relative flex items-center justify-center">
+                    <Icon class={`w-4 h-4 flex-shrink-0 transition-colors ${item.active ? 'text-[#C6EE58] drop-shadow-[0_0_5px_rgba(198,238,88,0.45)]' : 'text-[#6C8E80] group-hover:text-[#C6EE58]'}`} />
+                    {item.badge && (
+                      <span class={`sidebar-dot-badge hidden absolute -top-1 -right-1 h-2 w-2 rounded-full ring-2 ring-[#0A261F] ${
+                        item.badgeType === 'alert' ? 'bg-[#E5532E] shadow-[0_0_6px_#E5532E]' : 'bg-[#C6EE58] shadow-[0_0_6px_#C6EE58]'
+                      }`} />
+                    )}
+                  </div>
+                  <span class="sidebar-text-label truncate font-medium">{item.name}</span>
                 </div>
 
+                <!-- Full Pill Badge in Expanded Mode -->
                 {item.badge && (
-                  <span class={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                  <span class={`sidebar-pill-badge text-[11px] font-semibold px-2 py-0.5 rounded-full transition-all ${
                     item.badgeType === 'alert'
-                      ? 'bg-[#D95B34] text-white ring-2 ring-[#D95B34]/20'
-                      : 'bg-[#184638] text-[#93BDB0]'
+                      ? 'bg-[#E5532E]/20 text-[#FF8566] border border-[#E5532E]/40 shadow-[0_0_8px_rgba(229,83,46,0.25)]'
+                      : 'bg-[#C6EE58]/15 text-[#C6EE58] border border-[#C6EE58]/30 shadow-[0_0_8px_rgba(198,238,88,0.15)]'
                   }`}>
                     {item.badge}
                   </span>
                 )}
+
+                <!-- Floating Tooltip in Collapsed Mode -->
+                <div class="sidebar-item-tooltip">
+                  <span>{item.name}</span>
+                  {item.badge && (
+                    <span class={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                      item.badgeType === 'alert' ? 'bg-[#E5532E] text-white' : 'bg-[#C6EE58] text-[#0A261F]'
+                    }`}>
+                      {item.badge}
+                    </span>
+                  )}
+                </div>
               </a>
             );
           })}
@@ -112,24 +167,32 @@ const navItems = [
     </div>
   </div>
 
-  <!-- User Footer Profile -->
-  <div class="p-4 border-t border-[#143B30]/60 bg-[#08201A]/60">
-    <div class="flex items-center justify-between p-2 rounded-xl">
-      <div class="flex items-center gap-3 min-w-0">
-        <div class="h-10 w-10 rounded-full bg-[#184E3F] text-[#C6EE58] font-semibold text-sm flex items-center justify-center border border-[#276251] flex-shrink-0">
-          {adminInitials}
+  <!-- User Footer Profile Card -->
+  <div class="p-3 border-t border-[#154235]/70 bg-[#061B15]/85 backdrop-blur-md">
+    <div class="sidebar-user-card flex items-center justify-between p-2 rounded-2xl bg-[#09261E]/90 border border-[#18483B]/60 shadow-inner group">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="relative flex-shrink-0">
+          <div class="h-9 w-9 rounded-xl bg-gradient-to-br from-[#1C5243] to-[#0E352B] text-[#C6EE58] font-bold text-xs flex items-center justify-center border border-[#2B6D5A] shadow-xs">
+            {adminInitials}
+          </div>
+          <span class="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[#10B981] ring-2 ring-[#09261E]"></span>
         </div>
-        <div class="min-w-0 text-left">
-          <p class="text-sm font-semibold text-white truncate leading-tight">
+        <div class="sidebar-user-details min-w-0 text-left">
+          <p class="text-xs font-semibold text-white truncate leading-tight">
             {adminName}
           </p>
-          <p class="text-xs text-[#7F9C90] truncate font-medium" title={user?.email}>
+          <p class="text-[11px] text-[#7F9C90] truncate mt-0.5" title={user?.email}>
             {adminRole} · {user?.email}
           </p>
         </div>
       </div>
-      <form method="post" action="/logout">
-        <button type="submit" class="p-2 rounded-lg text-[#5C796E] hover:text-white hover:bg-[#12362C] transition-colors cursor-pointer" aria-label="Sign out" title="Sign out">
+      <form method="post" action="/logout" class="sidebar-signout-btn">
+        <button 
+          type="submit" 
+          class="p-2 rounded-xl text-[#7F9C90] hover:text-[#FF8566] hover:bg-[#2B1512]/60 hover:border-[#6B2822]/50 border border-transparent transition-all cursor-pointer" 
+          aria-label="Sign out" 
+          title="Sign out"
+        >
           <LogOut class="w-4 h-4" />
         </button>
       </form>
