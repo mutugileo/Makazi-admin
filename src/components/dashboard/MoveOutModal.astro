@@ -91,120 +91,127 @@ const endOfMonth = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
 </div>
 
 <script>
-  const modal = document.getElementById('move-out-modal')!;
-  const form = document.getElementById('move-out-form') as HTMLFormElement;
-  const readingInput = document.getElementById('move-out-reading') as HTMLInputElement;
-  const kes = (n: number) => `${n < 0 ? '−' : ''}KES ${Math.abs(n).toLocaleString('en-KE')}`;
-  const setText = (field: string, text: string) =>
-    modal.querySelectorAll(`[data-field="${field}"]`).forEach((el) => (el.textContent = text));
+  function initMoveOutModal() {
+    const modal = document.getElementById('move-out-modal');
+    if (!modal) return;
+    const form = document.getElementById('move-out-form') as HTMLFormElement | null;
+    const readingInput = document.getElementById('move-out-reading') as HTMLInputElement | null;
+    const dateInput = document.getElementById('move-out-date') as HTMLInputElement | null;
+    if (!form || !readingInput || !dateInput) return;
 
-  let current = { name: '', balance: 0, deposit: 0, rate: 0, lastReading: 0 };
+    const kes = (n: number) => `${n < 0 ? '−' : ''}KES ${Math.abs(n).toLocaleString('en-KE')}`;
+    const setText = (field: string, text: string) =>
+      modal.querySelectorAll(`[data-field="${field}"]`).forEach((el) => (el.textContent = text));
 
-  const dateInput = document.getElementById('move-out-date') as HTMLInputElement;
-  const retentionMonths = Number(modal.dataset.retentionMonths);
-  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    let current = { tenancyId: '', name: '', balance: 0, deposit: 0, rate: 0, lastReading: 0 };
+    const retentionMonths = Number(modal.dataset.retentionMonths) || 0;
+    const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-  // Same rule as addMonthsToDate in lib/billing.ts: same day, clamped.
-  function keptUntil(iso: string): string {
-    if (!iso) return '—';
-    const [y, m, d] = iso.split('-').map(Number);
-    const index = y * 12 + (m - 1) + retentionMonths;
-    const year = Math.floor(index / 12);
-    const month = index % 12;
-    const last = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
-    return `${String(Math.min(d, last)).padStart(2, '0')} ${MONTHS[month]} ${year}`;
-  }
-
-  function recalc() {
-    setText('kept-until', keptUntil(dateInput.value));
-    const reading = Number(readingInput.value);
-    const valid = readingInput.value !== '' && Number.isInteger(reading) && reading >= current.lastReading;
-    modal.querySelector('[data-field="reading-error"]')?.classList.toggle('hidden', valid || readingInput.value === '');
-    const units = valid ? reading - current.lastReading : 0;
-    const water = units * current.rate;
-    const result = current.balance + water - current.deposit;
-    setText('balance', kes(current.balance));
-    setText('water', kes(water));
-    setText('water-detail', valid ? `(${units} units × KES ${current.rate})` : '');
-    setText('deposit', kes(-current.deposit));
-    setText('result-label', result > 0 ? 'Tenant still owes' : 'Refund to tenant');
-    setText('result', kes(Math.abs(result)));
-    const resultEl = modal.querySelector('[data-field="result"]')!;
-    resultEl.classList.toggle('text-[#C04A26]', result > 0);
-    resultEl.classList.toggle('text-[#2E7D32]', result <= 0);
-    return valid;
-  }
-
-  document.querySelectorAll<HTMLButtonElement>('.move-out-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const d = btn.dataset;
-      current = {
-        tenancyId: d.tenancy ?? '',
-        name: d.name ?? '',
-        balance: Number(d.balance),
-        deposit: Number(d.deposit),
-        rate: Number(d.waterRate),
-        lastReading: Number(d.lastReading),
-      };
-      form.reset();
-      readingInput.min = String(current.lastReading);
-      readingInput.placeholder = String(current.lastReading);
-      setText('name', current.name);
-      setText('unit', d.unit ?? '');
-      setText('last-reading', current.lastReading.toLocaleString('en-KE'));
-      recalc();
-      window.makaziUi?.showModal('move-out-modal');
-    });
-  });
-
-  readingInput.addEventListener('input', recalc);
-  dateInput.addEventListener('input', recalc);
-  modal.querySelectorAll('[data-close]').forEach((el) =>
-    el.addEventListener('click', () => window.makaziUi?.hideModal('move-out-modal')),
-  );
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!recalc()) {
-      modal.querySelector('[data-field="reading-error"]')?.classList.remove('hidden');
-      readingInput.focus();
-      return;
+    function keptUntil(iso: string): string {
+      if (!iso) return '—';
+      const [y, m, d] = iso.split('-').map(Number);
+      const index = y * 12 + (m - 1) + retentionMonths;
+      const year = Math.floor(index / 12);
+      const month = index % 12;
+      const last = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+      return `${String(Math.min(d, last)).padStart(2, '0')} ${MONTHS[month]} ${year}`;
     }
 
-    const moveOutDate = dateInput.value;
-    const finalReading = Number(readingInput.value);
-    const note = (modal.querySelector('[data-field="note"]') as HTMLInputElement | null)?.value ?? '';
-
-    const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Saving...';
-    }
-
-    try {
-      const res = await fetch('/api/move-out', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tenancyId: current.tenancyId,
-          moveOutDate,
-          finalReading,
-          note,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || 'Failed to record move-out');
-
-      window.makaziUi?.hideModal('move-out-modal');
-      window.makaziUi?.showToast('Move-out recorded', `${current.name} has been moved out.`);
-      setTimeout(() => window.location.reload(), 1000);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      window.makaziUi?.showToast('Error', msg);
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Confirm move-out';
+    function recalc() {
+      setText('kept-until', keptUntil(dateInput.value));
+      const reading = Number(readingInput.value);
+      const valid = readingInput.value !== '' && Number.isInteger(reading) && reading >= current.lastReading;
+      modal.querySelector('[data-field="reading-error"]')?.classList.toggle('hidden', valid || readingInput.value === '');
+      const units = valid ? reading - current.lastReading : 0;
+      const water = units * current.rate;
+      const result = current.balance + water - current.deposit;
+      setText('balance', kes(current.balance));
+      setText('water', kes(water));
+      setText('water-detail', valid ? `(${units} units × KES ${current.rate})` : '');
+      setText('deposit', kes(-current.deposit));
+      setText('result-label', result > 0 ? 'Tenant still owes' : 'Refund to tenant');
+      setText('result', kes(Math.abs(result)));
+      const resultEl = modal.querySelector('[data-field="result"]');
+      if (resultEl) {
+        resultEl.classList.toggle('text-[#C04A26]', result > 0);
+        resultEl.classList.toggle('text-[#2E7D32]', result <= 0);
       }
+      return valid;
     }
-  });
+
+    document.querySelectorAll<HTMLButtonElement>('.move-out-btn').forEach((btn) => {
+      btn.onclick = () => {
+        const d = btn.dataset;
+        current = {
+          tenancyId: d.tenancy ?? '',
+          name: d.name ?? '',
+          balance: Number(d.balance),
+          deposit: Number(d.deposit),
+          rate: Number(d.waterRate),
+          lastReading: Number(d.lastReading),
+        };
+        form.reset();
+        readingInput.min = String(current.lastReading);
+        readingInput.placeholder = String(current.lastReading);
+        setText('name', current.name);
+        setText('unit', d.unit ?? '');
+        setText('last-reading', current.lastReading.toLocaleString('en-KE'));
+        recalc();
+        window.makaziUi?.showModal('move-out-modal');
+      };
+    });
+
+    readingInput.oninput = recalc;
+    dateInput.oninput = recalc;
+    modal.querySelectorAll('[data-close]').forEach((el) => {
+      (el as HTMLElement).onclick = () => window.makaziUi?.hideModal('move-out-modal');
+    });
+
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      if (!recalc()) {
+        modal.querySelector('[data-field="reading-error"]')?.classList.remove('hidden');
+        readingInput.focus();
+        return;
+      }
+
+      const moveOutDate = dateInput.value;
+      const finalReading = Number(readingInput.value);
+      const note = (modal.querySelector('[data-field="note"]') as HTMLInputElement | null)?.value ?? '';
+
+      const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving...';
+      }
+
+      try {
+        const res = await fetch('/api/move-out', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tenancyId: current.tenancyId,
+            moveOutDate,
+            finalReading,
+            note,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) throw new Error(data.error || 'Failed to record move-out');
+
+        window.makaziUi?.hideModal('move-out-modal');
+        window.makaziUi?.showToast('Move-out recorded', `${current.name} has been moved out.`);
+        setTimeout(() => window.location.reload(), 1000);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        window.makaziUi?.showToast('Error', msg);
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Confirm move-out';
+        }
+      }
+    };
+  }
+
+  document.addEventListener('astro:page-load', initMoveOutModal);
 </script>

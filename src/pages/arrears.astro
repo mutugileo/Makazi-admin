@@ -169,14 +169,29 @@ const formerOwing = formerTenancies.filter((t) => t.balance > 0);
 </DashboardLayout>
 
 <script>
-  const boxes = document.querySelectorAll<HTMLInputElement>('.arrear-checkbox');
-  const all = document.getElementById('select-all-arrears') as HTMLInputElement | null;
-  const update = () => {
-    const n = [...boxes].filter((b) => b.checked).length;
+  function initArrearsPage() {
+    const boxes = document.querySelectorAll<HTMLInputElement>('.arrear-checkbox');
+    const all = document.getElementById('select-all-arrears') as HTMLInputElement | null;
     const label = document.getElementById('arrears-selected-count');
-    if (label) label.textContent = `(${n} selected)`;
-    if (all) all.checked = n === boxes.length && n > 0;
-  };
-  boxes.forEach((b) => b.addEventListener('change', update));
-  all?.addEventListener('change', () => setTimeout(update));
+    if (boxes.length === 0 && !all) return;
+
+    const update = () => {
+      const n = [...boxes].filter((b) => b.checked).length;
+      if (label) label.textContent = `(${n} selected)`;
+      if (all) all.checked = n === boxes.length && n > 0;
+    };
+
+    boxes.forEach((b) => {
+      b.onchange = update;
+    });
+
+    if (all) {
+      all.onchange = () => {
+        boxes.forEach((b) => { b.checked = all.checked; });
+        update();
+      };
+    }
+  }
+
+  document.addEventListener('astro:page-load', initArrearsPage);
 </script>

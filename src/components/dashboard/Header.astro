@@ -2,7 +2,11 @@
 import { Search, Bell, ExternalLink, Menu } from '@lucide/astro';
 ---
 
-<header class="sticky top-0 z-20 bg-[#F4F5F1]/80 backdrop-blur-md border-b border-[#E7EAE4]/80 px-4 sm:px-8 py-4 flex items-center justify-between gap-3 sm:gap-4">
+<header 
+  id="app-header"
+  transition:persist="header"
+  class="sticky top-0 z-20 bg-[#F4F5F1]/80 backdrop-blur-md border-b border-[#E7EAE4]/80 px-4 sm:px-8 py-4 flex items-center justify-between gap-3 sm:gap-4"
+>
   <!-- Mobile Menu Toggle & Search Bar -->
   <div class="flex items-center gap-3 flex-1 min-w-0 max-w-xl">
     <button 

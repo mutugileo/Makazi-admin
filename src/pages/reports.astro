@@ -79,3 +79,21 @@ const { reportsList } = dashboardData;
     ))}
   </div>
 </DashboardLayout>
+
+<script>
+  function initReportsPage() {
+    document.querySelectorAll<HTMLButtonElement>('.report-export-btn').forEach((btn) => {
+      btn.onclick = () => {
+        const type = btn.dataset.type || 'Report';
+        const title = btn.dataset.title || 'Export';
+        window.makaziUi?.showToast(
+          `${type} export queued`,
+          `Generating ${title} as ${type}. Automatic download starts shortly.`
+        );
+      };
+    });
+  }
+
+  document.addEventListener('astro:page-load', initReportsPage);
+</script>
+

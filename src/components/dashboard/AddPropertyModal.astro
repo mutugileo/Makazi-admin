@@ -161,201 +161,224 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
 
 <script>
   type Context = { names: string[]; prefixes: string[]; unitsUsed: number; unitLimit: number; planName: string };
-  const ctx: Context = JSON.parse(document.getElementById('add-property-context')?.textContent ?? '{}');
-  const modal = document.getElementById('add-property-modal')!;
-  const form = document.getElementById('add-property-form') as HTMLFormElement;
-  const rows = document.getElementById('unit-rows')!;
-  const template = document.getElementById('unit-row-template') as HTMLTemplateElement;
-  const nameInput = document.getElementById('property-name') as HTMLInputElement;
-  const prefixInput = document.getElementById('property-prefix') as HTMLInputElement;
-  const errorEl = document.getElementById('add-property-error')!;
-  let prefixTouched = false;
 
-  const labels = () => [...rows.querySelectorAll<HTMLInputElement>('.unit-label')];
+  function initAddPropertyModal() {
+    const modal = document.getElementById('add-property-modal');
+    const form = document.getElementById('add-property-form') as HTMLFormElement | null;
+    const rows = document.getElementById('unit-rows');
+    const template = document.getElementById('unit-row-template') as HTMLTemplateElement | null;
+    const nameInput = document.getElementById('property-name') as HTMLInputElement | null;
+    const prefixInput = document.getElementById('property-prefix') as HTMLInputElement | null;
+    const errorEl = document.getElementById('add-property-error');
+    if (!modal || !form || !rows || !template || !nameInput || !prefixInput || !errorEl) return;
 
-  // Next label after the last one: A9 -> A10, 12 -> 13, otherwise a count.
-  function nextLabel(): string {
-    const last = labels().at(-1)?.value.trim() ?? '';
-    const m = last.match(/^(.*?)(\d+)$/);
-    if (m) return `${m[1]}${Number(m[2]) + 1}`;
-    return String(labels().length + 1);
-  }
+    const ctx: Context = JSON.parse(document.getElementById('add-property-context')?.textContent ?? '{}');
+    let prefixTouched = false;
 
-  function updateCounts() {
-    const count = labels().length;
-    document.getElementById('unit-count')!.textContent = `(${count})`;
-    const after = ctx.unitsUsed + count;
-    const note = document.getElementById('plan-note')!;
-    const over = after > ctx.unitLimit;
-    note.classList.toggle('hidden', !over);
-    if (over) {
-      note.textContent = `This takes you to ${after} units, over the ${ctx.unitLimit} on your ${ctx.planName} plan. Plans aren't enforced yet; Codzure will be in touch about an upgrade.`;
+    const labels = () => [...rows.querySelectorAll<HTMLInputElement>('.unit-label')];
+
+    // Next label after the last one: A9 -> A10, 12 -> 13, otherwise a count.
+    function nextLabel(): string {
+      const last = labels().at(-1)?.value.trim() ?? '';
+      const m = last.match(/^(.*?)(\d+)$/);
+      if (m) return `${m[1]}${Number(m[2]) + 1}`;
+      return String(labels().length + 1);
     }
-    rows.querySelectorAll<HTMLButtonElement>('.unit-remove').forEach((b) => (b.disabled = count === 1));
-  }
 
-  function addRow(label = nextLabel()) {
-    const row = template.content.firstElementChild!.cloneNode(true) as HTMLElement;
-    (row.querySelector('.unit-label') as HTMLInputElement).value = label;
-    row.querySelector('.unit-remove')!.addEventListener('click', () => {
-      if (labels().length > 1) row.remove();
-      updateCounts();
-    });
-    rows.appendChild(row);
-    updateCounts();
-  }
-
-  function suggestPrefix() {
-    if (prefixTouched) return;
-    const initials = nameInput.value
-      .split(/\s+/)
-      .filter(Boolean)
-      .map((w) => w[0])
-      .join('')
-      .toUpperCase()
-      .replace(/[^A-Z]/g, '')
-      .slice(0, 3);
-    prefixInput.value = initials;
-    updatePrefixExample();
-  }
-
-  function updatePrefixExample() {
-    const prefix = prefixInput.value.toUpperCase() || 'KG';
-    document.getElementById('prefix-example')!.textContent = `${prefix}-${labels()[0]?.value.trim() || '1'}`;
-  }
-
-  function reset() {
-    form.reset();
-    rows.innerHTML = '';
-    prefixTouched = false;
-    errorEl.classList.add('hidden');
-    addRow('1');
-    updatePrefixExample();
-  }
-
-  function problem(): string | null {
-    const name = nameInput.value.trim();
-    if (!name) return 'Enter the property name.';
-    if (ctx.names.includes(name.toLowerCase())) return `You already have a property called ${name}.`;
-    if (!(document.getElementById('property-address') as HTMLInputElement).value.trim()) return 'Enter the address.';
-    const prefix = prefixInput.value.trim().toUpperCase();
-    if (!/^[A-Z]{2,4}$/.test(prefix)) return 'The account prefix is 2 to 4 letters, e.g. KG.';
-    if (ctx.prefixes.includes(prefix)) return `Prefix ${prefix} is already used by another of your properties.`;
-    for (const id of ['property-water', 'property-garbage']) {
-      const v = Number((document.getElementById(id) as HTMLInputElement).value);
-      if (!Number.isInteger(v) || v < 0) return 'Rates must be whole shillings, zero or more.';
-    }
-    const unitLabels = labels().map((i) => i.value.trim());
-    if (unitLabels.some((l) => !l)) return 'Give every unit a label.';
-    const seen = new Set<string>();
-    for (const l of unitLabels) {
-      if (seen.has(l.toLowerCase())) return `Unit ${l} is listed twice.`;
-      seen.add(l.toLowerCase());
-    }
-    return null;
-  }
-
-  // Open from the page's "Add property" button.
-  document.getElementById('add-property-btn')?.addEventListener('click', () => {
-    reset();
-    window.makaziUi?.showModal('add-property-modal');
-    setTimeout(() => nameInput.focus(), 50);
-  });
-  modal.querySelectorAll('[data-close]').forEach((el) =>
-    el.addEventListener('click', () => window.makaziUi?.hideModal('add-property-modal')),
-  );
-  document.getElementById('add-unit')!.addEventListener('click', () => addRow());
-  document.getElementById('add-many-units')!.addEventListener('click', () => {
-    for (let i = 0; i < 5; i++) addRow();
-  });
-  nameInput.addEventListener('input', suggestPrefix);
-  prefixInput.addEventListener('input', () => {
-    prefixTouched = prefixInput.value !== '';
-    prefixInput.value = prefixInput.value.toUpperCase().replace(/[^A-Z]/g, '');
-    updatePrefixExample();
-  });
-  rows.addEventListener('input', updatePrefixExample);
-
-  // Image preview & presets
-  const imageInput = document.getElementById('property-image') as HTMLInputElement | null;
-  const imagePreview = document.getElementById('image-preview') as HTMLElement | null;
-  const updateImagePreview = (url: string) => {
-    if (!imagePreview) return;
-    if (url) {
-      imagePreview.innerHTML = `<img src="${url}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<span class=\\'text-[9px] text-[#C04A26]\\'>Invalid</span>'" />`;
-    } else {
-      imagePreview.innerHTML = '<span class="text-[9px] text-[#73827C]">No image</span>';
-    }
-  };
-  imageInput?.addEventListener('input', () => updateImagePreview(imageInput.value.trim()));
-  document.querySelectorAll<HTMLButtonElement>('.preset-img-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      if (imageInput) {
-        imageInput.value = btn.dataset.url || '';
-        updateImagePreview(imageInput.value);
+    function updateCounts() {
+      const count = labels().length;
+      const countEl = document.getElementById('unit-count');
+      if (countEl) countEl.textContent = `(${count})`;
+      const after = ctx.unitsUsed + count;
+      const note = document.getElementById('plan-note');
+      if (note) {
+        const over = after > ctx.unitLimit;
+        note.classList.toggle('hidden', !over);
+        if (over) {
+          note.textContent = `This takes you to ${after} units, over the ${ctx.unitLimit} on your ${ctx.planName} plan. Plans aren't enforced yet; Codzure will be in touch about an upgrade.`;
+        }
       }
-    });
-  });
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const issue = problem();
-    errorEl.textContent = issue ?? '';
-    errorEl.classList.toggle('hidden', !issue);
-    if (issue) return;
-
-    const name = nameInput.value.trim();
-    const address = (document.getElementById('property-address') as HTMLInputElement).value.trim();
-    const type = (document.getElementById('property-type') as HTMLSelectElement).value;
-    const accountPrefix = prefixInput.value.trim().toUpperCase();
-    const waterRate = Number((document.getElementById('property-water') as HTMLInputElement).value) || 0;
-    const garbageFee = Number((document.getElementById('property-garbage') as HTMLInputElement).value) || 0;
-    const imageUrl = (document.getElementById('property-image') as HTMLInputElement | null)?.value.trim() || null;
-
-    const units = [...rows.querySelectorAll('.unit-row')].map((r) => ({
-      label: (r.querySelector('.unit-label') as HTMLInputElement).value.trim(),
-      bedrooms: Number((r.querySelector('.unit-bedrooms') as HTMLSelectElement).value) || 1,
-    }));
-
-    const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Saving...';
+      rows!.querySelectorAll<HTMLButtonElement>('.unit-remove').forEach((b) => (b.disabled = count === 1));
     }
 
-    try {
-      const res = await fetch('/api/create-property', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          type,
-          address,
-          accountPrefix,
-          waterRate,
-          garbageFee,
-          units,
-          imageUrl,
-        }),
+    function addRow(label = nextLabel()) {
+      const row = template!.content.firstElementChild!.cloneNode(true) as HTMLElement;
+      (row.querySelector('.unit-label') as HTMLInputElement).value = label;
+      row.querySelector('.unit-remove')!.addEventListener('click', () => {
+        if (labels().length > 1) row.remove();
+        updateCounts();
       });
+      rows!.appendChild(row);
+      updateCounts();
+    }
 
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || 'Failed to add property');
+    function suggestPrefix() {
+      if (prefixTouched) return;
+      const initials = nameInput!.value
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((w) => w[0])
+        .join('')
+        .toUpperCase()
+        .replace(/[^A-Z]/g, '')
+        .slice(0, 3);
+      prefixInput!.value = initials;
+      updatePrefixExample();
+    }
 
-      window.makaziUi?.hideModal('add-property-modal');
-      window.makaziUi?.showToast(
-        'Property created',
-        `${name} and its ${units.length} unit(s) are now live in the system.`,
-      );
-      setTimeout(() => window.location.reload(), 1000);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      errorEl.textContent = msg;
-      errorEl.classList.remove('hidden');
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Save property & units';
+    function updatePrefixExample() {
+      const prefix = prefixInput!.value.toUpperCase() || 'KG';
+      const exampleEl = document.getElementById('prefix-example');
+      if (exampleEl) {
+        exampleEl.textContent = `${prefix}-${labels()[0]?.value.trim() || '1'}`;
       }
     }
-  });
+
+    function reset() {
+      form!.reset();
+      rows!.innerHTML = '';
+      prefixTouched = false;
+      errorEl!.classList.add('hidden');
+      addRow('1');
+      updatePrefixExample();
+    }
+
+    function problem(): string | null {
+      const name = nameInput!.value.trim();
+      if (!name) return 'Enter the property name.';
+      if (ctx.names?.includes(name.toLowerCase())) return `You already have a property called ${name}.`;
+      if (!(document.getElementById('property-address') as HTMLInputElement)?.value.trim()) return 'Enter the address.';
+      const prefix = prefixInput!.value.trim().toUpperCase();
+      if (!/^[A-Z]{2,4}$/.test(prefix)) return 'The account prefix is 2 to 4 letters, e.g. KG.';
+      if (ctx.prefixes?.includes(prefix)) return `Prefix ${prefix} is already used by another of your properties.`;
+      for (const id of ['property-water', 'property-garbage']) {
+        const v = Number((document.getElementById(id) as HTMLInputElement)?.value);
+        if (!Number.isInteger(v) || v < 0) return 'Rates must be whole shillings, zero or more.';
+      }
+      const unitLabels = labels().map((i) => i.value.trim());
+      if (unitLabels.some((l) => !l)) return 'Give every unit a label.';
+      const seen = new Set<string>();
+      for (const l of unitLabels) {
+        if (seen.has(l.toLowerCase())) return `Unit ${l} is listed twice.`;
+        seen.add(l.toLowerCase());
+      }
+      return null;
+    }
+
+    const addBtn = document.getElementById('add-property-btn');
+    if (addBtn) {
+      addBtn.onclick = () => {
+        reset();
+        window.makaziUi?.showModal('add-property-modal');
+        setTimeout(() => nameInput!.focus(), 50);
+      };
+    }
+
+    modal.querySelectorAll('[data-close]').forEach((el) => {
+      (el as HTMLElement).onclick = () => window.makaziUi?.hideModal('add-property-modal');
+    });
+
+    const addUnitBtn = document.getElementById('add-unit');
+    if (addUnitBtn) addUnitBtn.onclick = () => addRow();
+
+    const addManyUnitsBtn = document.getElementById('add-many-units');
+    if (addManyUnitsBtn) {
+      addManyUnitsBtn.onclick = () => {
+        for (let i = 0; i < 5; i++) addRow();
+      };
+    }
+
+    nameInput.oninput = suggestPrefix;
+    prefixInput.oninput = () => {
+      prefixTouched = prefixInput!.value !== '';
+      prefixInput!.value = prefixInput!.value.toUpperCase().replace(/[^A-Z]/g, '');
+      updatePrefixExample();
+    };
+    rows.oninput = updatePrefixExample;
+
+    const imageInput = document.getElementById('property-image') as HTMLInputElement | null;
+    const imagePreview = document.getElementById('image-preview') as HTMLElement | null;
+    const updateImagePreview = (url: string) => {
+      if (!imagePreview) return;
+      if (url) {
+        imagePreview.innerHTML = `<img src="${url}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<span class=\\'text-[9px] text-[#C04A26]\\'>Invalid</span>'" />`;
+      } else {
+        imagePreview.innerHTML = '<span class="text-[9px] text-[#73827C]">No image</span>';
+      }
+    };
+    if (imageInput) imageInput.oninput = () => updateImagePreview(imageInput.value.trim());
+
+    document.querySelectorAll<HTMLButtonElement>('.preset-img-btn').forEach((btn) => {
+      btn.onclick = () => {
+        if (imageInput) {
+          imageInput.value = btn.dataset.url || '';
+          updateImagePreview(imageInput.value);
+        }
+      };
+    });
+
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const issue = problem();
+      errorEl.textContent = issue ?? '';
+      errorEl.classList.toggle('hidden', !issue);
+      if (issue) return;
+
+      const name = nameInput!.value.trim();
+      const address = (document.getElementById('property-address') as HTMLInputElement).value.trim();
+      const type = (document.querySelector('input[name="property-type"]:checked') as HTMLInputElement)?.value ?? 'apartments';
+      const accountPrefix = prefixInput!.value.trim().toUpperCase();
+      const waterRate = Number((document.getElementById('property-water') as HTMLInputElement).value) || 0;
+      const garbageFee = Number((document.getElementById('property-garbage') as HTMLInputElement).value) || 0;
+      const imageUrl = (document.getElementById('property-image') as HTMLInputElement | null)?.value.trim() || null;
+
+      const units = [...rows!.querySelectorAll('.unit-row')].map((r) => ({
+        label: (r.querySelector('.unit-label') as HTMLInputElement).value.trim(),
+        bedrooms: Number((r.querySelector('.unit-bedrooms') as HTMLSelectElement).value) || 1,
+      }));
+
+      const submitBtn = form!.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving...';
+      }
+
+      try {
+        const res = await fetch('/api/create-property', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name,
+            type,
+            address,
+            accountPrefix,
+            waterRate,
+            garbageFee,
+            units,
+            imageUrl,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok || data.error) throw new Error(data.error || 'Failed to add property');
+
+        window.makaziUi?.hideModal('add-property-modal');
+        window.makaziUi?.showToast(
+          'Property created',
+          `${name} and its ${units.length} unit(s) are now live in the system.`,
+        );
+        setTimeout(() => window.location.reload(), 1000);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        errorEl.textContent = msg;
+        errorEl.classList.remove('hidden');
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Save property & units';
+        }
+      }
+    };
+  }
+
+  document.addEventListener('astro:page-load', initAddPropertyModal);
 </script>

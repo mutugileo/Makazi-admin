@@ -100,107 +100,118 @@ const currentMonthLbl = monthLabel(currentMonth);
 </div>
 
 <script>
-  const modal = document.getElementById('readings-modal')!;
-  const form = document.getElementById('readings-form') as HTMLFormElement;
-  const kes = (n: number) => `KES ${n.toLocaleString('en-KE')}`;
+  function initReadingsModal() {
+    const modal = document.getElementById('readings-modal');
+    if (!modal) return;
+    const form = document.getElementById('readings-form') as HTMLFormElement | null;
+    if (!form) return;
+    const kes = (n: number) => `KES ${n.toLocaleString('en-KE')}`;
 
-  function recalc() {
-    let entered = 0;
-    let invalid = 0;
-    let total = 0;
-    modal.querySelectorAll<HTMLTableRowElement>('.reading-row').forEach((row) => {
-      const input = row.querySelector<HTMLInputElement>('.reading-input')!;
-      const last = Number(row.dataset.last);
-      const rate = Number(row.dataset.rate);
-      const unitsCell = row.querySelector('.units-cell')!;
-      const waterCell = row.querySelector('.water-cell')!;
-      if (input.value === '') {
-        unitsCell.textContent = '—';
-        waterCell.textContent = '—';
-        input.classList.remove('border-[#C04A26]');
-        return;
+    function recalc() {
+      let entered = 0;
+      let invalid = 0;
+      let total = 0;
+      modal!.querySelectorAll<HTMLTableRowElement>('.reading-row').forEach((row) => {
+        const input = row.querySelector<HTMLInputElement>('.reading-input')!;
+        const last = Number(row.dataset.last);
+        const rate = Number(row.dataset.rate);
+        const unitsCell = row.querySelector('.units-cell')!;
+        const waterCell = row.querySelector('.water-cell')!;
+        if (input.value === '') {
+          unitsCell.textContent = '—';
+          waterCell.textContent = '—';
+          input.classList.remove('border-[#C04A26]');
+          return;
+        }
+        const value = Number(input.value);
+        const ok = Number.isInteger(value) && value >= last;
+        input.classList.toggle('border-[#C04A26]', !ok);
+        entered++;
+        if (!ok) {
+          invalid++;
+          unitsCell.textContent = 'Below last';
+          waterCell.textContent = '—';
+          return;
+        }
+        const units = value - last;
+        total += units * rate;
+        unitsCell.textContent = String(units);
+        waterCell.textContent = kes(units * rate);
+      });
+      const summary = document.getElementById('readings-summary');
+      if (summary) {
+        summary.textContent = invalid
+          ? `${invalid} reading${invalid > 1 ? 's are' : ' is'} lower than last month. Check the meter.`
+          : entered
+            ? `${entered} of ${modal!.querySelectorAll('.reading-row').length} units read · ${kes(total)} water to bill`
+            : 'Enter readings to preview water charges.';
+        summary.classList.toggle('text-[#C04A26]', invalid > 0);
       }
-      const value = Number(input.value);
-      const ok = Number.isInteger(value) && value >= last;
-      input.classList.toggle('border-[#C04A26]', !ok);
-      entered++;
-      if (!ok) {
-        invalid++;
-        unitsCell.textContent = 'Below last';
-        waterCell.textContent = '—';
-        return;
-      }
-      const units = value - last;
-      total += units * rate;
-      unitsCell.textContent = String(units);
-      waterCell.textContent = kes(units * rate);
+      return { entered, invalid };
+    }
+
+    const monthSelect = document.getElementById('readings-month-select') as HTMLSelectElement | null;
+    if (monthSelect) {
+      monthSelect.onchange = () => {
+        const selectedMonth = monthSelect.value;
+        modal!.querySelectorAll<HTMLTableRowElement>('.reading-row').forEach((row) => {
+          row.dataset.month = selectedMonth;
+        });
+        recalc();
+      };
+    }
+
+    form.oninput = recalc;
+    modal.querySelectorAll('[data-close]').forEach((el) => {
+      (el as HTMLElement).onclick = () => window.makaziUi?.hideModal('readings-modal');
     });
-    const summary = document.getElementById('readings-summary')!;
-    summary.textContent = invalid
-      ? `${invalid} reading${invalid > 1 ? 's are' : ' is'} lower than last month. Check the meter.`
-      : entered
-        ? `${entered} of ${modal.querySelectorAll('.reading-row').length} units read · ${kes(total)} water to bill`
-        : 'Enter readings to preview water charges.';
-    summary.classList.toggle('text-[#C04A26]', invalid > 0);
-    return { entered, invalid };
+
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const { entered, invalid } = recalc();
+      if (invalid || !entered) return;
+
+      const selectedMonth = monthSelect?.value || (modal!.querySelector('.reading-row') as HTMLElement | null)?.dataset.month;
+      const readings: Array<{ unitId: string; month: string; value: number }> = [];
+      modal!.querySelectorAll<HTMLTableRowElement>('.reading-row').forEach((row) => {
+        const input = row.querySelector<HTMLInputElement>('.reading-input')!;
+        if (input.value !== '') {
+          readings.push({
+            unitId: row.dataset.unitId!,
+            month: selectedMonth || row.dataset.month!,
+            value: Number(input.value),
+          });
+        }
+      });
+
+      const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving...';
+      }
+
+      try {
+        const res = await fetch('/api/record-reading', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ readings }),
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) throw new Error(data.error || 'Failed to save readings');
+
+        window.makaziUi?.hideModal('readings-modal');
+        window.makaziUi?.showToast('Readings saved', `Successfully saved ${readings.length} meter reading(s).`);
+        setTimeout(() => window.location.reload(), 1000);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        window.makaziUi?.showToast('Error', msg);
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Save readings';
+        }
+      }
+    };
   }
 
-  const monthSelect = document.getElementById('readings-month-select') as HTMLSelectElement | null;
-  monthSelect?.addEventListener('change', () => {
-    const selectedMonth = monthSelect.value;
-    modal.querySelectorAll<HTMLTableRowElement>('.reading-row').forEach((row) => {
-      row.dataset.month = selectedMonth;
-    });
-    recalc();
-  });
-
-  form.addEventListener('input', recalc);
-  modal.querySelectorAll('[data-close]').forEach((el) =>
-    el.addEventListener('click', () => window.makaziUi?.hideModal('readings-modal')),
-  );
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const { entered, invalid } = recalc();
-    if (invalid || !entered) return;
-
-    const selectedMonth = monthSelect?.value || (modal.querySelector('.reading-row') as HTMLElement | null)?.dataset.month;
-    const readings: Array<{ unitId: string; month: string; value: number }> = [];
-    modal.querySelectorAll<HTMLTableRowElement>('.reading-row').forEach((row) => {
-      const input = row.querySelector<HTMLInputElement>('.reading-input')!;
-      if (input.value !== '') {
-        readings.push({
-          unitId: row.dataset.unitId!,
-          month: selectedMonth || row.dataset.month!,
-          value: Number(input.value),
-        });
-      }
-    });
-
-    const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Saving...';
-    }
-
-    try {
-      const res = await fetch('/api/record-reading', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ readings }),
-      });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || 'Failed to save readings');
-
-      window.makaziUi?.hideModal('readings-modal');
-      window.makaziUi?.showToast('Readings saved', `Successfully saved ${readings.length} meter reading(s).`);
-      setTimeout(() => window.location.reload(), 1000);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      window.makaziUi?.showToast('Error', msg);
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Save readings';
-      }
-    }
-  });
+  document.addEventListener('astro:page-load', initReadingsModal);
 </script>

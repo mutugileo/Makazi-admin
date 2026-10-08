@@ -9,6 +9,7 @@ import CommandPaletteModal from '../components/dashboard/CommandPaletteModal.ast
 import TenantAppModal from '../components/dashboard/TenantAppModal.astro';
 import Toast from '../components/dashboard/Toast.astro';
 import { getPortfolio } from '../data/portfolio';
+import { ClientRouter } from 'astro:transitions';
 
 interface Props {
   title?: string;
@@ -41,6 +42,7 @@ const {
     <meta name="description" content={`Makazi property management for ${companyName}`} />
     <meta name="robots" content="noindex" />
     <title>{title}</title>
+    <ClientRouter />
     <!-- Opt in to bar animations only when JS runs and motion is allowed, so
          bars are never left at zero width. -->
     <script is:inline>
@@ -50,16 +52,23 @@ const {
     </script>
   </head>
   <body class="bg-[#F3F4F0] text-[#17231E] min-h-screen antialiased flex">
+    <!-- Top Progress Bar for Seamless Route Transitions -->
+    <div 
+      id="nav-progress-bar" 
+      class="fixed top-0 left-0 h-[2.5px] bg-[#C6EE58] z-50 transition-all duration-200 ease-out pointer-events-none opacity-0 w-0 shadow-[0_0_8px_rgba(198,238,88,0.8)]" 
+      aria-hidden="true"
+    ></div>
+
     <!-- Desktop & Mobile Sidebar Navigation -->
     <Sidebar currentPath={currentPath} />
 
-    <!-- Main Content Canvas -->
-    <div class="flex-1 flex flex-col min-w-0 lg:pl-72 transition-all duration-300">
+    <!-- Main Content Canvas (stable padding, zero layout shift) -->
+    <div class="flex-1 flex flex-col min-w-0 lg:pl-72">
       <!-- Top Sticky Header -->
       <Header />
 
-      <!-- Page View Slot -->
-      <main class="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+      <!-- Page View Slot with smooth native crossfade -->
+      <main id="main-content" class="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto" transition:animate="fade">
         <slot />
       </main>
 
@@ -75,13 +84,15 @@ const {
       </footer>
     </div>
 
-    <!-- Modals & Feedback Elements -->
-    <OnboardTenantModal />
-    <SendRemindersModal />
-    <ReceiptModal />
-    <CommandPaletteModal />
-    <TenantAppModal />
-    <Toast />
+    <!-- Modals & Feedback Elements (persisted across page transitions) -->
+    <div id="dashboard-modals-root" transition:persist="modals">
+      <OnboardTenantModal />
+      <SendRemindersModal />
+      <ReceiptModal />
+      <CommandPaletteModal />
+      <TenantAppModal />
+      <Toast />
+    </div>
 
     <!-- Vanilla Interactivity Scripts -->
     <script>
@@ -138,99 +149,130 @@ const {
 
       window.makaziUi = { showModal, hideModal, showToast };
 
-      // Grow [data-animate-bars] bars the first time they scroll into view.
-      const barGroups = document.querySelectorAll<HTMLElement>('[data-animate-bars]');
-      if ('IntersectionObserver' in window) {
-        const observer = new IntersectionObserver(
-          (entries) => {
-            entries.forEach((entry) => {
-              if (!entry.isIntersecting) return;
-              entry.target.classList.add('in-view');
-              observer.unobserve(entry.target);
-            });
-          },
-          { threshold: 0.25 },
-        );
-        barGroups.forEach((el) => observer.observe(el));
-      } else {
-        barGroups.forEach((el) => el.classList.add('in-view'));
+      // Top navigation progress bar and modal cleanup
+      let navProgressTimer: any;
+      document.addEventListener('astro:before-preparation', () => {
+        hideAllModals();
+        const bar = document.getElementById('nav-progress-bar');
+        if (bar) {
+          bar.style.opacity = '1';
+          bar.style.width = '35%';
+          clearTimeout(navProgressTimer);
+          navProgressTimer = setTimeout(() => {
+            bar.style.width = '75%';
+          }, 150);
+        }
+      });
+
+      function initBarsAnimation() {
+        const barGroups = document.querySelectorAll<HTMLElement>('[data-animate-bars]');
+        if ('IntersectionObserver' in window) {
+          const observer = new IntersectionObserver(
+            (entries) => {
+              entries.forEach((entry) => {
+                if (!entry.isIntersecting) return;
+                entry.target.classList.add('in-view');
+                observer.unobserve(entry.target);
+              });
+            },
+            { threshold: 0.25 },
+          );
+          barGroups.forEach((el) => observer.observe(el));
+        } else {
+          barGroups.forEach((el) => el.classList.add('in-view'));
+        }
       }
 
-      // DOM Ready Setup
-      document.addEventListener('DOMContentLoaded', () => {
-        // Mobile sidebar toggle
-        const mobileToggle = document.getElementById('mobile-sidebar-toggle');
+      function updateActiveSidebar() {
+        const currentPath = window.location.pathname;
+        document.querySelectorAll<HTMLAnchorElement>('#app-sidebar a[data-nav-href]').forEach((link) => {
+          const href = link.getAttribute('data-nav-href');
+          const isActive = (href === '/' && currentPath === '/') || (href !== '/' && currentPath.startsWith(href!));
+          const icon = link.querySelector('svg');
+          if (isActive) {
+            link.classList.remove('text-[#8FA69C]', 'hover:bg-[#10342A]');
+            link.classList.add('bg-[#153F33]', 'text-white', 'shadow-sm');
+            if (icon) {
+              icon.classList.remove('text-[#729285]', 'group-hover:text-white');
+              icon.classList.add('text-[#C6EE58]');
+            }
+          } else {
+            link.classList.remove('bg-[#153F33]', 'text-white', 'shadow-sm');
+            link.classList.add('text-[#8FA69C]', 'hover:bg-[#10342A]');
+            if (icon) {
+              icon.classList.remove('text-[#C6EE58]');
+              icon.classList.add('text-[#729285]', 'group-hover:text-white');
+            }
+          }
+        });
+      }
+
+      function setupPageListeners() {
         const sidebar = document.getElementById('app-sidebar');
         const backdrop = document.getElementById('sidebar-backdrop');
 
+        // Close mobile drawer on route load
+        if (sidebar && backdrop && !backdrop.classList.contains('hidden')) {
+          sidebar.classList.add('-translate-x-full');
+          backdrop.classList.add('hidden');
+        }
+
+        // Mobile sidebar toggle
+        const mobileToggle = document.getElementById('mobile-sidebar-toggle');
         if (mobileToggle && sidebar && backdrop) {
-          mobileToggle.addEventListener('click', () => {
+          mobileToggle.onclick = () => {
             sidebar.classList.remove('-translate-x-full');
             backdrop.classList.remove('hidden');
-          });
+          };
 
-          backdrop.addEventListener('click', () => {
+          backdrop.onclick = () => {
             sidebar.classList.add('-translate-x-full');
             backdrop.classList.add('hidden');
-          });
+          };
         }
+
+        // Auto-close mobile sidebar when clicking any navigation link
+        document.querySelectorAll('#app-sidebar a').forEach((a) => {
+          (a as HTMLElement).onclick = () => {
+            if (sidebar && backdrop && window.innerWidth < 1024) {
+              sidebar.classList.add('-translate-x-full');
+              backdrop.classList.add('hidden');
+            }
+          };
+        });
 
         // Onboard Tenant Modal triggers
-        const onboardBtn = document.getElementById('onboard-tenant-btn');
+        document.querySelectorAll('#onboard-tenant-btn, #new-lease-btn').forEach((btn) => {
+          (btn as HTMLElement).onclick = () => showModal('onboard-tenant-modal');
+        });
         const closeOnboardBtn = document.getElementById('close-onboard-modal-btn');
         const cancelOnboardBtn = document.getElementById('cancel-onboard-btn');
-
-        if (onboardBtn) {
-          onboardBtn.addEventListener('click', () => showModal('onboard-tenant-modal'));
-        }
-        if (closeOnboardBtn) {
-          closeOnboardBtn.addEventListener('click', () => hideModal('onboard-tenant-modal'));
-        }
-        if (cancelOnboardBtn) {
-          cancelOnboardBtn.addEventListener('click', () => hideModal('onboard-tenant-modal'));
-        }
-        // Submission, unit filtering and the move-in bill preview live in
-        // OnboardTenantModal.astro.
+        if (closeOnboardBtn) closeOnboardBtn.onclick = () => hideModal('onboard-tenant-modal');
+        if (cancelOnboardBtn) cancelOnboardBtn.onclick = () => hideModal('onboard-tenant-modal');
 
         // Send Reminders Modal triggers
-        const remindersHeaderBtn = document.getElementById('send-reminders-header-btn');
-        const remindersActionBtn = document.getElementById('send-reminders-action-btn');
+        document.querySelectorAll('#send-reminders-header-btn, #send-reminders-action-btn').forEach((btn) => {
+          (btn as HTMLElement).onclick = () => showModal('send-reminders-modal');
+        });
         const closeRemindersBtn = document.getElementById('close-reminders-modal-btn');
         const cancelRemindersBtn = document.getElementById('cancel-reminders-btn');
         const confirmRemindersBtn = document.getElementById('confirm-send-reminders-btn');
-
-        if (remindersHeaderBtn) {
-          remindersHeaderBtn.addEventListener('click', () => showModal('send-reminders-modal'));
-        }
-        if (remindersActionBtn) {
-          remindersActionBtn.addEventListener('click', () => showModal('send-reminders-modal'));
-        }
-        if (closeRemindersBtn) {
-          closeRemindersBtn.addEventListener('click', () => hideModal('send-reminders-modal'));
-        }
-        if (cancelRemindersBtn) {
-          cancelRemindersBtn.addEventListener('click', () => hideModal('send-reminders-modal'));
-        }
+        if (closeRemindersBtn) closeRemindersBtn.onclick = () => hideModal('send-reminders-modal');
+        if (cancelRemindersBtn) cancelRemindersBtn.onclick = () => hideModal('send-reminders-modal');
         if (confirmRemindersBtn) {
-          confirmRemindersBtn.addEventListener('click', () => {
+          confirmRemindersBtn.onclick = () => {
             hideModal('send-reminders-modal');
             showToast('Prototype: reminders not sent', 'SMS and email sending is connected in Phase 2.');
-          });
-        }
-
-        // "Add property" opens AddPropertyModal (wired in that component).
-        const newLeaseBtn = document.getElementById('new-lease-btn');
-        if (newLeaseBtn) {
-          newLeaseBtn.addEventListener('click', () => showModal('onboard-tenant-modal'));
+          };
         }
 
         // Select all arrears checkboxes
-        const selectAllArrears = document.getElementById('select-all-arrears') as HTMLInputElement;
+        const selectAllArrears = document.getElementById('select-all-arrears') as HTMLInputElement | null;
         const arrearCheckboxes = document.querySelectorAll('.arrear-checkbox') as NodeListOf<HTMLInputElement>;
         if (selectAllArrears && arrearCheckboxes.length > 0) {
-          selectAllArrears.addEventListener('change', () => {
-            arrearCheckboxes.forEach(cb => { cb.checked = selectAllArrears.checked; });
-          });
+          selectAllArrears.onchange = () => {
+            arrearCheckboxes.forEach((cb) => { cb.checked = selectAllArrears.checked; });
+          };
         }
 
         // Receipt Modal triggers
@@ -239,7 +281,7 @@ const {
         const paymentRows = document.querySelectorAll('.payment-row');
 
         paymentRows.forEach((row) => {
-          row.addEventListener('click', () => {
+          (row as HTMLElement).onclick = () => {
             const id = row.getAttribute('data-id') || 'RCT-2610-0000';
             const tenant = row.getAttribute('data-tenant') || '';
             const unit = row.getAttribute('data-unit') || '';
@@ -272,16 +314,14 @@ const {
             if (forEl) forEl.textContent = forText;
 
             showModal('receipt-modal');
-          });
+          };
         });
 
-        if (closeReceiptBtn) {
-          closeReceiptBtn.addEventListener('click', () => hideModal('receipt-modal'));
-        }
+        if (closeReceiptBtn) closeReceiptBtn.onclick = () => hideModal('receipt-modal');
         if (downloadReceiptBtn) {
-          downloadReceiptBtn.addEventListener('click', () => {
+          downloadReceiptBtn.onclick = () => {
             showToast('PDF receipts not available yet', 'Use Print to save a copy for now. PDF download arrives with the database.');
-          });
+          };
         }
 
         // Tenant App Preview modal
@@ -289,44 +329,64 @@ const {
         const closeTenantAppBtn = document.getElementById('close-tenant-app-btn');
         const dismissTenantAppBtn = document.getElementById('dismiss-tenant-app-btn');
 
-        if (tenantAppBtn) {
-          tenantAppBtn.addEventListener('click', () => showModal('tenant-app-modal'));
-        }
-        if (closeTenantAppBtn) {
-          closeTenantAppBtn.addEventListener('click', () => hideModal('tenant-app-modal'));
-        }
-        if (dismissTenantAppBtn) {
-          dismissTenantAppBtn.addEventListener('click', () => hideModal('tenant-app-modal'));
-        }
+        if (tenantAppBtn) tenantAppBtn.onclick = () => showModal('tenant-app-modal');
+        if (closeTenantAppBtn) closeTenantAppBtn.onclick = () => hideModal('tenant-app-modal');
+        if (dismissTenantAppBtn) dismissTenantAppBtn.onclick = () => hideModal('tenant-app-modal');
 
         // Command Palette ⌘K modal triggers
         const searchTriggerBtn = document.getElementById('search-trigger-btn');
         const closeCommandBtn = document.getElementById('close-command-modal-btn');
-        const commandInput = document.getElementById('command-search-input') as HTMLInputElement;
+        const commandInput = document.getElementById('command-search-input') as HTMLInputElement | null;
 
         function openCommandPalette() {
           showModal('command-palette-modal');
           setTimeout(() => commandInput?.focus(), 50);
         }
 
-        if (searchTriggerBtn) {
-          searchTriggerBtn.addEventListener('click', openCommandPalette);
-        }
-        if (closeCommandBtn) {
-          closeCommandBtn.addEventListener('click', () => hideModal('command-palette-modal'));
+        if (searchTriggerBtn) searchTriggerBtn.onclick = openCommandPalette;
+        if (closeCommandBtn) closeCommandBtn.onclick = () => hideModal('command-palette-modal');
+      }
+
+      // Page-load handler for initial render and client-side view transitions
+      function onPageReady() {
+        const bar = document.getElementById('nav-progress-bar');
+        if (bar) {
+          bar.style.width = '100%';
+          setTimeout(() => {
+            bar.style.opacity = '0';
+            setTimeout(() => {
+              bar.style.width = '0%';
+            }, 200);
+          }, 150);
         }
 
-        // Global Keyboard Shortcut: ⌘K or Ctrl+K & ESC
+        initBarsAnimation();
+        updateActiveSidebar();
+        setupPageListeners();
+      }
+
+      document.addEventListener('astro:page-load', onPageReady);
+      if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        onPageReady();
+      } else {
+        document.addEventListener('DOMContentLoaded', onPageReady);
+      }
+
+      // Global Keyboard Shortcut: ⌘K or Ctrl+K & ESC (attached once per session)
+      if (!(window as any).__makaziKeydownAttached) {
+        (window as any).__makaziKeydownAttached = true;
         document.addEventListener('keydown', (e) => {
           if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
             e.preventDefault();
-            openCommandPalette();
+            showModal('command-palette-modal');
+            const commandInput = document.getElementById('command-search-input') as HTMLInputElement | null;
+            setTimeout(() => commandInput?.focus(), 50);
           }
           if (e.key === 'Escape') {
             hideAllModals();
           }
         });
-      });
+      }
     </script>
   </body>
 </html>

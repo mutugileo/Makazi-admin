@@ -204,6 +204,10 @@ export interface RepairTicket {
   resolvedAt: string | null;
   /** Fundi or company doing the work. */
   assignedTo: string | null;
+  /** The fundi's mobile, +2547XXXXXXXX, shown to the tenant. */
+  assignedPhone?: string | null;
+  /** When they're expected (ISO, Nairobi time). */
+  visitAt?: string | null;
   resolutionNote: string | null;
 }
 

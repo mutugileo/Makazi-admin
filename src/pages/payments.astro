@@ -117,35 +117,45 @@ const { payments, portfolioSummary, currentPeriod } = await getPortfolio(Astro.l
 </DashboardLayout>
 
 <script>
-  const ON = ['bg-[#0D382B]', 'text-white', 'border-[#0D382B]'];
-  const OFF = ['bg-white', 'text-[#0D382B]', 'border-[#E3E6DF]'];
-  let method = 'All';
+  function initPaymentsPage() {
+    const methodBtns = document.querySelectorAll<HTMLElement>('[data-method-btn]');
+    const countEl = document.getElementById('payments-count');
+    const totalEl = document.getElementById('payments-total');
+    if (!countEl || !totalEl) return;
 
-  function render() {
-    let count = 0;
-    let total = 0;
-    document.querySelectorAll<HTMLElement>('.payment-tx').forEach((row) => {
-      const show = method === 'All' || row.dataset.method === method;
-      row.classList.toggle('hidden', !show);
-      if (show) {
-        count++;
-        total += Number(row.dataset.amount);
-      }
+    const ON = ['bg-[#0D382B]', 'text-white', 'border-[#0D382B]'];
+    const OFF = ['bg-white', 'text-[#0D382B]', 'border-[#E3E6DF]'];
+    let method = 'All';
+
+    function render() {
+      let count = 0;
+      let total = 0;
+      document.querySelectorAll<HTMLElement>('.payment-tx').forEach((row) => {
+        const show = method === 'All' || row.dataset.method === method;
+        row.classList.toggle('hidden', !show);
+        if (show) {
+          count++;
+          total += Number(row.dataset.amount);
+        }
+      });
+      countEl!.textContent = String(count);
+      totalEl!.textContent = `KES ${total.toLocaleString('en-KE')}`;
+      methodBtns.forEach((b) => {
+        const on = b.dataset.methodBtn === method;
+        b.classList.remove(...(on ? OFF : ON));
+        b.classList.add(...(on ? ON : OFF));
+      });
+    }
+
+    methodBtns.forEach((b) => {
+      b.onclick = () => {
+        method = b.dataset.methodBtn ?? 'All';
+        render();
+      };
     });
-    document.getElementById('payments-count')!.textContent = String(count);
-    document.getElementById('payments-total')!.textContent = `KES ${total.toLocaleString('en-KE')}`;
-    document.querySelectorAll<HTMLElement>('[data-method-btn]').forEach((b) => {
-      const on = b.dataset.methodBtn === method;
-      b.classList.remove(...(on ? OFF : ON));
-      b.classList.add(...(on ? ON : OFF));
-    });
+
+    render();
   }
 
-  document.querySelectorAll<HTMLElement>('[data-method-btn]').forEach((b) =>
-    b.addEventListener('click', () => {
-      method = b.dataset.methodBtn ?? 'All';
-      render();
-    }),
-  );
-  render();
+  document.addEventListener('astro:page-load', initPaymentsPage);
 </script>

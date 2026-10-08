@@ -72,109 +72,119 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
 </div>
 
 <script>
-  const modal = document.getElementById('edit-rates-modal')!;
-  const form = document.getElementById('edit-rates-form') as HTMLFormElement;
-  const water = document.getElementById('rate-water') as HTMLInputElement;
-  const garbage = document.getElementById('rate-garbage') as HTMLInputElement;
-  const errorEl = document.getElementById('edit-rates-error')!;
-  const kes = (n: number) => `KES ${n.toLocaleString('en-KE')}`;
-  const setText = (field: string, text: string) => {
-    const el = modal.querySelector(`[data-field="${field}"]`);
-    if (el) el.textContent = text;
-  };
-  let propertyName = '';
+  function initEditRatesModal() {
+    const modal = document.getElementById('edit-rates-modal');
+    if (!modal) return;
+    const form = document.getElementById('edit-rates-form') as HTMLFormElement | null;
+    const water = document.getElementById('rate-water') as HTMLInputElement | null;
+    const garbage = document.getElementById('rate-garbage') as HTMLInputElement | null;
+    const errorEl = document.getElementById('edit-rates-error');
+    if (!form || !water || !garbage || !errorEl) return;
 
-  type Period = { label: string; waterRate: number; garbageFee: number };
+    const kes = (n: number) => `KES ${n.toLocaleString('en-KE')}`;
+    const setText = (field: string, text: string) => {
+      const el = modal.querySelector(`[data-field="${field}"]`);
+      if (el) el.textContent = text;
+    };
+    let propertyName = '';
 
-  // Newest first; built with textContent so nothing is parsed as HTML.
-  function renderHistory(periods: Period[]) {
-    const list = modal.querySelector('[data-field="history"]')!;
-    list.replaceChildren();
-    modal.querySelector('[data-field="history-empty"]')!.classList.toggle('hidden', periods.length > 0);
-    list.classList.toggle('hidden', periods.length === 0);
-    [...periods].reverse().forEach((p, i) => {
-      const li = document.createElement('li');
-      li.className = 'flex items-center justify-between gap-3 px-3 py-2';
-      const when = document.createElement('span');
-      when.className = 'text-[#5A6862]';
-      when.textContent = i === 0 ? `${p.label} (current)` : p.label;
-      const rates = document.createElement('span');
-      rates.className = 'font-semibold text-[#0D382B]';
-      rates.textContent = `Water ${kes(p.waterRate)}/unit · Garbage ${kes(p.garbageFee)}`;
-      li.append(when, rates);
-      list.append(li);
-    });
-  }
+    type Period = { label: string; waterRate: number; garbageFee: number };
 
-  function preview() {
-    const rate = Number(water.value);
-    setText('example', Number.isInteger(rate) && rate >= 0 ? `Example: 12 units of water = ${kes(12 * rate)}` : '');
-  }
-
-  let propertyId = '';
-  document.querySelectorAll<HTMLButtonElement>('.edit-rates-btn').forEach((btn) =>
-    btn.addEventListener('click', () => {
-      const d = btn.dataset;
-      propertyId = d.id ?? '';
-      propertyName = d.name ?? '';
-      setText('property', propertyName);
-      setText('water-now', `${kes(Number(d.water))} per unit`);
-      setText('garbage-now', `${kes(Number(d.garbage))} a month`);
-      water.value = d.water ?? '';
-      garbage.value = d.garbage ?? '';
-      renderHistory(JSON.parse(d.history ?? '[]'));
-      errorEl.classList.add('hidden');
-      preview();
-      window.makaziUi?.showModal('edit-rates-modal');
-      setTimeout(() => water.focus(), 50);
-    }),
-  );
-  water.addEventListener('input', preview);
-  modal.querySelectorAll('[data-close]').forEach((el) =>
-    el.addEventListener('click', () => window.makaziUi?.hideModal('edit-rates-modal')),
-  );
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const values = [water.value, garbage.value].map(Number);
-    const bad = [water.value, garbage.value].some((v) => v === '') || values.some((v) => !Number.isInteger(v) || v < 0);
-    errorEl.textContent = bad ? 'Rates must be whole shillings, zero or more.' : '';
-    errorEl.classList.toggle('hidden', !bad);
-    if (bad || !propertyId) return;
-
-    const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Saving...';
-    }
-
-    try {
-      const res = await fetch('/api/update-rates', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          propertyId,
-          waterRate: values[0],
-          garbageFee: values[1],
-        }),
+    // Newest first; built with textContent so nothing is parsed as HTML.
+    function renderHistory(periods: Period[]) {
+      const list = modal!.querySelector('[data-field="history"]');
+      const emptyEl = modal!.querySelector('[data-field="history-empty"]');
+      if (!list || !emptyEl) return;
+      list.replaceChildren();
+      emptyEl.classList.toggle('hidden', periods.length > 0);
+      list.classList.toggle('hidden', periods.length === 0);
+      [...periods].reverse().forEach((p, i) => {
+        const li = document.createElement('li');
+        li.className = 'flex items-center justify-between gap-3 px-3 py-2';
+        const when = document.createElement('span');
+        when.className = 'text-[#5A6862]';
+        when.textContent = i === 0 ? `${p.label} (current)` : p.label;
+        const rates = document.createElement('span');
+        rates.className = 'font-semibold text-[#0D382B]';
+        rates.textContent = `Water ${kes(p.waterRate)}/unit · Garbage ${kes(p.garbageFee)}`;
+        li.append(when, rates);
+        list.append(li);
       });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || 'Failed to update rates');
-
-      window.makaziUi?.hideModal('edit-rates-modal');
-      window.makaziUi?.showToast(
-        'Rates updated',
-        `${propertyName} water updated to ${kes(values[0])}/unit and garbage to ${kes(values[1])}.`,
-      );
-      setTimeout(() => window.location.reload(), 1000);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      errorEl.textContent = msg;
-      errorEl.classList.remove('hidden');
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Save rates';
-      }
     }
-  });
+
+    function preview() {
+      const rate = Number(water!.value);
+      setText('example', Number.isInteger(rate) && rate >= 0 ? `Example: 12 units of water = ${kes(12 * rate)}` : '');
+    }
+
+    let propertyId = '';
+    document.querySelectorAll<HTMLButtonElement>('.edit-rates-btn').forEach((btn) => {
+      btn.onclick = () => {
+        const d = btn.dataset;
+        propertyId = d.id ?? '';
+        propertyName = d.name ?? '';
+        setText('property', propertyName);
+        setText('water-now', `${kes(Number(d.water))} per unit`);
+        setText('garbage-now', `${kes(Number(d.garbage))} a month`);
+        water.value = d.water ?? '';
+        garbage.value = d.garbage ?? '';
+        renderHistory(JSON.parse(d.history ?? '[]'));
+        errorEl.classList.add('hidden');
+        preview();
+        window.makaziUi?.showModal('edit-rates-modal');
+        setTimeout(() => water.focus(), 50);
+      };
+    });
+
+    water.oninput = preview;
+    modal.querySelectorAll('[data-close]').forEach((el) => {
+      (el as HTMLElement).onclick = () => window.makaziUi?.hideModal('edit-rates-modal');
+    });
+
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const values = [water.value, garbage.value].map(Number);
+      const bad = [water.value, garbage.value].some((v) => v === '') || values.some((v) => !Number.isInteger(v) || v < 0);
+      errorEl.textContent = bad ? 'Rates must be whole shillings, zero or more.' : '';
+      errorEl.classList.toggle('hidden', !bad);
+      if (bad || !propertyId) return;
+
+      const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving...';
+      }
+
+      try {
+        const res = await fetch('/api/update-rates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            propertyId,
+            waterRate: values[0],
+            garbageFee: values[1],
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) throw new Error(data.error || 'Failed to update rates');
+
+        window.makaziUi?.hideModal('edit-rates-modal');
+        window.makaziUi?.showToast(
+          'Rates updated',
+          `${propertyName} water updated to ${kes(values[0])}/unit and garbage to ${kes(values[1])}.`,
+        );
+        setTimeout(() => window.location.reload(), 1000);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        errorEl.textContent = msg;
+        errorEl.classList.remove('hidden');
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Save rates';
+        }
+      }
+    };
+  }
+
+  document.addEventListener('astro:page-load', initEditRatesModal);
 </script>

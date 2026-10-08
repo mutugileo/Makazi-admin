@@ -118,46 +118,53 @@ const active = threads.find((t) => t.view.tenancy.id === requested) ?? threads[0
 </DashboardLayout>
 
 <script>
-  const form = document.getElementById('chat-send-form') as HTMLFormElement | null;
-  const input = form?.querySelector('input[name="body"]') as HTMLInputElement | null;
-  const tenancyId = form?.dataset.tenancy;
+  function initMessagesPage() {
+    const form = document.getElementById('chat-send-form') as HTMLFormElement | null;
+    if (!form) return;
+    const input = form.querySelector('input[name="body"]') as HTMLInputElement | null;
+    const tenancyId = form.dataset.tenancy;
 
-  let typingTimeout: any = null;
-  input?.addEventListener('input', () => {
-    if (!tenancyId) return;
-    if (typingTimeout) clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(() => {
-      fetch('/api/typing', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenancyId, isTyping: true }),
-      }).catch(() => {});
-    }, 200);
-  });
-
-  form?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const body = input?.value.trim() ?? '';
-    if (!body || !tenancyId) return;
-
-    const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
-    if (submitBtn) submitBtn.disabled = true;
-
-    try {
-      const res = await fetch('/api/send-message', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenancyId, body }),
-      });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || 'Failed to send message');
-
-      if (input) input.value = '';
-      window.location.reload();
-    } catch (err: unknown) {
-      if (submitBtn) submitBtn.disabled = false;
-      const msg = err instanceof Error ? err.message : String(err);
-      window.makaziUi?.showToast('Error', msg);
+    let typingTimeout: any = null;
+    if (input) {
+      input.oninput = () => {
+        if (!tenancyId) return;
+        if (typingTimeout) clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+          fetch('/api/typing', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tenancyId, isTyping: true }),
+          }).catch(() => {});
+        }, 200);
+      };
     }
-  });
+
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const body = input?.value.trim() ?? '';
+      if (!body || !tenancyId) return;
+
+      const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+      if (submitBtn) submitBtn.disabled = true;
+
+      try {
+        const res = await fetch('/api/send-message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tenancyId, body }),
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) throw new Error(data.error || 'Failed to send message');
+
+        if (input) input.value = '';
+        window.location.reload();
+      } catch (err: unknown) {
+        if (submitBtn) submitBtn.disabled = false;
+        const msg = err instanceof Error ? err.message : String(err);
+        window.makaziUi?.showToast('Error', msg);
+      }
+    };
+  }
+
+  document.addEventListener('astro:page-load', initMessagesPage);
 </script>

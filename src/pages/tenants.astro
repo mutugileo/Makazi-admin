@@ -242,55 +242,67 @@ const searchText = (parts: string[]) => parts.join(' ').toLowerCase();
   const ACTIVE = ['bg-[#0D382B]', 'text-white', 'border-[#0D382B]'];
   const IDLE = ['bg-white', 'text-[#0D382B]', 'border-[#E3E6DF]'];
 
-  const params = new URLSearchParams(window.location.search);
-  let tab = params.get('tab') === 'former' ? 'former' : 'active';
-  let property = params.get('property') ?? 'all';
-  let query = '';
+  function initTenantsPage() {
+    const searchInput = document.getElementById('tenant-search') as HTMLInputElement | null;
+    const tabBtns = document.querySelectorAll<HTMLElement>('[data-tab-btn]');
+    if (!searchInput && tabBtns.length === 0) return;
 
-  function setPressed(el: Element, on: boolean, active = ACTIVE, idle = IDLE) {
-    el.classList.remove(...(on ? idle : active));
-    el.classList.add(...(on ? active : idle));
-  }
+    const params = new URLSearchParams(window.location.search);
+    let tab = params.get('tab') === 'former' ? 'former' : 'active';
+    let property = params.get('property') ?? 'all';
+    let query = searchInput ? searchInput.value.trim().toLowerCase() : '';
 
-  function render() {
-    document.querySelectorAll<HTMLElement>('[data-tab-btn]').forEach((btn) => {
-      const on = btn.dataset.tabBtn === tab;
-      btn.setAttribute('aria-selected', String(on));
-      setPressed(btn, on, ['bg-[#0D382B]', 'text-white'], ['text-[#69847A]']);
-    });
-    document.querySelectorAll<HTMLElement>('[data-property-btn]').forEach((btn) => {
-      setPressed(btn, btn.dataset.propertyBtn === property);
-    });
-    document.querySelectorAll<HTMLElement>('[data-tab-panel]').forEach((panel) => {
-      panel.classList.toggle('hidden', panel.dataset.tabPanel !== tab);
-      let visible = 0;
-      panel.querySelectorAll<HTMLElement>('.tenant-row').forEach((row) => {
-        const show =
-          (property === 'all' || row.dataset.property === property) &&
-          (!query || (row.dataset.search ?? '').includes(query));
-        row.classList.toggle('hidden', !show);
-        if (show) visible++;
+    function setPressed(el: Element, on: boolean, active = ACTIVE, idle = IDLE) {
+      el.classList.remove(...(on ? idle : active));
+      el.classList.add(...(on ? active : idle));
+    }
+
+    function render() {
+      document.querySelectorAll<HTMLElement>('[data-tab-btn]').forEach((btn) => {
+        const on = btn.dataset.tabBtn === tab;
+        btn.setAttribute('aria-selected', String(on));
+        setPressed(btn, on, ['bg-[#0D382B]', 'text-white'], ['text-[#69847A]']);
       });
-      panel.querySelector('.empty-state')?.classList.toggle('hidden', visible > 0);
+      document.querySelectorAll<HTMLElement>('[data-property-btn]').forEach((btn) => {
+        setPressed(btn, btn.dataset.propertyBtn === property);
+      });
+      document.querySelectorAll<HTMLElement>('[data-tab-panel]').forEach((panel) => {
+        panel.classList.toggle('hidden', panel.dataset.tabPanel !== tab);
+        let visible = 0;
+        panel.querySelectorAll<HTMLElement>('.tenant-row').forEach((row) => {
+          const show =
+            (property === 'all' || row.dataset.property === property) &&
+            (!query || (row.dataset.search ?? '').includes(query));
+          row.classList.toggle('hidden', !show);
+          if (show) visible++;
+        });
+        panel.querySelector('.empty-state')?.classList.toggle('hidden', visible > 0);
+      });
+    }
+
+    tabBtns.forEach((btn) => {
+      btn.onclick = () => {
+        tab = btn.dataset.tabBtn ?? 'active';
+        render();
+      };
     });
+
+    document.querySelectorAll<HTMLElement>('[data-property-btn]').forEach((btn) => {
+      btn.onclick = () => {
+        property = btn.dataset.propertyBtn ?? 'all';
+        render();
+      };
+    });
+
+    if (searchInput) {
+      searchInput.oninput = (e) => {
+        query = (e.target as HTMLInputElement).value.trim().toLowerCase();
+        render();
+      };
+    }
+
+    render();
   }
 
-  document.querySelectorAll<HTMLElement>('[data-tab-btn]').forEach((btn) =>
-    btn.addEventListener('click', () => {
-      tab = btn.dataset.tabBtn ?? 'active';
-      render();
-    }),
-  );
-  document.querySelectorAll<HTMLElement>('[data-property-btn]').forEach((btn) =>
-    btn.addEventListener('click', () => {
-      property = btn.dataset.propertyBtn ?? 'all';
-      render();
-    }),
-  );
-  document.getElementById('tenant-search')?.addEventListener('input', (e) => {
-    query = (e.target as HTMLInputElement).value.trim().toLowerCase();
-    render();
-  });
-
-  render();
+  document.addEventListener('astro:page-load', initTenantsPage);
 </script>

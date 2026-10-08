@@ -202,94 +202,104 @@ const td = 'py-3 px-3 whitespace-nowrap';
 
 <script>
   type ExportRow = { month: string; property: string; status: string; csv: Record<string, string | number> };
-  const rows: ExportRow[] = JSON.parse(document.getElementById('bill-export-data')?.textContent ?? '[]');
-  const monthSelect = document.getElementById('bill-month') as HTMLSelectElement;
-  const ON = ['bg-[#0D382B]', 'text-white', 'border-[#0D382B]'];
-  const OFF = ['bg-white', 'text-[#0D382B]', 'border-[#E3E6DF]'];
-  const kes = (n: number) => `${n < 0 ? '−' : ''}KES ${Math.abs(n).toLocaleString('en-KE')}`;
 
-  const params = new URLSearchParams(window.location.search);
-  let property = params.get('property') ?? 'all';
-  let status = 'All';
-  const paramMonth = params.get('month');
-  if (paramMonth && Array.from(monthSelect.options).some((o) => o.value === paramMonth)) {
-    monthSelect.value = paramMonth;
-  }
+  function initBillsPage() {
+    const exportScript = document.getElementById('bill-export-data');
+    const monthSelect = document.getElementById('bill-month') as HTMLSelectElement | null;
+    if (!exportScript || !monthSelect) return;
 
-  const matches = (r: { month: string; property: string; status: string }) =>
-    (monthSelect.value === 'all' || r.month === monthSelect.value) &&
-    (property === 'all' || r.property === property) &&
-    (status === 'All' || r.status === status);
+    const rows: ExportRow[] = JSON.parse(exportScript.textContent ?? '[]');
+    const ON = ['bg-[#0D382B]', 'text-white', 'border-[#0D382B]'];
+    const OFF = ['bg-white', 'text-[#0D382B]', 'border-[#E3E6DF]'];
+    const kes = (n: number) => `${n < 0 ? '−' : ''}KES ${Math.abs(n).toLocaleString('en-KE')}`;
 
-  function render() {
-    let shown = 0;
-    document.querySelectorAll<HTMLElement>('.bill-row').forEach((row) => {
-      const show = matches(row.dataset as { month: string; property: string; status: string });
-      row.classList.toggle('hidden', !show);
-      if (show) shown++;
-    });
-    document.getElementById('bills-empty')?.classList.toggle('hidden', shown > 0);
+    const params = new URLSearchParams(window.location.search);
+    let property = params.get('property') ?? 'all';
+    let status = 'All';
+    const paramMonth = params.get('month');
+    if (paramMonth && Array.from(monthSelect.options).some((o) => o.value === paramMonth)) {
+      monthSelect.value = paramMonth;
+    }
 
-    const visible = rows.filter(matches);
-    const sum = (key: string) => visible.reduce((acc, r) => acc + Number(r.csv[key] || 0), 0);
-    const set = (id: string, text: string) => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = text;
-    };
-    set('total-due', kes(sum('TOTAL DUE')));
-    set('total-paid', kes(sum('AMOUNT PAID')));
-    set('total-outstanding', kes(visible.reduce((acc, r) => acc + Math.max(0, Number(r.csv['AMOUNT OUTSTANDING'])), 0)));
-    set('total-count', String(visible.length));
+    const matches = (r: { month: string; property: string; status: string }) =>
+      (monthSelect.value === 'all' || r.month === monthSelect.value) &&
+      (property === 'all' || r.property === property) &&
+      (status === 'All' || r.status === status);
 
+    function render() {
+      let shown = 0;
+      document.querySelectorAll<HTMLElement>('.bill-row').forEach((row) => {
+        const show = matches(row.dataset as { month: string; property: string; status: string });
+        row.classList.toggle('hidden', !show);
+        if (show) shown++;
+      });
+      document.getElementById('bills-empty')?.classList.toggle('hidden', shown > 0);
+
+      const visible = rows.filter(matches);
+      const sum = (key: string) => visible.reduce((acc, r) => acc + Number(r.csv[key] || 0), 0);
+      const set = (id: string, text: string) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text;
+      };
+      set('total-due', kes(sum('TOTAL DUE')));
+      set('total-paid', kes(sum('AMOUNT PAID')));
+      set('total-outstanding', kes(visible.reduce((acc, r) => acc + Math.max(0, Number(r.csv['AMOUNT OUTSTANDING'])), 0)));
+      set('total-count', String(visible.length));
+
+      document.querySelectorAll<HTMLElement>('[data-property-btn]').forEach((b) => {
+        const on = b.dataset.propertyBtn === property;
+        b.classList.remove(...(on ? OFF : ON));
+        b.classList.add(...(on ? ON : OFF));
+      });
+      document.querySelectorAll<HTMLElement>('[data-status-btn]').forEach((b) => {
+        const on = b.dataset.statusBtn === status;
+        b.classList.remove(...(on ? OFF : ON));
+        b.classList.add(...(on ? ON : OFF));
+      });
+    }
+
+    function exportCsv() {
+      const visible = rows.filter(matches);
+      if (!visible.length) return;
+      const headers = Object.keys(visible[0].csv);
+      // Quote every cell; neutralise leading formula characters for Excel.
+      const cell = (v: string | number) => {
+        let s = String(v);
+        if (/^[=+\-@]/.test(s) && typeof v === 'string') s = `'${s}`;
+        return `"${s.replace(/"/g, '""')}"`;
+      };
+      const csv = [headers.map(cell).join(','), ...visible.map((r) => headers.map((h) => cell(r.csv[h])).join(','))].join('\r\n');
+      const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `makazi-bills-${monthSelect.value}${property === 'all' ? '' : `-${property}`}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    monthSelect.onchange = render;
     document.querySelectorAll<HTMLElement>('[data-property-btn]').forEach((b) => {
-      const on = b.dataset.propertyBtn === property;
-      b.classList.remove(...(on ? OFF : ON));
-      b.classList.add(...(on ? ON : OFF));
+      b.onclick = () => {
+        property = b.dataset.propertyBtn ?? 'all';
+        render();
+      };
     });
     document.querySelectorAll<HTMLElement>('[data-status-btn]').forEach((b) => {
-      const on = b.dataset.statusBtn === status;
-      b.classList.remove(...(on ? OFF : ON));
-      b.classList.add(...(on ? ON : OFF));
+      b.onclick = () => {
+        status = b.dataset.statusBtn ?? 'All';
+        render();
+      };
     });
+    const exportBtn = document.getElementById('export-csv-btn');
+    if (exportBtn) exportBtn.onclick = exportCsv;
+    const readingsBtn = document.getElementById('open-readings-btn');
+    if (readingsBtn) readingsBtn.onclick = () => window.makaziUi?.showModal('readings-modal');
+
+    render();
   }
 
-  function exportCsv() {
-    const visible = rows.filter(matches);
-    if (!visible.length) return;
-    const headers = Object.keys(visible[0].csv);
-    // Quote every cell; neutralise leading formula characters for Excel.
-    const cell = (v: string | number) => {
-      let s = String(v);
-      if (/^[=+\-@]/.test(s) && typeof v === 'string') s = `'${s}`;
-      return `"${s.replace(/"/g, '""')}"`;
-    };
-    const csv = [headers.map(cell).join(','), ...visible.map((r) => headers.map((h) => cell(r.csv[h])).join(','))].join('\r\n');
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `makazi-bills-${monthSelect.value}${property === 'all' ? '' : `-${property}`}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  }
-
-  monthSelect.addEventListener('change', render);
-  document.querySelectorAll<HTMLElement>('[data-property-btn]').forEach((b) =>
-    b.addEventListener('click', () => {
-      property = b.dataset.propertyBtn ?? 'all';
-      render();
-    }),
-  );
-  document.querySelectorAll<HTMLElement>('[data-status-btn]').forEach((b) =>
-    b.addEventListener('click', () => {
-      status = b.dataset.statusBtn ?? 'All';
-      render();
-    }),
-  );
-  document.getElementById('export-csv-btn')?.addEventListener('click', exportCsv);
-  document.getElementById('open-readings-btn')?.addEventListener('click', () => window.makaziUi?.showModal('readings-modal'));
-
-  render();
+  document.addEventListener('astro:page-load', initBillsPage);
 </script>
