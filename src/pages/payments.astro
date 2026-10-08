@@ -2,10 +2,15 @@
 import DashboardLayout from '../layouts/DashboardLayout.astro';
 import { getPortfolio, formatKes } from '../data/portfolio';
 import { paymentMethodLabel } from '../lib/billing';
-import { ChevronDown } from '@lucide/astro';
+import { ChevronDown, Plus, X, CreditCard, Check, AlertCircle } from '@lucide/astro';
 
 // This company's data only (the signed-in user's).
-const { payments, portfolioSummary, currentPeriod } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+const { payments, portfolioSummary, currentPeriod, activeTenancies } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+
+// Nairobi date & time defaults
+const nairobiNow = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString();
+const defaultDate = nairobiNow.slice(0, 10);
+const defaultTime = nairobiNow.slice(11, 16);
 ---
 
 <DashboardLayout title="Makazi — Payments & Receipts" currentPath="/payments">
@@ -21,6 +26,16 @@ const { payments, portfolioSummary, currentPeriod } = await getPortfolio(Astro.l
     </div>
 
     <div class="flex items-center gap-3 self-start md:self-auto">
+      <!-- Record Payment Button (Manual Intervention) -->
+      <button 
+        type="button" 
+        id="open-record-payment-btn"
+        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#0D382B] text-white hover:bg-[#08221A] text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+      >
+        <Plus class="w-4 h-4" />
+        <span>Record Payment</span>
+      </button>
+
       <!-- Period Selector -->
       <div class="relative inline-block">
         <button 
@@ -118,6 +133,153 @@ const { payments, portfolioSummary, currentPeriod } = await getPortfolio(Astro.l
       </div>
     )}
   </div>
+
+  <!-- Manual Record Payment Modal -->
+  <div id="record-payment-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-[#E3E6DF] space-y-5 animate-in fade-in zoom-in-95 duration-150">
+      <div class="flex items-center justify-between pb-3 border-b border-[#E3E6DF]">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-[#0D382B] text-[#C6EE58] flex items-center justify-center">
+            <CreditCard class="w-5 h-5" />
+          </div>
+          <div>
+            <h3 class="font-bold text-base text-[#0D382B]">Record Manual Payment</h3>
+            <p class="text-xs text-[#5A6862]">Cash, Cheque, Bank Transfer, or Manual M-Pesa</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          id="close-record-payment-modal-btn"
+          class="p-1.5 text-[#5A6862] hover:text-[#0D382B] rounded-lg transition-colors cursor-pointer"
+        >
+          <X class="w-5 h-5" />
+        </button>
+      </div>
+
+      <form id="record-payment-form" class="space-y-4">
+        <div id="record-payment-error" class="hidden p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-center gap-2">
+          <AlertCircle class="w-4 h-4 shrink-0" />
+          <span id="record-payment-error-msg"></span>
+        </div>
+
+        <div>
+          <label for="record-tenancy-select" class="block text-xs font-semibold text-[#0D382B] mb-1">
+            Tenant & Unit *
+          </label>
+          <select
+            id="record-tenancy-select"
+            required
+            class="w-full px-3 py-2 text-xs rounded-xl border border-[#CCD2C7] focus:outline-none focus:border-[#0D382B] bg-white text-[#0D382B]"
+          >
+            <option value="">Select a tenancy...</option>
+            {activeTenancies.map((t) => (
+              <option value={t.tenancy.id}>
+                {t.tenant.name} · Unit {t.unit.label} ({t.property.name}) [Ref: {t.accountNumber}]
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label for="record-amount-input" class="block text-xs font-semibold text-[#0D382B] mb-1">
+              Amount (KES) *
+            </label>
+            <input
+              type="number"
+              id="record-amount-input"
+              required
+              min="1"
+              step="1"
+              placeholder="e.g. 45000"
+              class="w-full px-3 py-2 text-xs rounded-xl border border-[#CCD2C7] focus:outline-none focus:border-[#0D382B] font-semibold"
+            />
+          </div>
+
+          <div>
+            <label for="record-method-select" class="block text-xs font-semibold text-[#0D382B] mb-1">
+              Payment Method *
+            </label>
+            <select
+              id="record-method-select"
+              required
+              class="w-full px-3 py-2 text-xs rounded-xl border border-[#CCD2C7] focus:outline-none focus:border-[#0D382B] bg-white text-[#0D382B]"
+            >
+              <option value="M-Pesa">M-Pesa</option>
+              <option value="Bank">Bank Transfer / Cheque / Cash</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label for="record-ref-input" class="block text-xs font-semibold text-[#0D382B]">
+              Transaction Reference *
+            </label>
+            <span class="text-[10px] text-[#69847A]">M-Pesa code or Slip/Cheque ref</span>
+          </div>
+          <input
+            type="text"
+            id="record-ref-input"
+            required
+            placeholder="e.g. QJD92881X or EFT-10293 or CASH-OCT"
+            class="w-full px-3 py-2 text-xs rounded-xl border border-[#CCD2C7] focus:outline-none focus:border-[#0D382B] font-mono uppercase"
+          />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label for="record-date-input" class="block text-xs font-semibold text-[#0D382B] mb-1">
+              Date
+            </label>
+            <input
+              type="date"
+              id="record-date-input"
+              value={defaultDate}
+              class="w-full px-3 py-2 text-xs rounded-xl border border-[#CCD2C7] focus:outline-none focus:border-[#0D382B]"
+            />
+          </div>
+
+          <div>
+            <label for="record-time-input" class="block text-xs font-semibold text-[#0D382B] mb-1">
+              Time
+            </label>
+            <input
+              type="time"
+              id="record-time-input"
+              value={defaultTime}
+              class="w-full px-3 py-2 text-xs rounded-xl border border-[#CCD2C7] focus:outline-none focus:border-[#0D382B]"
+            />
+          </div>
+        </div>
+
+        <div class="p-3 rounded-2xl bg-[#F8F9F6] border border-[#E3E6DF] text-[11px] text-[#5A6862] space-y-1">
+          <p class="font-semibold text-[#0D382B]">Immediate Ledger Reconciliation</p>
+          <p>
+            An official receipt (RCT-YYMM-NNNN) will be automatically generated. The tenant ledger will be credited and real-time in-app confirmation dispatched immediately.
+          </p>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button
+            type="button"
+            id="cancel-record-payment-btn"
+            class="px-4 py-2 text-xs font-semibold text-[#5A6862] hover:text-[#0D382B] transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            id="submit-record-payment-btn"
+            class="px-5 py-2.5 text-xs font-bold bg-[#0D382B] text-white hover:bg-[#08221A] rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+          >
+            <Check class="w-3.5 h-3.5" />
+            <span>Record & Issue Receipt</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 </DashboardLayout>
 
 <script>
@@ -125,13 +287,13 @@ const { payments, portfolioSummary, currentPeriod } = await getPortfolio(Astro.l
     const methodBtns = document.querySelectorAll<HTMLElement>('[data-method-btn]');
     const countEl = document.getElementById('payments-count');
     const totalEl = document.getElementById('payments-total');
-    if (!countEl || !totalEl) return;
 
     const ON = ['bg-[#0D382B]', 'text-white', 'border-[#0D382B]'];
     const OFF = ['bg-white', 'text-[#0D382B]', 'border-[#E3E6DF]'];
     let method = 'All';
 
     function render() {
+      if (!countEl || !totalEl) return;
       let count = 0;
       let total = 0;
       document.querySelectorAll<HTMLElement>('.payment-tx').forEach((row) => {
@@ -142,8 +304,8 @@ const { payments, portfolioSummary, currentPeriod } = await getPortfolio(Astro.l
           total += Number(row.dataset.amount);
         }
       });
-      countEl!.textContent = String(count);
-      totalEl!.textContent = `KES ${total.toLocaleString('en-KE')}`;
+      countEl.textContent = String(count);
+      totalEl.textContent = `KES ${total.toLocaleString('en-KE')}`;
       methodBtns.forEach((b) => {
         const on = b.dataset.methodBtn === method;
         b.classList.remove(...(on ? OFF : ON));
@@ -159,6 +321,90 @@ const { payments, portfolioSummary, currentPeriod } = await getPortfolio(Astro.l
     });
 
     render();
+
+    // Record Payment Modal logic
+    const openRecordBtn = document.getElementById('open-record-payment-btn');
+    const recordModal = document.getElementById('record-payment-modal');
+    const closeRecordBtn = document.getElementById('close-record-payment-modal-btn');
+    const cancelRecordBtn = document.getElementById('cancel-record-payment-btn');
+    const recordForm = document.getElementById('record-payment-form') as HTMLFormElement | null;
+    const submitRecordBtn = document.getElementById('submit-record-payment-btn') as HTMLButtonElement | null;
+    const errorBox = document.getElementById('record-payment-error');
+    const errorMsg = document.getElementById('record-payment-error-msg');
+
+    function openRecordModal() {
+      if (recordModal) {
+        recordModal.classList.remove('hidden');
+        if (errorBox) errorBox.classList.add('hidden');
+      }
+    }
+
+    function closeRecordModal() {
+      if (recordModal) recordModal.classList.add('hidden');
+    }
+
+    if (openRecordBtn) openRecordBtn.onclick = openRecordModal;
+    if (closeRecordBtn) closeRecordBtn.onclick = closeRecordModal;
+    if (cancelRecordBtn) cancelRecordBtn.onclick = closeRecordModal;
+
+    if (recordForm) {
+      recordForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const tenancyId = (document.getElementById('record-tenancy-select') as HTMLSelectElement).value;
+        const amount = Number((document.getElementById('record-amount-input') as HTMLInputElement).value);
+        const methodVal = (document.getElementById('record-method-select') as HTMLSelectElement).value;
+        const reference = (document.getElementById('record-ref-input') as HTMLInputElement).value.trim();
+        const date = (document.getElementById('record-date-input') as HTMLInputElement).value;
+        const time = (document.getElementById('record-time-input') as HTMLInputElement).value;
+
+        if (!tenancyId || !amount || !reference) {
+          if (errorBox && errorMsg) {
+            errorMsg.textContent = 'Please select a tenancy and enter both amount and reference.';
+            errorBox.classList.remove('hidden');
+          }
+          return;
+        }
+
+        if (submitRecordBtn) {
+          submitRecordBtn.disabled = true;
+          submitRecordBtn.textContent = 'Recording...';
+        }
+
+        try {
+          const res = await fetch('/api/record-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tenancyId,
+              amount,
+              method: methodVal,
+              reference,
+              date,
+              time,
+            }),
+          });
+
+          const data = await res.json();
+          if (!res.ok || data.error) {
+            throw new Error(data.error || 'Failed to record payment');
+          }
+
+          // Success! Show toast and reload page to reflect new ledger state
+          closeRecordModal();
+          window.location.reload();
+        } catch (err: unknown) {
+          if (errorBox && errorMsg) {
+            errorMsg.textContent = err instanceof Error ? err.message : 'Error recording payment';
+            errorBox.classList.remove('hidden');
+          }
+        } finally {
+          if (submitRecordBtn) {
+            submitRecordBtn.disabled = false;
+            submitRecordBtn.innerHTML = '<span>Record & Issue Receipt</span>';
+          }
+        }
+      };
+    }
   }
 
   document.addEventListener('astro:page-load', initPaymentsPage);
