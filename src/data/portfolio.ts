@@ -723,11 +723,15 @@ async function getCurrentPortfolio(
       liveInflight.set(companyId, fetchPromise);
       return fetchPromise;
     }
+
+    throw new Error(`Database connection unavailable for company ${companyId}. Demo data fallback is disabled.`);
   }
 
-  // Phase 1 (no Supabase in .env): the JSON demo seed, cached per company.
-  // Never used once Supabase is configured: a failed fetch is an error page,
-  // not someone else's demo numbers.
+  // Standalone offline demo development only (no Supabase in .env).
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(`Database is required in production. No dummy or demo data allowed.`);
+  }
+
   if (!demoWarned) {
     demoWarned = true;
     console.warn('[Makazi] Supabase is not configured: showing DEMO data from shared/billing-seed.json.');
