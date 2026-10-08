@@ -102,6 +102,32 @@ body {
   animation: bar-grow-y 900ms cubic-bezier(0.22, 1, 0.36, 1) var(--bar-delay, 0ms) both;
 }
 
+/* Reports: lines draw left to right, dots and labels fade up after. Same
+   .bars-ready gate as the bars, so reduced motion shows them at rest. */
+.line-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+@keyframes line-draw {
+  from { stroke-dashoffset: 1; }
+}
+@keyframes chart-fade {
+  /* transform composes with Tailwind's translate-* (the separate translate property). */
+  from { opacity: 0; transform: translateY(4px); }
+}
+.bars-ready [data-animate-bars]:not(.in-view) .line-draw {
+  stroke-dashoffset: 1;
+}
+.bars-ready [data-animate-bars]:not(.in-view) .chart-fade {
+  opacity: 0;
+}
+.bars-ready [data-animate-bars].in-view .line-draw {
+  animation: line-draw 1300ms cubic-bezier(0.65, 0, 0.35, 1) 150ms both;
+}
+.bars-ready [data-animate-bars].in-view .chart-fade {
+  animation: chart-fade 500ms ease-out var(--fade-delay, 900ms) both;
+}
+
 /* Seamless view transitions */
 ::view-transition-old(root),
 ::view-transition-new(root) {
@@ -126,6 +152,13 @@ body {
   transition: width 240ms cubic-bezier(0.16, 1, 0.3, 1), transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
   background: radial-gradient(130% 40% at 50% 0%, rgba(198, 238, 88, 0.08) 0%, rgba(10, 38, 31, 0) 100%),
               linear-gradient(180deg, #0C2E25 0%, #0A261F 35%, #061A14 100%);
+}
+
+/* The label copy that floats beside an icon only exists for the collapsed
+   sidebar (shown on hover below). Everywhere else, including the expanded
+   sidebar and the mobile drawer, it stays hidden. */
+.sidebar-item-tooltip {
+  display: none;
 }
 
 #dashboard-main-canvas {
@@ -168,8 +201,11 @@ body {
     padding-right: 0 !important;
   }
 
+  /* Too narrow for the emblem and the expand button side by side: stack them. */
   html.sidebar-is-collapsed .sidebar-brand-wrapper {
+    flex-direction: column;
     justify-content: center !important;
+    gap: 0.75rem;
     padding-left: 0 !important;
     padding-right: 0 !important;
   }

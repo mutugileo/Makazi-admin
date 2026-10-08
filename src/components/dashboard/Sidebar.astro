@@ -45,7 +45,7 @@ const navItems = [
   { name: 'Monthly bills', href: '/bills', icon: ReceiptText, active: currentPath === '/bills' },
   { name: 'Payments & receipts', href: '/payments', icon: CreditCard, active: currentPath === '/payments' },
   { name: 'Arrears', href: '/arrears', icon: AlertTriangle, active: currentPath === '/arrears', badge: stats.tenantsOverdueCount ? stats.tenantsOverdueCount.toString() : undefined, badgeType: 'alert' },
-  { name: 'Maintenance', href: '/maintenance', icon: Wrench, active: currentPath === '/maintenance', badge: openRepairsCount.toString(), badgeType: 'neutral' },
+  { name: 'Maintenance', href: '/maintenance', icon: Wrench, active: currentPath === '/maintenance', badge: openRepairsCount ? openRepairsCount.toString() : undefined, badgeType: 'neutral' },
   { name: 'Messages', href: '/messages', icon: MessageSquare, active: currentPath === '/messages', badge: unreadThreadCount ? unreadThreadCount.toString() : undefined, badgeType: 'neutral' },
   { name: 'Reports', href: '/reports', icon: BarChart2, active: currentPath === '/reports' },
   { name: 'Settings', href: '/settings', icon: Settings, active: currentPath === '/settings' },

@@ -1,0 +1,60 @@
+---
+// Horizontal bars, one per row: label and value on a line, the bar beneath
+// growing from the left (global.css .bar-x). Value text never sits inside a
+// bar, so nothing is clipped. Each row is a hover/focus target.
+
+interface Row {
+  label: string;
+  /** Secondary text after the label, e.g. "12 units". */
+  sub?: string;
+  value: number;
+  valueLabel: string;
+  color: string;
+  tip: string;
+  ariaLabel: string;
+}
+
+interface Props {
+  rows: Row[];
+  /** Bar length is value / max. Defaults to the largest value. */
+  max?: number;
+  empty?: string;
+}
+
+const { rows, max, empty = 'Nothing to show yet.' } = Astro.props;
+const top = Math.max(1, max ?? Math.max(0, ...rows.map((r) => r.value)));
+---
+
+<div data-animate-bars class="report-chart">
+  {rows.length === 0 ? (
+    <p class="py-8 text-center text-xs text-[#73827C]">{empty}</p>
+  ) : (
+    <ul class="space-y-3.5">
+      {rows.map((r, i) => (
+        <li
+          class="chart-hit group rounded-lg -mx-2 px-2 py-1 outline-none hover:bg-[#0D382B]/[0.03] focus-visible:bg-[#0D382B]/[0.03] focus-visible:ring-2 focus-visible:ring-[#0D382B]/40"
+          tabindex="0"
+          role="img"
+          aria-label={r.ariaLabel}
+          data-tip={r.tip}
+        >
+          <div class="flex items-baseline justify-between gap-3 text-xs mb-1.5">
+            <span class="min-w-0 truncate font-semibold text-[#17231E]">
+              {r.label}
+              {r.sub && <span class="font-normal text-[#73827C]"> · {r.sub}</span>}
+            </span>
+            <span class="font-semibold text-[#17231E] tabular-nums whitespace-nowrap">{r.valueLabel}</span>
+          </div>
+          <div class="h-2.5 w-full rounded-r-[4px] bg-[#F1F3EF]">
+            {r.value > 0 && (
+              <div
+                class="bar-x h-full rounded-r-[4px] transition-[filter] duration-150 group-hover:brightness-110"
+                style={`width:${Math.max(1.5, (r.value / top) * 100)}%;background:${r.color};--bar-delay:${i * 60}ms`}
+              ></div>
+            )}
+          </div>
+        </li>
+      ))}
+    </ul>
+  )}
+</div>

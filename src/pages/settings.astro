@@ -74,6 +74,17 @@ const fixed = 'text-sm font-semibold text-[#0D382B] mt-0.5';
             <input id="s-account" name="bankAccount" class={`${input} tabular-nums`} value={company.bankAccount} inputmode="numeric" maxlength="24" required />
             <p class={hint}>Shown for bank transfers in the app.</p>
           </div>
+          <label for="s-mpesa-test" class="sm:col-span-2 flex items-start gap-3 rounded-2xl border border-[#FFE082] bg-[#FFF8E1]/60 p-3.5 cursor-pointer">
+            <input id="s-mpesa-test" name="mpesaSimulation" type="checkbox" checked={settings.mpesaSimulation === true} class="mt-0.5 h-4 w-4 accent-[#0D382B] cursor-pointer" />
+            <span>
+              <span class="block text-sm font-semibold text-[#0D382B]">M-Pesa test mode</span>
+              <span class="block text-[11px] text-[#5A6862] mt-0.5 leading-relaxed">
+                Tenants' Pay now runs a simulated M-Pesa request and records a <strong>test payment</strong>
+                that counts towards their balance, labelled "Test" everywhere. No money moves.
+                Turn it off before tenants pay for real; real STK push needs M-Pesa Daraja.
+              </span>
+            </span>
+          </label>
         </div>
       </section>
 
@@ -165,6 +176,7 @@ const fixed = 'text-sm font-semibold text-[#0D382B] mt-0.5';
             dueDay: value('dueDay'),
             graceDay: value('graceDay'),
             recordRetentionMonths: value('recordRetentionMonths'),
+            mpesaSimulation: (form.elements.namedItem('mpesaSimulation') as HTMLInputElement | null)?.checked ?? false,
             depositSchedule,
           }),
         });

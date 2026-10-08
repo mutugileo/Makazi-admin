@@ -1,6 +1,7 @@
 ---
 import DashboardLayout from '../layouts/DashboardLayout.astro';
 import { getPortfolio, formatKes } from '../data/portfolio';
+import { paymentMethodLabel } from '../lib/billing';
 import { ChevronDown } from '@lucide/astro';
 
 // This company's data only (the signed-in user's).
@@ -83,6 +84,9 @@ const { payments, portfolioSummary, currentPeriod } = await getPortfolio(Astro.l
                 </td>
                 <td class="py-4 px-4 whitespace-nowrap">
                   <span class="font-semibold text-[#0D382B]">{payment.method}</span>
+                  {payment.simulated && (
+                    <span class="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#FFF8E1] text-[#B78103] border border-[#FFE082]" title="M-Pesa test mode: no money moved">Test</span>
+                  )}
                   <span class="ml-1 text-[#69847A] font-mono text-[11px]">{payment.reference}</span>
                 </td>
                 <td class="py-4 px-4 text-[#69847A]">{forDescription}</td>
@@ -97,7 +101,7 @@ const { payments, portfolioSummary, currentPeriod } = await getPortfolio(Astro.l
                     data-tenant={view.tenant.name}
                     data-unit={view.unit.label}
                     data-property={view.property.name}
-                    data-method={payment.method}
+                    data-method={paymentMethodLabel(payment)}
                     data-amount={payment.amount}
                     data-date={dateLabel}
                     data-time={payment.time}

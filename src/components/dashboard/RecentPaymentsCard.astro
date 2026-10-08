@@ -1,5 +1,6 @@
 ---
 import { getPortfolio, viewMonthFrom, formatKes } from '../../data/portfolio';
+import { paymentMethodLabel } from '../../lib/billing';
 
 // This company's data only (the signed-in user's).
 const { payments } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies, viewMonthFrom(Astro.url));
@@ -34,7 +35,7 @@ const recentPayments = payments.slice(0, 5);
         data-tenant={view.tenant.name}
         data-unit={view.unit.label}
         data-property={view.property.name}
-        data-method={payment.method}
+        data-method={paymentMethodLabel(payment)}
         data-amount={payment.amount}
         data-date={dateLabel}
         data-time={payment.time}
@@ -46,7 +47,7 @@ const recentPayments = payments.slice(0, 5);
             {view.tenant.name}
           </h4>
           <p class="text-xs text-[#73827C] mt-0.5 truncate">
-            {view.unit.label} · {view.property.name} · {payment.method} · {dateLabel}
+            {view.unit.label} · {view.property.name} · {paymentMethodLabel(payment)} · {dateLabel}
           </p>
         </div>
         <div class="text-right flex-shrink-0">

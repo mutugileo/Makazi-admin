@@ -1,0 +1,132 @@
+---
+// Columns over months: one series, stacked series (2px surface gap between
+// segments), or a "billed" ghost behind "collected". Bars grow from the
+// baseline when scrolled into view (global.css .bar-y). Every column is a
+// hover/focus target carrying a tooltip; the table view sits under the chart.
+import { CHART, compactKes, niceScale } from '../../lib/chart';
+
+interface Segment {
+  name: string;
+  value: number;
+  color: string;
+}
+
+interface Column {
+  label: string;
+  segments: Segment[];
+  /** Drawn behind the segments, e.g. what was billed. */
+  ghost?: number;
+  tip: string;
+  ariaLabel: string;
+}
+
+interface LegendItem {
+  name: string;
+  color: string;
+}
+
+interface Props {
+  columns: Column[];
+  format: 'kes' | 'count';
+  legend?: LegendItem[];
+  /** A hairline across the plot, e.g. total units. */
+  reference?: { value: number; label: string };
+  /** Shown above the last column (the one value the story is about). */
+  endLabel?: string;
+  height?: number;
+}
+
+const { columns, format, legend, reference, endLabel, height = 200 } = Astro.props;
+const stackTotal = (c: Column) => c.segments.reduce((acc, s) => acc + s.value, 0);
+const peak = Math.max(0, ...columns.map((c) => Math.max(stackTotal(c), c.ghost ?? 0)), reference?.value ?? 0);
+const scale = niceScale(format === 'count' && peak > 0 ? Math.max(peak, 4) : peak);
+const pct = (v: number) => (v / scale.max) * 100;
+const tick = (v: number) => (format === 'kes' ? compactKes(v) : Math.round(v).toLocaleString('en-KE'));
+// Thin out x labels when there are many months.
+const labelEvery = columns.length > 12 ? Math.ceil(columns.length / 12) : 1;
+---
+
+<div data-animate-bars class="report-chart">
+  {legend && legend.length > 1 && (
+    <ul class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-4 text-xs text-[#5A6862]">
+      {legend.map((item) => (
+        <li class="inline-flex items-center gap-1.5">
+          <span class="h-2.5 w-2.5 rounded-[3px]" style={`background:${item.color}`}></span>
+          {item.name}
+        </li>
+      ))}
+    </ul>
+  )}
+  <div class="flex">
+    <div class="relative w-14 shrink-0" style={`height:${height}px`} aria-hidden="true">
+      {scale.ticks.map((t) => (
+        <span class="absolute right-2 translate-y-1/2 text-[10px] text-[#73827C] tabular-nums whitespace-nowrap" style={`bottom:${pct(t)}%`}>
+          {tick(t)}
+        </span>
+      ))}
+    </div>
+    <div class="flex-1 min-w-0">
+      <div class="relative" style={`height:${height}px`}>
+        {scale.ticks.map((t) => (
+          <div class="absolute inset-x-0 h-px" style={`bottom:${pct(t)}%;background:${t === 0 ? CHART.axis : CHART.grid}`} aria-hidden="true"></div>
+        ))}
+        {reference && (
+          <div class="absolute inset-x-0 h-px bg-[#73827C]/60 z-[1]" style={`bottom:${pct(reference.value)}%`} aria-hidden="true">
+            <span class="absolute right-0 -top-4 text-[10px] font-semibold text-[#5A6862] bg-white/80 px-1 rounded">{reference.label}</span>
+          </div>
+        )}
+        <div class="absolute inset-0 flex items-end">
+          {columns.map((c, i) => {
+            const total = stackTotal(c);
+            const shown = c.segments.filter((s) => s.value > 0);
+            const isLast = i === columns.length - 1;
+            return (
+              <div
+                class="chart-hit group relative flex-1 h-full flex items-end justify-center rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-[#0D382B]/40 hover:bg-[#0D382B]/[0.03] focus-visible:bg-[#0D382B]/[0.03]"
+                tabindex="0"
+                role="img"
+                aria-label={c.ariaLabel}
+                data-tip={c.tip}
+              >
+                {c.ghost !== undefined && c.ghost > 0 && (
+                  <div
+                    class="bar-y absolute bottom-0 left-1/2 -translate-x-1/2 w-[min(24px,62%)] rounded-t-[4px]"
+                    style={`height:${pct(c.ghost)}%;background:${CHART.ghost};--bar-delay:${i * 35}ms`}
+                  ></div>
+                )}
+                {total > 0 && (
+                  <div
+                    class="bar-y relative w-[min(24px,62%)] flex flex-col-reverse gap-[2px] transition-[filter] duration-150 group-hover:brightness-110 group-focus-visible:brightness-110"
+                    style={`height:${pct(total)}%;--bar-delay:${120 + i * 35}ms`}
+                  >
+                    {shown.map((s, j) => (
+                      <div
+                        class={`min-h-0 ${j === shown.length - 1 ? 'rounded-t-[4px]' : ''}`}
+                        style={`flex:${s.value} 1 0;background:${s.color}`}
+                      ></div>
+                    ))}
+                  </div>
+                )}
+                {isLast && endLabel && (
+                  <span
+                    class="absolute left-1/2 -translate-x-1/2 text-[11px] font-semibold text-[#17231E] whitespace-nowrap pointer-events-none"
+                    style={`bottom:calc(${pct(Math.max(total, c.ghost ?? 0))}% + 6px)`}
+                  >
+                    {endLabel}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div class="flex mt-2" aria-hidden="true">
+        {columns.map((c, i) => (
+          <span class="flex-1 text-center text-[10px] sm:text-[11px] text-[#73827C] whitespace-nowrap">
+            {i % labelEvery === 0 || i === columns.length - 1 ? c.label : ''}
+          </span>
+        ))}
+      </div>
+    </div>
+  </div>
+</div>

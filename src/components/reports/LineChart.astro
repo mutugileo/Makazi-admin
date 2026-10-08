@@ -1,0 +1,102 @@
+---
+// A percentage over months: a 2px line with a 10% wash beneath, drawn left to
+// right when scrolled into view. A hairline crosshair snaps to the month under
+// the pointer (or the focused month) and the tooltip reads it out. The last
+// value is labelled at the end of the line.
+import { CHART } from '../../lib/chart';
+
+interface Point {
+  label: string;
+  value: number;
+  tip: string;
+  ariaLabel: string;
+}
+
+interface Props {
+  points: Point[];
+  color?: string;
+  height?: number;
+}
+
+const { points, color = CHART.series1, height = 180 } = Astro.props;
+const W = 1000;
+const n = points.length;
+const x = (i: number) => ((i + 0.5) / n) * W;
+const y = (v: number) => height - (Math.max(0, Math.min(100, v)) / 100) * height;
+const line = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ');
+const area = n ? `${line} L${x(n - 1).toFixed(1)},${height} L${x(0).toFixed(1)},${height} Z` : '';
+const ticks = [0, 25, 50, 75, 100];
+const last = points[n - 1];
+// Put the end label on the side the line isn't coming from: below the last
+// dot when the line falls into it, above when it rises (or is flat).
+const falling = n > 1 && last.value < points[n - 2].value;
+const labelEvery = n > 12 ? Math.ceil(n / 12) : 1;
+---
+
+<div data-animate-bars class="report-chart">
+  <div class="flex">
+    <div class="relative w-14 shrink-0" style={`height:${height}px`} aria-hidden="true">
+      {ticks.map((t) => (
+        <span class="absolute right-2 translate-y-1/2 text-[10px] text-[#73827C] tabular-nums" style={`bottom:${t}%`}>{t}%</span>
+      ))}
+    </div>
+    <div class="flex-1 min-w-0">
+      <div class="relative" style={`height:${height}px`}>
+        {ticks.map((t) => (
+          <div class="absolute inset-x-0 h-px" style={`bottom:${t}%;background:${t === 0 ? CHART.axis : CHART.grid}`} aria-hidden="true"></div>
+        ))}
+        <svg class="absolute inset-0 w-full h-full overflow-visible" viewBox={`0 0 ${W} ${height}`} preserveAspectRatio="none" aria-hidden="true">
+          {n > 1 && <path class="chart-fade" d={area} fill={color} fill-opacity="0.1" />}
+          {n > 1 && (
+            <path
+              class="line-draw"
+              d={line}
+              pathLength="1"
+              fill="none"
+              stroke={color}
+              stroke-width="2"
+              stroke-linejoin="round"
+              stroke-linecap="round"
+              vector-effect="non-scaling-stroke"
+            />
+          )}
+        </svg>
+        {points.map((p, i) => (
+          <span
+            class="chart-fade absolute h-2.5 w-2.5 -translate-x-1/2 translate-y-1/2 rounded-full ring-2 ring-white pointer-events-none"
+            style={`left:${((i + 0.5) / n) * 100}%;bottom:${Math.max(0, Math.min(100, p.value))}%;background:${color};--fade-delay:${700 + i * 30}ms`}
+            aria-hidden="true"
+          ></span>
+        ))}
+        {last && (
+          <span
+            class={`chart-fade absolute -translate-x-full pr-2 text-[11px] font-semibold text-[#17231E] whitespace-nowrap pointer-events-none ${falling ? 'translate-y-full pt-1.5' : '-translate-y-full pb-1.5'}`}
+            style={`left:${((n - 0.5) / n) * 100}%;bottom:${Math.max(0, Math.min(100, last.value))}%;--fade-delay:1100ms`}
+          >
+            {last.value}%
+          </span>
+        )}
+        <div class="absolute inset-0 flex">
+          {points.map((p) => (
+            <div
+              class="chart-hit group relative flex-1 h-full outline-none focus-visible:bg-[#0D382B]/[0.03]"
+              tabindex="0"
+              role="img"
+              aria-label={p.ariaLabel}
+              data-tip={p.tip}
+            >
+              <span class="absolute inset-y-0 left-1/2 w-px bg-[#5A6862]/50 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity" aria-hidden="true"></span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div class="flex mt-2" aria-hidden="true">
+        {points.map((p, i) => (
+          <span class="flex-1 text-center text-[10px] sm:text-[11px] text-[#73827C] whitespace-nowrap">
+            {i % labelEvery === 0 || i === n - 1 ? p.label : ''}
+          </span>
+        ))}
+      </div>
+    </div>
+  </div>
+</div>

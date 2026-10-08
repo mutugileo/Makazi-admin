@@ -1,99 +1,395 @@
 ---
 import DashboardLayout from '../layouts/DashboardLayout.astro';
-import { dashboardData } from '../data/dashboardData';
-import { getPortfolio } from '../data/portfolio';
-import { ChevronDown, Download, FileSpreadsheet } from '@lucide/astro';
+import ColumnChart from '../components/reports/ColumnChart.astro';
+import LineChart from '../components/reports/LineChart.astro';
+import BarList from '../components/reports/BarList.astro';
+import { formatKes, getPortfolio } from '../data/portfolio';
+import { buildReports, REPORT_RANGES, reportRangeFrom } from '../data/reports';
+import { CHART, compactKes, tip } from '../lib/chart';
+import { Download, FileSpreadsheet } from '@lucide/astro';
 
 // This company's data only (the signed-in user's).
-const { portfolioSummary, currentPeriod } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+const portfolio = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+const range = reportRangeFrom(Astro.url);
+const r = buildReports(portfolio, range);
+const { portfolioSummary } = portfolio;
+const hasBills = r.totals.billed > 0;
 
-const { reportsList } = dashboardData;
+const card = 'bg-white rounded-3xl border border-[#E3E6DF] p-6 sm:p-7 shadow-xs';
+const h2 = 'font-editorial text-2xl text-[#0D382B] leading-tight';
+const sub = 'text-xs text-[#73827C] mt-1';
+const summaryCls = 'mt-5 text-xs font-semibold text-[#0D382B] cursor-pointer select-none hover:underline';
+const th = 'py-2 pr-4 text-left font-semibold text-[#5A6862]';
+const td = 'py-2 pr-4 tabular-nums text-[#17231E]';
+
+const collectedColumns = r.monthly.map((m) => ({
+  label: m.short,
+  ghost: m.billed,
+  segments: [{ name: 'Collected', value: m.collected, color: CHART.series1 }],
+  tip: tip(m.label, [
+    { label: 'Collected', value: formatKes(m.collected), color: CHART.series1 },
+    { label: 'Billed', value: formatKes(m.billed), color: CHART.ghost },
+    { label: 'Collection rate', value: `${m.rate}%` },
+  ]),
+  ariaLabel: `${m.label}: collected ${formatKes(m.collected)} of ${formatKes(m.billed)} billed, ${m.rate}%`,
+}));
+
+const methodColumns = r.monthly.map((m) => ({
+  label: m.short,
+  segments: [
+    { name: 'M-Pesa', value: m.mpesa, color: CHART.series1 },
+    { name: 'Bank', value: m.bank, color: CHART.series2 },
+  ],
+  tip: tip(m.label, [
+    { label: 'M-Pesa', value: formatKes(m.mpesa), color: CHART.series1 },
+    { label: 'Bank', value: formatKes(m.bank), color: CHART.series2 },
+  ]),
+  ariaLabel: `${m.label}: M-Pesa ${formatKes(m.mpesa)}, bank ${formatKes(m.bank)}`,
+}));
+
+const ratePoints = r.monthly.map((m) => ({
+  label: m.short,
+  value: m.rate,
+  tip: tip(m.label, [
+    { label: 'Collection rate', value: `${m.rate}%`, color: CHART.series1 },
+    { label: 'Collected', value: formatKes(m.collected) },
+    { label: 'Billed', value: formatKes(m.billed) },
+  ]),
+  ariaLabel: `${m.label}: ${m.rate}% collected`,
+}));
+
+const occupancyColumns = r.monthly.map((m) => ({
+  label: m.short,
+  segments: [{ name: 'Occupied', value: m.occupied, color: CHART.series1 }],
+  tip: tip(m.label, [
+    { label: 'Occupied', value: `${m.occupied} of ${r.occupancy.total} units`, color: CHART.series1 },
+    { label: 'Occupancy', value: `${m.occupancyRate}%` },
+    { label: 'Moved in', value: String(m.moveIns) },
+    { label: 'Moved out', value: String(m.moveOuts) },
+  ]),
+  ariaLabel: `${m.label}: ${m.occupied} of ${r.occupancy.total} units occupied, ${m.moveIns} moved in, ${m.moveOuts} moved out`,
+}));
+
+const propertyRows = r.byProperty.map((p) => ({
+  label: p.name,
+  sub: `${p.occupied}/${p.units} units let`,
+  value: p.rate,
+  valueLabel: p.billed ? `${p.rate}%` : 'No bills',
+  color: CHART.series1,
+  tip: tip(p.name, [
+    { label: 'Collection rate', value: `${p.rate}%`, color: CHART.series1 },
+    { label: 'Collected', value: formatKes(p.collected) },
+    { label: 'Billed', value: formatKes(p.billed) },
+  ]),
+  ariaLabel: `${p.name}: ${p.rate}% collected, ${formatKes(p.collected)} of ${formatKes(p.billed)}`,
+}));
+
+const ageingRows = r.ageing.map((b, i) => ({
+  label: b.label,
+  value: b.amount,
+  valueLabel: formatKes(b.amount),
+  color: CHART.ageing[i] ?? CHART.ageing[CHART.ageing.length - 1],
+  tip: tip(b.label, [{ label: 'Owed', value: formatKes(b.amount), color: CHART.ageing[i] }]),
+  ariaLabel: `${b.label}: ${formatKes(b.amount)}`,
+}));
+
+const repairRows = r.repairs.byCategory
+  .filter((c) => c.count > 0)
+  .map((c) => ({
+    label: c.label,
+    value: c.count,
+    valueLabel: `${c.count} ${c.count === 1 ? 'request' : 'requests'}`,
+    color: CHART.series1,
+    tip: tip(c.label, [{ label: 'Requests', value: String(c.count), color: CHART.series1 }]),
+    ariaLabel: `${c.label}: ${c.count} requests`,
+  }));
+
+const last = r.monthly[r.monthly.length - 1];
+const downloads = [
+  { kind: 'rent-roll', title: 'Rent roll', description: 'Every unit with its tenant, rent, deposit, move-in date and balance.' },
+  { kind: 'collections', title: 'Collections by month', description: 'Billed, collected and collection rate, split by M-Pesa and bank.' },
+  { kind: 'by-property', title: 'Collections by property', description: 'Billed and collected per building for the range.' },
+  { kind: 'arrears', title: 'Arrears', description: 'Everyone who owes today, with days overdue.' },
+  { kind: 'occupancy', title: 'Occupancy & moves', description: 'Occupied units, move-ins and move-outs per month.' },
+  { kind: 'maintenance', title: 'Maintenance log', description: 'Repair requests, who fixed them and days to fix.' },
+];
+const rangeQuery = range === '12' ? '' : `?range=${range}`;
 ---
 
 <DashboardLayout title="Makazi — Reports" currentPath="/reports">
-  <!-- Header & Actions -->
-  <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
     <div>
-      <span class="text-xs font-semibold tracking-wider text-[#69847A] uppercase">
-        {portfolioSummary}
-      </span>
-      <h1 class="text-3xl sm:text-4xl font-normal font-editorial text-[#0D382B] tracking-tight mt-1">
-        Reports
-      </h1>
+      <span class="text-xs font-semibold tracking-wider text-[#69847A] uppercase">{portfolioSummary}</span>
+      <h1 class="text-3xl sm:text-4xl font-normal font-editorial text-[#0D382B] tracking-tight mt-1">Reports</h1>
+      <p class="text-xs text-[#69847A] mt-1">{r.rangeLabel}</p>
     </div>
-
-    <div class="flex items-center gap-3 self-start md:self-auto">
-      <!-- Period Selector -->
-      <div class="relative inline-block">
-        <button 
-          type="button" 
-          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white border border-[#E3E6DF] text-xs font-semibold text-[#0D382B] shadow-xs hover:border-[#0D382B] transition-colors cursor-pointer"
+    <!-- One range for everything on the page, downloads included. -->
+    <nav class="inline-flex self-start md:self-auto rounded-full bg-white border border-[#E3E6DF] p-1 shadow-xs" aria-label="Report range">
+      {REPORT_RANGES.map((opt) => (
+        <a
+          href={opt.value === '12' ? '/reports' : `/reports?range=${opt.value}`}
+          aria-current={opt.value === range ? 'page' : undefined}
+          class={`px-4 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+            opt.value === range ? 'bg-[#0D382B] text-white' : 'text-[#5A6862] hover:text-[#0D382B]'
+          }`}
         >
-          <span>{currentPeriod}</span>
-          <ChevronDown class="w-4 h-4 text-[#69847A]" />
-        </button>
-      </div>
+          {opt.label}
+        </a>
+      ))}
+    </nav>
+  </div>
+
+  <!-- Headline figures -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class={card}>
+      <p class="text-xs text-[#73827C]">Collected</p>
+      <p class="text-xl sm:text-2xl xl:text-3xl font-semibold text-[#0D382B] mt-1 whitespace-nowrap">{compactKes(r.totals.collected)}</p>
+      <p class={sub}>of {compactKes(r.totals.billed)} billed</p>
+    </div>
+    <div class={card}>
+      <p class="text-xs text-[#73827C]">Collection rate</p>
+      <p class="text-xl sm:text-2xl xl:text-3xl font-semibold text-[#0D382B] mt-1 whitespace-nowrap">{hasBills ? `${r.totals.rate}%` : '—'}</p>
+      <p class={sub}>{last ? `${last.rate}% in ${last.label.split(' ')[0]}` : ''}</p>
+    </div>
+    <div class={card}>
+      <p class="text-xs text-[#73827C]">Outstanding today</p>
+      <p class="text-xl sm:text-2xl xl:text-3xl font-semibold text-[#0D382B] mt-1 whitespace-nowrap">{compactKes(r.outstanding)}</p>
+      <p class={sub}>{r.tenantsOwing} {r.tenantsOwing === 1 ? 'tenant' : 'tenants'} owing</p>
+    </div>
+    <div class={card}>
+      <p class="text-xs text-[#73827C]">Occupancy today</p>
+      <p class="text-xl sm:text-2xl xl:text-3xl font-semibold text-[#0D382B] mt-1 whitespace-nowrap">{r.occupancy.total ? `${r.occupancy.rate}%` : '—'}</p>
+      <p class={sub}>{r.occupancy.occupied} of {r.occupancy.total} units let</p>
     </div>
   </div>
 
-  <!-- Reports Grid -->
-  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-    {reportsList.map((report) => (
-      <div class="bg-white rounded-3xl border border-[#E3E6DF] p-6 sm:p-7 flex flex-col justify-between shadow-xs hover:border-[#69847A]/50 transition-colors">
-        <div>
-          <h2 class="text-base font-semibold text-[#0D382B]">
-            {report.title}
-          </h2>
-          <p class="text-xs text-[#69847A] mt-2 leading-relaxed">
-            {report.description}
-          </p>
-        </div>
+  {!hasBills && (
+    <p class="mb-6 text-xs text-[#5A6862] bg-white border border-[#E2E5DF] rounded-2xl px-4 py-3">
+      No bills in this range yet. Charts fill in from the first bills on the 1st of the month.
+    </p>
+  )}
 
-        {'href' in report ? (
-          <div class="flex items-center gap-3 mt-6 pt-5 border-t border-[#E3E6DF]">
-            <a href={report.href} class="px-4 py-2 rounded-full bg-[#0D382B] text-white text-xs font-semibold hover:bg-[#08221A] transition-colors shadow-xs">
-              Open bills sheet
-            </a>
-          </div>
-        ) : (
-        <div class="flex items-center gap-3 mt-6 pt-5 border-t border-[#E3E6DF]">
-          <button 
-            type="button"
-            class="report-export-btn px-4 py-2 rounded-full border border-[#E3E6DF] hover:border-[#0D382B] text-xs font-semibold text-[#0D382B] bg-[#F8F9F6] hover:bg-white transition-colors cursor-pointer shadow-xs"
-            data-type="CSV"
-            data-title={report.title}
-          >
-            Export CSV
-          </button>
-          <button 
-            type="button"
-            class="report-export-btn px-4 py-2 rounded-full border border-[#E3E6DF] hover:border-[#0D382B] text-xs font-semibold text-[#0D382B] bg-[#F8F9F6] hover:bg-white transition-colors cursor-pointer shadow-xs"
-            data-type="PDF"
-            data-title={report.title}
-          >
-            Export PDF
-          </button>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <section class={`${card} lg:col-span-2`}>
+      <h2 class={h2}>Billed vs collected</h2>
+      <p class={`${sub} mb-5`}>Rent, water and garbage billed each month, and what came in against it. Deposits are left out.</p>
+      <ColumnChart
+        columns={collectedColumns}
+        format="kes"
+        legend={[{ name: 'Billed', color: CHART.ghost }, { name: 'Collected', color: CHART.series1 }]}
+        endLabel={last ? compactKes(last.collected) : undefined}
+        height={220}
+      />
+      <details>
+        <summary class={summaryCls}>Show as table</summary>
+        <div class="overflow-x-auto mt-3">
+          <table class="w-full text-xs">
+            <thead><tr><th class={th}>Month</th><th class={th}>Billed</th><th class={th}>Collected</th><th class={th}>Rate</th></tr></thead>
+            <tbody class="divide-y divide-[#F0F2EE]">
+              {r.monthly.map((m) => <tr><td class={td}>{m.label}</td><td class={td}>{formatKes(m.billed)}</td><td class={td}>{formatKes(m.collected)}</td><td class={td}>{m.rate}%</td></tr>)}
+            </tbody>
+          </table>
         </div>
-        )}
-      </div>
-    ))}
+      </details>
+    </section>
+
+    <section class={card}>
+      <h2 class={h2}>Collection rate</h2>
+      <p class={`${sub} mb-5`}>Share of each month's bills paid.</p>
+      <LineChart points={ratePoints} />
+    </section>
+
+    <section class={card}>
+      <h2 class={h2}>How tenants pay</h2>
+      <p class={`${sub} mb-5`}>
+        {r.totals.collected
+          ? `M-Pesa ${Math.round((r.totals.mpesa / r.totals.collected) * 100)}% · Bank ${Math.round((r.totals.bank / r.totals.collected) * 100)}% over the range.`
+          : 'Collections split by method.'}
+      </p>
+      <ColumnChart
+        columns={methodColumns}
+        format="kes"
+        legend={[{ name: 'M-Pesa', color: CHART.series1 }, { name: 'Bank', color: CHART.series2 }]}
+        height={180}
+      />
+      <details>
+        <summary class={summaryCls}>Show as table</summary>
+        <div class="overflow-x-auto mt-3">
+          <table class="w-full text-xs">
+            <thead><tr><th class={th}>Month</th><th class={th}>M-Pesa</th><th class={th}>Bank</th></tr></thead>
+            <tbody class="divide-y divide-[#F0F2EE]">
+              {r.monthly.map((m) => <tr><td class={td}>{m.label}</td><td class={td}>{formatKes(m.mpesa)}</td><td class={td}>{formatKes(m.bank)}</td></tr>)}
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+
+    <section class={card}>
+      <h2 class={h2}>Occupancy</h2>
+      <p class={`${sub} mb-5`}>Units let at the end of each month.</p>
+      <ColumnChart
+        columns={occupancyColumns}
+        format="count"
+        reference={{ value: r.occupancy.total, label: `${r.occupancy.total} units` }}
+        height={180}
+      />
+      <details>
+        <summary class={summaryCls}>Show as table</summary>
+        <div class="overflow-x-auto mt-3">
+          <table class="w-full text-xs">
+            <thead><tr><th class={th}>Month</th><th class={th}>Occupied</th><th class={th}>Moved in</th><th class={th}>Moved out</th></tr></thead>
+            <tbody class="divide-y divide-[#F0F2EE]">
+              {r.monthly.map((m) => <tr><td class={td}>{m.label}</td><td class={td}>{m.occupied} of {r.occupancy.total}</td><td class={td}>{m.moveIns}</td><td class={td}>{m.moveOuts}</td></tr>)}
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+
+    <section class={card}>
+      <h2 class={h2}>Collection by property</h2>
+      <p class={`${sub} mb-5`}>Share of the range's bills paid, best first.</p>
+      <BarList rows={propertyRows} max={100} empty="No properties yet." />
+    </section>
+
+    <section class={card}>
+      <h2 class={h2}>Arrears ageing</h2>
+      <p class={`${sub} mb-5`}>What tenants owe today, by how late it is.</p>
+      <BarList rows={ageingRows} empty="Nobody owes anything." />
+    </section>
+
+    <section class={card}>
+      <h2 class={h2}>Repairs</h2>
+      <dl class="grid grid-cols-3 gap-3 mt-4 mb-6">
+        <div class="rounded-2xl bg-[#F8F9F6] border border-[#E3E6DF] p-3">
+          <dt class="text-[11px] text-[#73827C]">Reported</dt>
+          <dd class="text-xl font-semibold text-[#0D382B]">{r.repairs.opened}</dd>
+        </div>
+        <div class="rounded-2xl bg-[#F8F9F6] border border-[#E3E6DF] p-3">
+          <dt class="text-[11px] text-[#73827C]">Fixed</dt>
+          <dd class="text-xl font-semibold text-[#0D382B]">{r.repairs.resolved}</dd>
+        </div>
+        <div class="rounded-2xl bg-[#F8F9F6] border border-[#E3E6DF] p-3">
+          <dt class="text-[11px] text-[#73827C]">Days to fix (avg)</dt>
+          <dd class="text-xl font-semibold text-[#0D382B]">{r.repairs.avgDaysToFix ?? '—'}</dd>
+        </div>
+      </dl>
+      <BarList rows={repairRows} empty="No repair requests in this range." />
+    </section>
   </div>
+
+  <!-- Downloads: real files, same range as the charts above -->
+  <section class="mt-8">
+    <h2 class={h2}>Downloads</h2>
+    <p class={`${sub} mb-4`}>CSV files that open in Excel or Google Sheets, for {r.rangeLabel}. Tenant phone numbers are left out.</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div class={`${card} flex flex-col justify-between`}>
+        <div>
+          <h3 class="text-base font-semibold text-[#0D382B]">Monthly bills</h3>
+          <p class="text-xs text-[#69847A] mt-2 leading-relaxed">The owner's spreadsheet: rent, water, garbage, balance b/f, paid and outstanding.</p>
+        </div>
+        <a href="/bills" class="mt-5 inline-flex items-center gap-2 self-start px-4 py-2 rounded-full bg-[#0D382B] text-white text-xs font-semibold hover:bg-[#08221A] transition-colors">
+          <FileSpreadsheet class="w-3.5 h-3.5" /> Open bills sheet
+        </a>
+      </div>
+      {downloads.map((d) => (
+        <div class={`${card} flex flex-col justify-between`}>
+          <div>
+            <h3 class="text-base font-semibold text-[#0D382B]">{d.title}</h3>
+            <p class="text-xs text-[#69847A] mt-2 leading-relaxed">{d.description}</p>
+          </div>
+          <a
+            href={`/api/reports/${d.kind}.csv${rangeQuery}`}
+            download
+            data-astro-reload
+            class="mt-5 inline-flex items-center gap-2 self-start px-4 py-2 rounded-full border border-[#E3E6DF] hover:border-[#0D382B] text-xs font-semibold text-[#0D382B] bg-[#F8F9F6] hover:bg-white transition-colors"
+          >
+            <Download class="w-3.5 h-3.5" /> Download CSV
+          </a>
+        </div>
+      ))}
+      <div class={`${card} opacity-70`}>
+        <h3 class="text-base font-semibold text-[#0D382B]">Landlord statement</h3>
+        <p class="text-xs text-[#69847A] mt-2 leading-relaxed">Monthly owner statement with deductions and payouts. Not available yet: Makazi doesn't record expenses or payouts.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- One tooltip for every chart; filled with textContent only. -->
+  <div
+    id="chart-tooltip"
+    role="tooltip"
+    class="fixed z-[70] pointer-events-none hidden min-w-[150px] rounded-xl bg-white border border-[#E3E6DF] shadow-lg px-3 py-2.5 text-xs"
+  ></div>
 </DashboardLayout>
 
 <script>
+  type Tip = { title: string; rows: Array<{ label: string; value: string; color?: string }> };
+
   function initReportsPage() {
-    document.querySelectorAll<HTMLButtonElement>('.report-export-btn').forEach((btn) => {
-      btn.onclick = () => {
-        const type = btn.dataset.type || 'Report';
-        const title = btn.dataset.title || 'Export';
-        window.makaziUi?.showToast(
-          `${type} export queued`,
-          `Generating ${title} as ${type}. Automatic download starts shortly.`
-        );
-      };
+    const tooltip = document.getElementById('chart-tooltip');
+    if (!tooltip) return;
+
+    const render = (raw: string) => {
+      let data: Tip;
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        return false;
+      }
+      tooltip.replaceChildren();
+      const title = document.createElement('p');
+      title.className = 'text-[11px] text-[#73827C] mb-1.5';
+      title.textContent = data.title;
+      tooltip.append(title);
+      for (const row of data.rows) {
+        const line = document.createElement('div');
+        line.className = 'flex items-center gap-2 py-0.5';
+        const key = document.createElement('span');
+        key.className = 'inline-block w-3 h-0.5 rounded-full shrink-0';
+        key.style.background = row.color ?? 'transparent';
+        const value = document.createElement('span');
+        value.className = 'font-semibold text-[#17231E] tabular-nums';
+        value.textContent = row.value;
+        const label = document.createElement('span');
+        label.className = 'text-[#5A6862]';
+        label.textContent = row.label;
+        line.append(key, value, label);
+        tooltip.append(line);
+      }
+      return true;
+    };
+
+    const place = (x: number, y: number) => {
+      const pad = 14;
+      const { width, height } = tooltip.getBoundingClientRect();
+      const left = Math.min(window.innerWidth - width - 8, x + pad);
+      const top = y - height - pad < 8 ? y + pad : y - height - pad;
+      tooltip.style.left = `${Math.max(8, left)}px`;
+      tooltip.style.top = `${top}px`;
+    };
+
+    const hide = () => tooltip.classList.add('hidden');
+
+    document.querySelectorAll<HTMLElement>('.chart-hit[data-tip]').forEach((el) => {
+      if (el.dataset.tipBound) return;
+      el.dataset.tipBound = 'true';
+      el.addEventListener('pointerenter', () => {
+        if (render(el.dataset.tip!)) tooltip.classList.remove('hidden');
+      });
+      el.addEventListener('pointermove', (e) => place(e.clientX, e.clientY));
+      el.addEventListener('pointerleave', hide);
+      el.addEventListener('focus', () => {
+        if (!render(el.dataset.tip!)) return;
+        tooltip.classList.remove('hidden');
+        const box = el.getBoundingClientRect();
+        place(box.left + box.width / 2, box.top);
+      });
+      el.addEventListener('blur', hide);
     });
+    window.addEventListener('scroll', hide, { passive: true });
   }
 
   document.addEventListener('astro:page-load', initReportsPage);
 </script>
-

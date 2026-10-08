@@ -29,6 +29,11 @@ export interface CompanySettings {
   depositSchedule: Record<string, number>;
   /** Months a former tenant's records are kept after move-out. */
   recordRetentionMonths: number;
+  /**
+   * M-Pesa test mode: tenants' "Pay now" runs a simulated STK push that the
+   * database records as a flagged test payment. Off unless the owner turns it on.
+   */
+  mpesaSimulation?: boolean;
 }
 
 /** Last numbers issued; each company has its own series. */
@@ -122,6 +127,13 @@ export interface DepositRefund {
   date: IsoDate;
   method: PaymentMethod;
   reference: string;
+  /** From M-Pesa test mode: recorded, but no money moved. */
+  simulated?: boolean;
+}
+
+/** 'M-Pesa', or 'M-Pesa (test)' for a test-mode payment, wherever a payment is shown. */
+export function paymentMethodLabel(payment: Payment): string {
+  return payment.simulated ? `${payment.method} (test)` : payment.method;
 }
 
 export interface Tenancy {
@@ -412,7 +424,10 @@ export function billingWindow(seed: Seed, tenancy: Tenancy): [Month, Month] | nu
   const maxActive = candidateMonths.sort().pop()!;
 
   const finalMonth = tenancy.moveOut ? addMonths(monthOf(tenancy.moveOut), 1) : maxActive;
-  const last = finalMonth < maxActive ? finalMonth : maxActive;
+  let last = finalMonth < maxActive ? finalMonth : maxActive;
+  // Paid before the first bill (deposit and rent ahead of moving in): issue
+  // the move-in bill so the payment has a bill to count against.
+  if (last < first && tenancyPayments.some((m) => m < first)) last = first;
   return first <= last ? [first, last] : null;
 }
 
@@ -491,7 +506,10 @@ export function buildLedger(seed: Seed, tenancy: Tenancy): MonthlyBill[] {
 
     const sumOf = (k: BillLineKind) =>
       lines.filter((l) => l.kind === k).reduce((acc, l) => acc + l.amount, 0);
-    const monthPayments = payments.filter((p) => monthOf(p.date) === month);
+    // Payments made before the first bill count towards it.
+    const monthPayments = payments.filter(
+      (p) => monthOf(p.date) === month || (month === window[0] && monthOf(p.date) < month),
+    );
     const amountPaid = monthPayments.reduce((acc, p) => acc + p.amount, 0);
     const newCharges = lines.reduce((acc, l) => acc + l.amount, 0);
     const totalDue = balanceBf + newCharges;

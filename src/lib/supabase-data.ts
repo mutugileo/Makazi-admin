@@ -56,6 +56,7 @@ interface TenancyRow {
 interface PaymentRow {
   receipt_number: string; tenancy_id: string; amount: number;
   date: string; time: string; method: Payment['method']; reference: string;
+  simulated?: boolean;
 }
 
 interface StaffRow {
@@ -125,6 +126,7 @@ const mapTenancy = (r: TenancyRow): Tenancy => ({
 const mapPayment = (r: PaymentRow): Payment => ({
   receiptNumber: r.receipt_number, tenancyId: r.tenancy_id, amount: r.amount,
   date: r.date, time: r.time.slice(0, 5), method: r.method, reference: r.reference,
+  simulated: r.simulated === true,
 });
 
 const mapStaff = (r: StaffRow): StaffMember => ({
@@ -160,6 +162,46 @@ const mapMessage = (r: MessageRow): Message => ({
  * asOf defaults to today in Nairobi time (UTC+3). This is the only difference
  * from the seed, where asOf is a fixed demo date.
  */
+const PAGE_SIZE = 1000;
+
+/**
+ * Every row of a table for one company. The Data API returns at most 1,000
+ * rows per request and says nothing when it stops, which would quietly drop
+ * payments or meter readings once a company has enough units. So: page by a
+ * stable order until the database's own count is reached, and fail rather
+ * than build balances from a partial list.
+ */
+async function allRows(
+  supabase: SupabaseClient,
+  table: string,
+  companyColumn: string,
+  companyId: string,
+  orderBy: string[],
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<{ data: any[] | null; error: { message: string } | null }> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rows: any[] = [];
+  let total: number | null = null;
+  // Advance by the rows actually received: a server cap below PAGE_SIZE
+  // must not skip any.
+  for (let from = 0; total === null || rows.length < total; from = rows.length) {
+    let query = supabase
+      .from(table)
+      .select('*', from === 0 ? { count: 'exact' } : undefined)
+      .eq(companyColumn, companyId);
+    for (const column of orderBy) query = query.order(column, { ascending: true });
+    const { data, error, count } = await query.range(from, from + PAGE_SIZE - 1);
+    if (error) return { data: null, error };
+    if (from === 0) total = count ?? 0;
+    rows.push(...(data ?? []));
+    if (!data?.length) break;
+  }
+  if (rows.length !== total) {
+    return { data: null, error: { message: `read ${rows.length} of ${total} rows; try again` } };
+  }
+  return { data: rows, error: null };
+}
+
 export async function fetchSeedFromSupabase(
   supabase: SupabaseClient,
   companyId: string,
@@ -178,16 +220,16 @@ export async function fetchSeedFromSupabase(
     ticketsRes,
     messagesRes,
   ] = await Promise.all([
-    supabase.from('companies').select('*').eq('id', companyId),
-    supabase.from('properties').select('*').eq('company_id', companyId),
-    supabase.from('units').select('*').eq('company_id', companyId),
-    supabase.from('tenants').select('*').eq('company_id', companyId),
-    supabase.from('tenancies').select('*').eq('company_id', companyId),
-    supabase.from('payments').select('*').eq('company_id', companyId),
-    supabase.from('staff').select('*').eq('company_id', companyId),
-    supabase.from('meter_readings').select('*').eq('company_id', companyId),
-    supabase.from('repair_tickets').select('*').eq('company_id', companyId),
-    supabase.from('messages').select('*').eq('company_id', companyId),
+    allRows(supabase, 'companies', 'id', companyId, ['id']),
+    allRows(supabase, 'properties', 'company_id', companyId, ['id']),
+    allRows(supabase, 'units', 'company_id', companyId, ['id']),
+    allRows(supabase, 'tenants', 'company_id', companyId, ['id']),
+    allRows(supabase, 'tenancies', 'company_id', companyId, ['id']),
+    allRows(supabase, 'payments', 'company_id', companyId, ['receipt_number']),
+    allRows(supabase, 'staff', 'company_id', companyId, ['id']),
+    allRows(supabase, 'meter_readings', 'company_id', companyId, ['unit_id', 'month']),
+    allRows(supabase, 'repair_tickets', 'company_id', companyId, ['id']),
+    allRows(supabase, 'messages', 'company_id', companyId, ['id']),
   ]);
 
   const companies = assertOk(companiesRes.data, companiesRes.error, 'companies').map(mapCompany);

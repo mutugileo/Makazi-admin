@@ -284,8 +284,15 @@ function buildPortfolio(companyId: string, seedOverride?: Seed) {
   const payments: PaymentView[] = seed.payments
     .map((payment) => {
       const view = tenancies.find((t) => t.tenancy.id === payment.tenancyId)!;
-      const bill = view.bills.find((b) => b.month === monthOf(payment.date))!;
-      return { payment, view, forDescription: receiptDescription(bill, payment), dateLabel: formatDate(payment.date) };
+      // The bill the engine counted it against (a payment made ahead of the
+      // first bill counts towards that bill, not its own month's).
+      const bill = view.bills.find((b) => b.payments.some((p) => p.receiptNumber === payment.receiptNumber));
+      return {
+        payment,
+        view,
+        forDescription: bill ? receiptDescription(bill, payment) : 'Payment',
+        dateLabel: formatDate(payment.date),
+      };
     })
     .sort((a, b) =>
       `${b.payment.date}${b.payment.time}`.localeCompare(`${a.payment.date}${a.payment.time}`),

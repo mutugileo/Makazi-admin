@@ -25,6 +25,8 @@ function arg(name, fallback) {
 
 const email = arg('email', 'admin@harborridge.local').trim().toLowerCase();
 const name = arg('name', 'Admin').trim();
+// Which landlord this admin works for (a company id in the seed).
+const companyId = arg('company', 'harborridge').trim();
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const localSeedPath = resolve(scriptDir, '../shared/billing-seed.json');
 const seedPath = existsSync(localSeedPath)
