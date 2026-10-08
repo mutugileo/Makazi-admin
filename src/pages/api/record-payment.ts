@@ -24,6 +24,19 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     }
 
     const companyId = user.companyId;
+    // The tenancy id comes from the client: it must belong to this company,
+    // or the payment would land in another landlord's ledger.
+    const { data: ownTenancy, error: tenancyError } = await supabase
+      .from('tenancies')
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('id', tenancyId)
+      .maybeSingle();
+    if (tenancyError) throw tenancyError;
+    if (!ownTenancy) {
+      return new Response(JSON.stringify({ error: 'Tenancy not found' }), { status: 404 });
+    }
+
     // Defaults are Nairobi time, like the rest of the ledger.
     const nairobiNow = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString();
     const paymentDate = date || nairobiNow.slice(0, 10);

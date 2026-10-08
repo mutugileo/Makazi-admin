@@ -30,18 +30,21 @@ export function adminConfigured(): boolean {
   return Boolean(SESSION_SECRET && (ADMIN_EMAIL || process.env.ADMIN_EMAIL));
 }
 
+/** The env-configured admin. Every admin belongs to exactly one company, so no company is ever assumed. */
 export function adminAccount(): { email: string; name: string; passwordHash: string; companyId: string } | null {
-  if (!ADMIN_EMAIL || !ADMIN_PASSWORD_HASH) return null;
+  if (!ADMIN_EMAIL || !ADMIN_PASSWORD_HASH || !ADMIN_COMPANY_ID) return null;
   return {
     email: ADMIN_EMAIL.toLowerCase(),
     name: ADMIN_NAME || 'Admin',
     passwordHash: ADMIN_PASSWORD_HASH,
-    companyId: ADMIN_COMPANY_ID ?? 'harborridge',
+    companyId: ADMIN_COMPANY_ID,
   };
 }
 
+/** Fails closed: without a secret nothing can be signed or verified. */
 function sign(body: string): string {
-  const secret = SESSION_SECRET || process.env.SESSION_SECRET || 'makazi_session_secret_default_key_2026';
+  const secret = SESSION_SECRET || process.env.SESSION_SECRET;
+  if (!secret) throw new Error('SESSION_SECRET is not set');
   return createHmac('sha256', secret).update(body).digest('base64url');
 }
 
@@ -51,7 +54,8 @@ export function createSession(
   secure: boolean
 ) {
   const account = adminAccount();
-  const companyId = user.companyId || account?.companyId || 'harborridge';
+  const companyId = user.companyId || account?.companyId;
+  if (!companyId) throw new Error('Cannot start an admin session without a company');
   const payload: SessionPayload = {
     sub: user.email.toLowerCase(),
     name: user.name,
@@ -82,12 +86,14 @@ export function readSession(cookies: AstroCookies): AdminUser | null {
   try {
     const payload = JSON.parse(Buffer.from(body, 'base64url').toString()) as SessionPayload;
     if (payload.exp * 1000 < Date.now()) return null;
+    // A session without a company is not a session: every page is scoped by it.
+    if (!payload.companyId) return null;
     const account = adminAccount();
     return {
       email: payload.sub,
       name: payload.name || account?.name || 'Admin',
       role: 'owner',
-      companyId: payload.companyId || account?.companyId || 'harborridge',
+      companyId: payload.companyId,
     };
   } catch {
     return null;

@@ -4,6 +4,7 @@ import { verifyPassword } from '../lib/auth/password';
 import { clearFailures, isLockedOut, recordFailure } from '../lib/auth/rate-limit';
 import { adminAccount, adminConfigured, createSession, safeNext } from '../lib/auth/session';
 import { makeSupabaseClient } from '../lib/supabase';
+import { ADMIN_FAQ } from '../data/login-faq';
 
 // Developer credit in the footer.
 const BUILDER = { name: 'Codzure Solutions Ltd', url: 'https://codzure.com' };
@@ -27,17 +28,7 @@ if (Astro.request.method === 'POST') {
   } else {
     let authenticatedUser: { email: string; name: string; companyId: string; role: 'owner' } | null = null;
 
-    // 1. Direct credentials check for codzuresolutions@gmail.com
-    if (email === 'codzuresolutions@gmail.com' && password === 'Codzure@2026@') {
-      authenticatedUser = {
-        email: 'codzuresolutions@gmail.com',
-        name: 'Codzure Super Admin',
-        companyId: 'codzure',
-        role: 'owner',
-      };
-    }
-
-    // 2. Supabase Auth check
+    // 1. Supabase Auth check: the signed-in user must have a staff row.
     if (!authenticatedUser) {
       const supabase = makeSupabaseClient();
       if (supabase) {
@@ -66,7 +57,7 @@ if (Astro.request.method === 'POST') {
       }
     }
 
-    // 3. Fallback to local adminAccount check
+    // 2. Fallback to local adminAccount check (ADMIN_* env, set by admin:create)
     if (!authenticatedUser && configured) {
       const account = adminAccount();
       if (account) {
@@ -167,8 +158,45 @@ if (Astro.request.method === 'POST') {
           )}
 
           <p class="text-xs text-[#3D4D46] mt-6 pt-4 border-t border-[#0D382B]/10">Tenants sign in on the Makazi app, not here.</p>
+
+          <button
+            type="button"
+            id="faq-open"
+            class="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-[#0D382B] hover:underline underline-offset-2 cursor-pointer"
+          >
+            Frequently asked questions
+          </button>
         </div>
       </main>
+
+      <dialog
+        id="faq-dialog"
+        aria-labelledby="faq-title"
+        class="m-auto w-[calc(100%-2rem)] max-w-lg max-h-[85vh] rounded-3xl bg-white p-0 shadow-2xl backdrop:bg-[#061913]/60"
+      >
+        <div class="flex items-center justify-between px-6 pt-6 pb-3">
+          <h2 id="faq-title" class="font-editorial text-2xl text-[#0D382B]">Frequently asked questions</h2>
+          <button type="button" id="faq-close" aria-label="Close FAQ" class="p-1.5 rounded-lg text-[#3D4D46] hover:bg-[#F3F4F0] cursor-pointer">✕</button>
+        </div>
+        <div class="px-6 pb-6 overflow-y-auto max-h-[70vh] space-y-3">
+          {ADMIN_FAQ.map((item) => (
+            <details class="group rounded-xl border border-[#E3E6DF] px-4 py-3">
+              <summary class="cursor-pointer text-sm font-semibold text-[#17231E] list-none">{item.question}</summary>
+              <p class="mt-2 text-xs leading-relaxed text-[#3D4D46]">{item.answer}</p>
+            </details>
+          ))}
+        </div>
+      </dialog>
+
+      <script>
+        const faqDialog = document.getElementById('faq-dialog') as HTMLDialogElement | null;
+        document.getElementById('faq-open')?.addEventListener('click', () => faqDialog?.showModal());
+        document.getElementById('faq-close')?.addEventListener('click', () => faqDialog?.close());
+        // Clicking the backdrop (the dialog element itself, not its content) closes it.
+        faqDialog?.addEventListener('click', (e) => {
+          if (e.target === faqDialog) faqDialog.close();
+        });
+      </script>
 
       <footer class="px-6 sm:px-10 pb-5 text-center sm:text-right">
         <p class="text-[11px] text-white/75 group-data-[photo=failed]:text-[#73827C]">

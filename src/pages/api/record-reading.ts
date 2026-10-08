@@ -24,6 +24,20 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     }
 
     const companyId = user.companyId;
+
+    // Unit ids come from the client: every one must be a unit of this company,
+    // or the upsert would overwrite another landlord's meter readings.
+    const unitIds = [...new Set(readings.map((r) => r.unitId))];
+    const { data: ownUnits, error: unitsError } = await supabase
+      .from('units')
+      .select('id')
+      .eq('company_id', companyId)
+      .in('id', unitIds);
+    if (unitsError) throw unitsError;
+    if ((ownUnits?.length ?? 0) !== unitIds.length) {
+      return new Response(JSON.stringify({ error: 'Unit not found' }), { status: 404 });
+    }
+
     const rows = readings.map((r) => ({
       company_id: companyId,
       unit_id: r.unitId,
