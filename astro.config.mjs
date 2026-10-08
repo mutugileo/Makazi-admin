@@ -3,7 +3,7 @@ import { defineConfig, envField } from 'astro/config';
 
 import tailwindcss from '@tailwindcss/vite';
 
-import node from '@astrojs/node';
+import vercel from '@astrojs/vercel';
 
 // https://astro.build/config
 export default defineConfig({
@@ -13,13 +13,11 @@ export default defineConfig({
 
   vite: {
     plugins: [tailwindcss()],
-    // The billing seed lives in ../shared so the Flutter app can read it too.
+    // The billing seed lives in shared so the app can read it.
     server: { fs: { allow: ['..'] } }
   },
 
-  adapter: node({
-    mode: 'standalone'
-  }),
+  adapter: vercel(),
 
   // Local admin account until Supabase Auth replaces it. Written to .env by
   // `npm run admin:create`; secrets never reach the browser.
