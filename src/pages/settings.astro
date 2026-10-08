@@ -137,6 +137,8 @@ const fixed = 'text-sm font-semibold text-[#0D382B] mt-0.5';
 </DashboardLayout>
 
 <script>
+  import { setBusy } from '../lib/busy';
+
   function initSettingsPage() {
     const form = document.getElementById('settings-form') as HTMLFormElement | null;
     // Page loads come back through view transitions: bind once per form.
@@ -161,7 +163,7 @@ const fixed = 'text-sm font-semibold text-[#0D382B] mt-0.5';
       });
 
       showError(null);
-      submit.disabled = true;
+      const restoreSubmit = setBusy(submit, 'Saving…');
       try {
         // The server checks every field; nothing shows as saved until it has.
         const res = await fetch('/api/update-settings', {
@@ -185,7 +187,7 @@ const fixed = 'text-sm font-semibold text-[#0D382B] mt-0.5';
         window.makaziUi?.showToast('Settings saved', 'Tenants see the new details in the app.');
         setTimeout(() => window.location.reload(), 800);
       } catch (err: unknown) {
-        submit.disabled = false;
+        restoreSubmit();
         showError(err instanceof Error ? err.message : String(err));
       }
     });

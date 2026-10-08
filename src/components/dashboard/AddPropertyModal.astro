@@ -12,6 +12,17 @@ const managers = seed.staff
 const bedroomOptions = Object.keys(company.settings.depositSchedule).map(Number).sort((a, b) => a - b);
 // Defaults from the company's existing properties, else Makazi's usual rates.
 const first = propertyViews[0]?.property;
+
+// Quick presets. Unit labels are patterns the owner can edit afterwards; rates are
+// the standard Makazi rates or the rates of the company's first property.
+const seq = (prefix: string, n: number) => Array.from({ length: n }, (_, i) => `${prefix}${i + 1}`);
+const UNIT_PRESETS = [
+  { label: 'A1–A4', labels: seq('A', 4) },
+  { label: 'A1–A8', labels: seq('A', 8) },
+  { label: 'A and B, 1–4 each', labels: [...seq('A', 4), ...seq('B', 4)] },
+  { label: '3 floors × 4 flats', labels: [1, 2, 3].flatMap((f) => ['A', 'B', 'C', 'D'].map((l) => `${f}${l}`)) },
+];
+const STANDARD_RATES = { water: 150, garbage: 250 };
 const defaults = { waterRate: first?.waterRate ?? 150, garbageFee: first?.garbageFee ?? 250 };
 
 // Sent to the browser for validation; names and prefixes only.
@@ -49,7 +60,8 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
       </button>
     </div>
 
-    <form id="add-property-form" class="p-6 space-y-5 max-h-[75vh] overflow-y-auto" novalidate>
+    <form id="add-property-form" class="flex flex-col max-h-[75vh]" novalidate>
+    <div class="flex-1 overflow-y-auto p-6 space-y-5">
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label for="property-name" class={labelClass}>Property name</label>
@@ -90,7 +102,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
 
       <div>
         <label for="property-manager" class={labelClass}>Property manager</label>
-        <select id="property-manager" required class={inputClass}>
+        <select id="property-manager" class={inputClass}>
           {managers.map((m) => (
             <option value={m.id}>{m.name} ({m.role === 'owner' ? 'Owner' : 'Manager'})</option>
           ))}
@@ -99,7 +111,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
       </div>
 
       <div>
-        <label for="property-image" class={labelClass}>Property photo URL <span class="normal-case font-normal">(displayed in app & admin)</span></label>
+        <label for="property-image" class={labelClass}>Property photo URL <span class="normal-case font-normal">(<strong class="font-bold">optional</strong>, shown in app & admin)</span></label>
         <div class="flex gap-3 items-center">
           <input
             id="property-image"
@@ -119,6 +131,14 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
         </div>
       </div>
 
+      <div class="flex flex-wrap items-center gap-1.5 -mt-3">
+        <span class="text-[11px] text-[#73827C]">Rate presets:</span>
+        <button type="button" class="rate-preset-btn text-[11px] px-2.5 py-0.5 rounded-full bg-[#F4F5F1] text-[#0D382B] hover:bg-[#E7EAE4] transition-colors cursor-pointer" data-water={STANDARD_RATES.water} data-garbage={STANDARD_RATES.garbage}>Standard ({STANDARD_RATES.water} / {STANDARD_RATES.garbage})</button>
+        {first && (
+          <button type="button" class="rate-preset-btn text-[11px] px-2.5 py-0.5 rounded-full bg-[#F4F5F1] text-[#0D382B] hover:bg-[#E7EAE4] transition-colors cursor-pointer" data-water={first.waterRate} data-garbage={first.garbageFee}>Same as {first.name}</button>
+        )}
+      </div>
+
       <div>
         <div class="flex items-center justify-between mb-2">
           <span class={labelClass}>Units <span id="unit-count" class="normal-case font-normal">(1)</span></span>
@@ -128,6 +148,12 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
               <Plus class="w-3.5 h-3.5" /> Add unit
             </button>
           </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-1.5 mb-2">
+          <span class="text-[11px] text-[#73827C]">Unit presets:</span>
+          {UNIT_PRESETS.map((p) => (
+            <button type="button" class="unit-preset-btn text-[11px] px-2.5 py-0.5 rounded-full bg-[#F4F5F1] text-[#0D382B] hover:bg-[#E7EAE4] transition-colors cursor-pointer" data-labels={p.labels.join(',')}>{p.label}</button>
+          ))}
         </div>
         <div id="unit-rows" class="space-y-2"></div>
         <template id="unit-row-template">
@@ -144,9 +170,11 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
         <p class="text-[11px] text-[#73827C] mt-2">Bedrooms set the deposit ({bedroomOptions.map((b) => bedLabel(b)).join(', ')}, from Settings). New units start as Vacant.</p>
       </div>
 
-      <p id="add-property-error" role="alert" class="hidden text-sm text-[#C04A26]"></p>
+    </div>
 
-      <div class="pt-4 flex items-center justify-end gap-3 border-t border-[#F0F2EE]">
+      <p id="add-property-error" role="alert" class="hidden px-6 pt-3 text-sm text-[#C04A26]"></p>
+
+      <div class="px-6 py-4 flex items-center justify-end gap-3 border-t border-[#F0F2EE]">
         <button type="button" data-close class="px-5 py-2.5 rounded-xl text-sm font-medium text-[#5A6862] hover:bg-[#F4F5F1] transition-colors cursor-pointer">Cancel</button>
         <button type="submit" class="px-6 py-2.5 rounded-xl text-sm font-semibold bg-[#0D382B] text-white hover:bg-[#154637] transition-all shadow-md cursor-pointer">Save property</button>
       </div>
@@ -157,6 +185,8 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
 <script type="application/json" id="add-property-context" set:html={JSON.stringify(existing).replace(/</g, '\\u003c')} />
 
 <script>
+  import { setBusy } from '../../lib/busy';
+
   type Context = { names: string[]; prefixes: string[] };
 
   function initAddPropertyModal() {
@@ -171,6 +201,8 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
 
     const ctx: Context = JSON.parse(document.getElementById('add-property-context')?.textContent ?? '{}');
     let prefixTouched = false;
+    // True while a save is in flight, so a second click or Enter can't send another.
+    let saving = false;
 
     const labels = () => [...rows.querySelectorAll<HTMLInputElement>('.unit-label')];
 
@@ -243,6 +275,8 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
         const v = Number((document.getElementById(id) as HTMLInputElement)?.value);
         if (!Number.isInteger(v) || v < 0) return 'Rates must be whole shillings, zero or more.';
       }
+      const managerSelect = document.getElementById('property-manager') as HTMLSelectElement | null;
+      if (!managerSelect?.value) return 'This company has no owner or manager to assign yet. Ask the platform team to add one.';
       const unitLabels = labels().map((i) => i.value.trim());
       if (unitLabels.some((l) => !l)) return 'Give every unit a label.';
       const seen = new Set<string>();
@@ -305,6 +339,22 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
       };
     });
 
+    // Quick presets: fill the unit rows from a pattern, or the rates from a preset.
+    document.querySelectorAll<HTMLButtonElement>('.unit-preset-btn').forEach((btn) => {
+      btn.onclick = () => {
+        const labels = (btn.dataset.labels ?? '').split(',').filter(Boolean);
+        rows!.innerHTML = '';
+        labels.forEach((l) => addRow(l));
+        updatePrefixExample();
+      };
+    });
+    document.querySelectorAll<HTMLButtonElement>('.rate-preset-btn').forEach((btn) => {
+      btn.onclick = () => {
+        (document.getElementById('property-water') as HTMLInputElement).value = btn.dataset.water ?? '';
+        (document.getElementById('property-garbage') as HTMLInputElement).value = btn.dataset.garbage ?? '';
+      };
+    });
+
     form.onsubmit = async (e) => {
       e.preventDefault();
       const issue = problem();
@@ -322,21 +372,23 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
 
       const units = [...rows!.querySelectorAll('.unit-row')].map((r) => ({
         label: (r.querySelector('.unit-label') as HTMLInputElement).value.trim(),
-        bedrooms: Number((r.querySelector('.unit-bedrooms') as HTMLSelectElement).value) || 1,
+        bedrooms: Number((r.querySelector('.unit-beds') as HTMLSelectElement | null)?.value) || 1,
       }));
 
       const submitBtn = form!.querySelector('button[type="submit"]') as HTMLButtonElement | null;
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Saving...';
-      }
+      if (saving) return;
+      saving = true;
+      const restoreSubmit = setBusy(submitBtn);
 
       try {
         const res = await fetch('/api/create-property', {
           method: 'POST',
+          // Without a limit, a stalled request leaves the button on "Saving..." forever.
+          signal: AbortSignal.timeout(20000),
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name,
+            managerId: (document.getElementById('property-manager') as HTMLSelectElement).value,
             type,
             address,
             accountPrefix,
@@ -357,13 +409,14 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
         );
         setTimeout(() => window.location.reload(), 1000);
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
+        const timedOut = err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError');
+        const msg = timedOut
+          ? 'Saving is taking too long. Refresh the page before trying again, in case the property was saved.'
+          : err instanceof Error ? err.message : String(err);
         errorEl.textContent = msg;
         errorEl.classList.remove('hidden');
-        if (submitBtn) {
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Save property & units';
-        }
+        restoreSubmit();
+        saving = false;
       }
     };
   }

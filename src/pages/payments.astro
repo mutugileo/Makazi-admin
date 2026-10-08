@@ -283,6 +283,7 @@ const defaultTime = nairobiNow.slice(11, 16);
 </DashboardLayout>
 
 <script>
+  import { setBusy } from '../lib/busy';
   function initPaymentsPage() {
     const methodBtns = document.querySelectorAll<HTMLElement>('[data-method-btn]');
     const countEl = document.getElementById('payments-count');
@@ -365,10 +366,7 @@ const defaultTime = nairobiNow.slice(11, 16);
           return;
         }
 
-        if (submitRecordBtn) {
-          submitRecordBtn.disabled = true;
-          submitRecordBtn.textContent = 'Recording...';
-        }
+        const restoreRecord = setBusy(submitRecordBtn, 'Recording…');
 
         try {
           const res = await fetch('/api/record-payment', {
@@ -398,10 +396,7 @@ const defaultTime = nairobiNow.slice(11, 16);
             errorBox.classList.remove('hidden');
           }
         } finally {
-          if (submitRecordBtn) {
-            submitRecordBtn.disabled = false;
-            submitRecordBtn.innerHTML = '<span>Record & Issue Receipt</span>';
-          }
+          restoreRecord();
         }
       };
     }

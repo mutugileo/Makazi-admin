@@ -91,6 +91,8 @@ const endOfMonth = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
 </div>
 
 <script>
+  import { setBusy } from '../../lib/busy';
+
   function initMoveOutModal() {
     const modal = document.getElementById('move-out-modal');
     if (!modal) return;
@@ -180,10 +182,7 @@ const endOfMonth = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
       const note = (modal.querySelector('[data-field="note"]') as HTMLInputElement | null)?.value ?? '';
 
       const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Saving...';
-      }
+      const restoreSubmit = setBusy(submitBtn);
 
       try {
         const res = await fetch('/api/move-out', {
@@ -206,8 +205,7 @@ const endOfMonth = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
         const msg = err instanceof Error ? err.message : String(err);
         window.makaziUi?.showToast('Error', msg);
         if (submitBtn) {
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Confirm move-out';
+          restoreSubmit();
         }
       }
     };

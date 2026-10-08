@@ -152,6 +152,8 @@ const active = threads.find((t) => t.view.tenancy.id === requested) ?? threads[0
 </style>
 
 <script>
+  import { setBusy } from '../lib/busy';
+
   function scrollChatToBottom(smooth = false) {
     const container = document.getElementById('chat-messages-container');
     if (!container) return;
@@ -193,7 +195,7 @@ const active = threads.find((t) => t.view.tenancy.id === requested) ?? threads[0
       if (!body || !tenancyId) return;
 
       const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
-      if (submitBtn) submitBtn.disabled = true;
+      const restoreSend = setBusy(submitBtn, 'Sending…');
 
       try {
         const res = await fetch('/api/send-message', {
@@ -207,7 +209,7 @@ const active = threads.find((t) => t.view.tenancy.id === requested) ?? threads[0
         if (input) input.value = '';
         window.location.reload();
       } catch (err: unknown) {
-        if (submitBtn) submitBtn.disabled = false;
+        restoreSend();
         const msg = err instanceof Error ? err.message : String(err);
         window.makaziUi?.showToast('Error', msg);
       }

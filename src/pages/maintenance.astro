@@ -200,6 +200,7 @@ const priorityTone = {
 </DashboardLayout>
 
 <script>
+  import { setBusy } from '../lib/busy';
   type UpdateBody = {
     ticketId: string;
     status: 'in_progress' | 'resolved';
@@ -266,7 +267,7 @@ const priorityTone = {
       showError(null);
 
       const submit = field('submit') as HTMLButtonElement;
-      submit.disabled = true;
+      const restoreSubmit = setBusy(submit, 'Saving…');
       try {
         await updateTicket({
           ticketId,
@@ -280,7 +281,7 @@ const priorityTone = {
         );
         setTimeout(() => window.location.reload(), 800);
       } catch (err: unknown) {
-        submit.disabled = false;
+        restoreSubmit();
         showError(err instanceof Error ? err.message : String(err));
       }
     };
@@ -288,13 +289,13 @@ const priorityTone = {
     resolveBtns.forEach((btn) => {
       btn.onclick = async () => {
         const id = btn.dataset.ticket ?? '';
-        btn.disabled = true;
+        const restoreResolve = setBusy(btn, 'Resolving…');
         try {
           await updateTicket({ ticketId: id, status: 'resolved' });
           window.makaziUi?.showToast('Ticket resolved', `${id} moved to Resolved.`);
           setTimeout(() => window.location.reload(), 800);
         } catch (err: unknown) {
-          btn.disabled = false;
+          restoreResolve();
           window.makaziUi?.showToast('Error', err instanceof Error ? err.message : String(err));
         }
       };

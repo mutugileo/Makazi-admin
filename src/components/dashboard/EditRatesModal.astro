@@ -72,6 +72,8 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
 </div>
 
 <script>
+  import { setBusy } from '../../lib/busy';
+
   function initEditRatesModal() {
     const modal = document.getElementById('edit-rates-modal');
     if (!modal) return;
@@ -150,10 +152,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
       if (bad || !propertyId) return;
 
       const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Saving...';
-      }
+      const restoreSubmit = setBusy(submitBtn);
 
       try {
         const res = await fetch('/api/update-rates', {
@@ -179,8 +178,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
         errorEl.textContent = msg;
         errorEl.classList.remove('hidden');
         if (submitBtn) {
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Save rates';
+          restoreSubmit();
         }
       }
     };
