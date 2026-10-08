@@ -1,8 +1,8 @@
 ---
-import { getPortfolio, formatKes } from '../../data/portfolio';
+import { getPortfolio, viewMonthFrom, formatKes } from '../../data/portfolio';
 
 // This company's data only (the signed-in user's).
-const { propertyViews, currentPeriod } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+const { propertyViews, currentPeriod } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies, viewMonthFrom(Astro.url));
 ---
 
 <div id="properties-section" data-animate-bars class="bg-white rounded-3xl p-6 sm:p-7 border border-[#E7EAE4] shadow-sm hover:shadow-md transition-shadow">

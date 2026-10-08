@@ -8,12 +8,16 @@ import ArrearsCard from '../components/dashboard/ArrearsCard.astro';
 import LeasesActionCard from '../components/dashboard/LeasesActionCard.astro';
 import { FEATURES } from '../config/features';
 import GetStartedCard from '../components/dashboard/GetStartedCard.astro';
-import { getPortfolio } from '../data/portfolio';
+import { getPortfolio, monthLabel, selectableMonths, viewMonthFrom } from '../data/portfolio';
 import { ChevronDown, Plus } from '@lucide/astro';
 
 // This company's data only (the signed-in user's).
-const { currentPeriod, gettingStarted } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
-const showGetStarted = !gettingStarted.hasBills;
+const companyId = Astro.locals.user!.companyId;
+const current = await getPortfolio(companyId, Astro.cookies);
+// ?month=YYYY-MM shows the company as it stood at the end of that month.
+const viewing = await getPortfolio(companyId, Astro.cookies, viewMonthFrom(Astro.url));
+const months = selectableMonths(current);
+const showGetStarted = !viewing.isPastMonth && !current.gettingStarted.hasBills;
 
 const firstName = (Astro.locals.user?.name ?? 'there').split(' ')[0];
 // Same greeting as the tenant app ("Habari, David").
@@ -34,17 +38,21 @@ const greeting = 'Habari';
 
     <!-- Date selector & Primary Action -->
     <div class="flex items-center gap-3 self-start md:self-auto">
-      <!-- Period Selector Dropdown Button -->
-      <div class="relative inline-block">
-        <button 
-          type="button" 
-          id="period-select-btn"
-          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white border border-[#E2E5DF] text-xs sm:text-sm font-medium text-[#17231E] shadow-sm hover:border-[#17231E] transition-all cursor-pointer"
+      <!-- Month filter: every card below follows it -->
+      <label class="relative inline-flex items-center">
+        <span class="sr-only">Show month</span>
+        <select
+          id="period-select"
+          class="appearance-none pl-4 pr-9 py-2.5 rounded-2xl bg-white border border-[#E2E5DF] text-xs sm:text-sm font-medium text-[#17231E] shadow-sm hover:border-[#17231E] focus:outline-none focus:border-[#0D382B] transition-all cursor-pointer"
         >
-          <span>{currentPeriod}</span>
-          <ChevronDown class="w-3.5 h-3.5 text-[#5A6862]" />
-        </button>
-      </div>
+          {months.map((m, i) => (
+            <option value={i === 0 ? '' : m} selected={m === viewing.currentMonth}>
+              {monthLabel(m)}{i === 0 ? ' (this month)' : ''}
+            </option>
+          ))}
+        </select>
+        <ChevronDown class="pointer-events-none absolute right-3 w-3.5 h-3.5 text-[#5A6862]" />
+      </label>
 
       <!-- Onboard Tenant Action Button -->
       <button 
@@ -57,6 +65,13 @@ const greeting = 'Habari';
       </button>
     </div>
   </div>
+
+  {viewing.isPastMonth && (
+    <p class="mb-5 text-xs text-[#5A6862] bg-white border border-[#E2E5DF] rounded-2xl px-4 py-3">
+      Showing {viewing.currentPeriod}: bills, payments and arrears as they stood on the last day of the month.
+      <a href="/" class="font-semibold text-[#0D382B] underline ml-1">Back to this month</a>
+    </p>
+  )}
 
   {showGetStarted && <GetStartedCard />}
 
@@ -82,3 +97,16 @@ const greeting = 'Habari';
     {FEATURES.leases && <LeasesActionCard />}
   </div>
 </DashboardLayout>
+
+<script>
+  import { navigate } from 'astro:transitions/client';
+
+  function initPeriodSelect() {
+    const select = document.getElementById('period-select') as HTMLSelectElement | null;
+    if (!select || select.dataset.bound) return;
+    select.dataset.bound = 'true';
+    select.addEventListener('change', () => navigate(select.value ? `/?month=${select.value}` : '/'));
+  }
+
+  document.addEventListener('astro:page-load', initPeriodSelect);
+</script>

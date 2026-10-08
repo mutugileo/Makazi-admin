@@ -537,6 +537,8 @@ function buildPortfolio(companyId: string, seedOverride?: Seed) {
 
   return {
     gettingStarted,
+    /** True when built as at the end of an earlier month (overview filter). */
+    isPastMonth: false,
     asOf,
     currentMonth,
     currentPeriod,
@@ -609,6 +611,74 @@ export function clearLiveCache(companyId?: string) {
  * All callers must `await` this function.
  */
 export async function getPortfolio(
+  companyId: string,
+  cookies?: AstroCookies,
+  month?: Month | null,
+): Promise<Portfolio> {
+  const current = await getCurrentPortfolio(companyId, cookies);
+  if (!month || month >= current.currentMonth || month < current.company.settings.ledgerStartMonth) {
+    return current;
+  }
+  return monthView(current, companyId, month);
+}
+
+/** ?month=YYYY-MM from the overview's month picker, or null. */
+export function viewMonthFrom(url: URL): Month | null {
+  const month = url.searchParams.get('month');
+  return month && /^\d{4}-(0[1-9]|1[0-2])$/.test(month) ? month : null;
+}
+
+/** Months the overview can show, newest first: this one back to the ledger start (2 years at most). */
+export function selectableMonths(portfolio: Portfolio): Month[] {
+  const start = portfolio.company.settings.ledgerStartMonth;
+  const months: Month[] = [];
+  for (let m = portfolio.currentMonth; m >= start && months.length < 24; m = addMonths(m, -1)) months.push(m);
+  return months;
+}
+
+/**
+ * The company as it stood at the end of an earlier month: payments made by
+ * then, tenancies that had started, move-outs that hadn't happened yet. The
+ * billing engine then gives that month's bills, collections and arrears.
+ * Built from the cached current data, once per month per fetch.
+ */
+const monthViews = new WeakMap<Portfolio, Map<Month, Portfolio>>();
+
+function monthView(current: Portfolio, companyId: string, month: Month): Portfolio {
+  let views = monthViews.get(current);
+  if (!views) monthViews.set(current, (views = new Map()));
+  const cached = views.get(month);
+  if (cached) return cached;
+  const view = { ...buildPortfolio(companyId, seedAsAt(current.seed, month)), isPastMonth: true };
+  views.set(month, view);
+  return view;
+}
+
+function seedAsAt(seed: Seed, month: Month): Seed {
+  const [y, m] = month.split('-').map(Number);
+  const asOf = `${month}-${String(new Date(Date.UTC(y, m, 0)).getUTCDate()).padStart(2, '0')}`;
+  const endOfDay = `${asOf}T23:59:59+03:00`;
+  return {
+    ...seed,
+    asOf,
+    tenancies: seed.tenancies
+      .filter((t) => t.moveIn <= asOf)
+      .map((t) =>
+        t.moveOut && t.moveOut > asOf ? { ...t, moveOut: null, moveOutNote: null, depositRefund: null } : t,
+      ),
+    payments: seed.payments.filter((p) => p.date <= asOf),
+    meterReadings: Object.fromEntries(
+      Object.entries(seed.meterReadings).map(([unitId, byMonth]) => [
+        unitId,
+        Object.fromEntries(Object.entries(byMonth).filter(([readingMonth]) => readingMonth <= month)),
+      ]),
+    ),
+    repairTickets: seed.repairTickets.filter((t) => t.createdAt <= endOfDay),
+    messages: seed.messages.filter((msg) => msg.sentAt <= endOfDay),
+  };
+}
+
+async function getCurrentPortfolio(
   companyId: string,
   cookies?: AstroCookies,
 ): Promise<Portfolio> {

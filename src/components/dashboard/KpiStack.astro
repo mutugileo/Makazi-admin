@@ -1,9 +1,9 @@
 ---
-import { getPortfolio, formatKes } from '../../data/portfolio';
+import { getPortfolio, viewMonthFrom, formatKes } from '../../data/portfolio';
 import { ArrowRight } from '@lucide/astro';
 
 // This company's data only (the signed-in user's).
-const { repairStats, stats, graceDay } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+const { repairStats, stats, graceDay } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies, viewMonthFrom(Astro.url));
 
 const openRepairsCount = repairStats.openCount;
 const highPriorityRepairsCount = repairStats.highPriorityOpen;

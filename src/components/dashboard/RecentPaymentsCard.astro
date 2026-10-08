@@ -1,8 +1,8 @@
 ---
-import { getPortfolio, formatKes } from '../../data/portfolio';
+import { getPortfolio, viewMonthFrom, formatKes } from '../../data/portfolio';
 
 // This company's data only (the signed-in user's).
-const { payments } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+const { payments } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies, viewMonthFrom(Astro.url));
 
 const recentPayments = payments.slice(0, 5);
 ---

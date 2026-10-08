@@ -35,7 +35,7 @@ const {
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link 
-      href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&family=Nunito+Sans:opsz,wght@6..12,300..800&display=swap" 
+      href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400..800&display=swap" 
       rel="stylesheet" 
     />
     <meta name="generator" content={Astro.generator} />
@@ -301,9 +301,29 @@ const {
         if (closeRemindersBtn) closeRemindersBtn.onclick = () => hideModal('send-reminders-modal');
         if (cancelRemindersBtn) cancelRemindersBtn.onclick = () => hideModal('send-reminders-modal');
         if (confirmRemindersBtn) {
-          confirmRemindersBtn.onclick = () => {
-            hideModal('send-reminders-modal');
-            showToast('Prototype: reminders not sent', 'SMS and email sending is connected in Phase 2.');
+          confirmRemindersBtn.onclick = async () => {
+            const btn = confirmRemindersBtn as HTMLButtonElement;
+            btn.disabled = true;
+            try {
+              // Success only once the server has saved the notifications.
+              const res = await fetch('/api/send-reminders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: '{}',
+              });
+              const data = await res.json().catch(() => ({}));
+              if (!res.ok || data.error) throw new Error(data.error || 'Could not send reminders');
+              hideModal('send-reminders-modal');
+              const skipped = data.skipped ? ` ${data.skipped} already reminded in the last 24 hours.` : '';
+              showToast(
+                data.sent ? 'Reminders sent' : 'No reminders sent',
+                `${data.sent} tenant${data.sent === 1 ? '' : 's'} notified in the Makazi app.${skipped}`,
+              );
+            } catch (err: unknown) {
+              showToast('Error', err instanceof Error ? err.message : String(err));
+            } finally {
+              btn.disabled = false;
+            }
           };
         }
 

@@ -2,8 +2,10 @@
 
 
 @theme {
-  --font-serif: 'Newsreader', Georgia, serif;
-  --font-sans: 'Nunito Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  /* One family for the admin and the tenant app (AppTypography): Baloo 2.
+     Headings ("font-editorial") use it too, just larger. */
+  --font-serif: 'Baloo 2', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans: 'Baloo 2', -apple-system, BlinkMacSystemFont, sans-serif;
   
   --color-forest-950: #061913;
   --color-forest-900: #0A261F;
@@ -50,6 +52,8 @@
 
 body {
   font-family: var(--font-sans);
+  font-optical-sizing: auto;
+  font-style: normal;
   background-color: var(--color-sand-100);
   color: #17231E;
   margin: 0;

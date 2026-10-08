@@ -1,14 +1,17 @@
 ---
-import { getPortfolio, formatKes } from '../../data/portfolio';
+import { getPortfolio, viewMonthFrom, formatKes } from '../../data/portfolio';
 
 // This company's data only (the signed-in user's).
-const { stats, sixMonthsHistory } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+const { stats, sixMonthsHistory, isPastMonth, currentMonth } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies, viewMonthFrom(Astro.url));
 
 // Bars are scaled against the largest month billed. Labels switch to
 // thousands when the portfolio bills under a million a month.
 const maxExpected = Math.max(1, ...sixMonthsHistory.map((m) => m.expected));
 const unit = maxExpected >= 1_000_000 ? { div: 1_000_000, label: 'KES M', digits: 2 } : { div: 1_000, label: "KES '000", digits: 0 };
 const maxBarValue = Math.max(1, maxExpected / unit.div);
+// "this month", or "in September" when the overview is set to an earlier month.
+const monthName = new Date(`${currentMonth}-01T00:00:00Z`).toLocaleString('en-GB', { month: 'long', timeZone: 'UTC' });
+const inMonth = isPastMonth ? `in ${monthName}` : 'this month';
 ---
 
 <div data-animate-bars class="relative overflow-hidden rounded-3xl bg-[#0D382B] text-white p-7 lg:p-8 shadow-xl border border-[#144838]/60 transition-all duration-300">
@@ -24,14 +27,14 @@ const maxBarValue = Math.max(1, maxExpected / unit.div);
     <div class="lg:col-span-7 flex flex-col justify-between">
       <div>
         <span class="text-xs font-semibold tracking-widest text-[#93BDB0] uppercase">
-          COLLECTED THIS MONTH
+          COLLECTED {inMonth.toUpperCase()}
         </span>
         <h2 class="font-editorial text-4xl sm:text-5xl lg:text-6xl font-normal tracking-tight text-white mt-3 mb-2">
           {formatKes(stats.collectedThisMonth)}
         </h2>
         <p class="text-sm text-[#93BDB0] font-medium">
           {stats.expectedThisMonth === 0
-            ? 'No bills issued this month yet'
+            ? (isPastMonth ? `No bills issued ${inMonth}` : 'No bills issued this month yet')
             : <>of {formatKes(stats.expectedThisMonth)} billed (rent, water, garbage) · <span class="text-white font-semibold">{stats.collectionRate}%</span></>}
         </p>
         {stats.depositsThisMonth > 0 && (

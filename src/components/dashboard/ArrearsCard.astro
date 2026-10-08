@@ -1,8 +1,8 @@
 ---
-import { getPortfolio, formatKes } from '../../data/portfolio';
+import { getPortfolio, viewMonthFrom, formatKes } from '../../data/portfolio';
 
 // This company's data only (the signed-in user's).
-const { arrears, lateLabel } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+const { arrears, lateLabel, isPastMonth, currentPeriod } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies, viewMonthFrom(Astro.url));
 
 const largestArrears = arrears.slice(0, 4);
 ---
@@ -11,15 +11,16 @@ const largestArrears = arrears.slice(0, 4);
   <!-- Card Header -->
   <div class="flex items-center justify-between mb-5 pb-2 border-b border-[#F0F2EE]">
     <h3 class="font-editorial text-2xl sm:text-3xl font-normal text-[#17231E] tracking-tight">
-      Largest arrears
+      Largest arrears{isPastMonth && <span class="block text-xs font-sans font-semibold tracking-wider uppercase text-[#73827C] mt-1">At end of {currentPeriod}</span>}
     </h3>
-    <button 
+    <!-- Reminders are about what tenants owe today, not in an earlier month. -->
+    {!isPastMonth && <button 
       type="button"
       id="send-reminders-header-btn" 
       class="text-xs sm:text-sm font-semibold text-[#0D382B] hover:text-[#185340] hover:underline transition-colors cursor-pointer"
     >
       Send reminders
-    </button>
+    </button>}
   </div>
 
   <!-- Arrears List -->

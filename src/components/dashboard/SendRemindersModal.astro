@@ -1,12 +1,27 @@
 ---
 import { X, Send } from '@lucide/astro';
 import { getPortfolio, formatKes } from '../../data/portfolio';
+import { paymentReminder } from '../../lib/reminders';
 
 // This company's data only (the signed-in user's).
-const { arrears, company, graceDay, lateLabel, currentPeriod } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+const { arrears, company, lateLabel, asOf } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
 
 const totalArrears = arrears.reduce((acc, t) => acc + t.balance, 0);
 const sample = arrears[0];
+// Exactly what the tenant will see (the server builds the same text).
+const preview = sample
+  ? paymentReminder({
+      tenantName: sample.tenant.name,
+      balance: sample.balance,
+      accountNumber: sample.accountNumber,
+      companyName: company.name,
+      mpesaPaybill: company.mpesaPaybill,
+      graceDay: company.settings.graceDay,
+      asOf,
+    })
+  : null;
+const disabledChannel =
+  'flex items-center gap-2 p-3 rounded-xl border border-[#E7EAE4] bg-[#F7F8F5] cursor-not-allowed text-xs font-medium text-[#A8B3AE]';
 ---
 
 <div 
@@ -27,7 +42,7 @@ const sample = arrears[0];
           <h3 id="reminders-modal-title" class="font-editorial text-2xl font-normal text-[#17231E]">
             Send payment reminders
           </h3>
-          <p class="text-xs text-[#73827C]">{arrears.length} tenants with a balance · Total {formatKes(totalArrears)}</p>
+          <p class="text-xs text-[#73827C]">{arrears.length} tenant{arrears.length === 1 ? '' : 's'} with a balance · Total {formatKes(totalArrears)}</p>
         </div>
       </div>
       <button 
@@ -66,30 +81,37 @@ const sample = arrears[0];
           Dispatch Channels
         </label>
         <div class="grid grid-cols-3 gap-3">
-          <label class="flex items-center gap-2 p-3 rounded-xl border border-[#0D382B] bg-[#0D382B]/5 cursor-pointer text-xs font-semibold text-[#0D382B]">
-            <input type="checkbox" checked class="rounded text-[#0D382B] focus:ring-0" />
+          <label class={disabledChannel} title="Not available">
+            <input type="checkbox" disabled class="rounded focus:ring-0" />
             <span>SMS Alert</span>
           </label>
-          <label class="flex items-center gap-2 p-3 rounded-xl border border-[#0D382B] bg-[#0D382B]/5 cursor-pointer text-xs font-semibold text-[#0D382B]">
-            <input type="checkbox" checked class="rounded text-[#0D382B] focus:ring-0" />
+          <label class={disabledChannel} title="Not available">
+            <input type="checkbox" disabled class="rounded focus:ring-0" />
             <span>Email</span>
           </label>
-          <label class="flex items-center gap-2 p-3 rounded-xl border border-[#DCE0D7] hover:border-[#CBD1C5] cursor-pointer text-xs font-medium text-[#5A6862]">
-            <input type="checkbox" class="rounded text-[#0D382B] focus:ring-0" />
+          <label class="flex items-center gap-2 p-3 rounded-xl border border-[#0D382B] bg-[#0D382B]/5 text-xs font-semibold text-[#0D382B]">
+            <input type="checkbox" checked disabled class="rounded accent-[#0D382B] focus:ring-0" />
             <span>In-App Push</span>
           </label>
         </div>
+        <p class="text-[11px] text-[#73827C] mt-2">
+          Shows as a notification in each tenant's Makazi app, at no cost. SMS and email aren't available.
+          Anyone reminded in the last 24 hours is skipped.
+        </p>
       </div>
 
       <!-- Message Preview -->
       <div>
         <label class="block text-xs font-semibold uppercase tracking-wider text-[#5A6862] mb-1.5">
-          Message preview{sample && ` (${sample.tenant.name})`}
+          Notification preview{sample && ` (${sample.tenant.name})`}
         </label>
-        <div class="p-3.5 bg-[#FAFBF9] rounded-xl border border-[#E2E5DF] text-xs text-[#2C3B34] font-mono leading-relaxed">
-          {sample
-            ? `"${company.name}: Dear ${sample.tenant.name.split(' ')[0]}, your balance is ${formatKes(sample.balance)} (rent, water, garbage and any unpaid amount from earlier months). Please pay by ${graceDay} ${currentPeriod.split(' ')[0]} via M-Pesa Paybill ${company.mpesaPaybill}, Account ${sample.accountNumber}. Your ${currentPeriod} bill is in the Makazi app."`
-            : 'Nobody owes anything right now.'}
+        <div class="p-3.5 bg-[#FAFBF9] rounded-xl border border-[#E2E5DF] text-xs text-[#2C3B34] leading-relaxed">
+          {preview ? (
+            <>
+              <span class="block font-semibold text-[#17231E] mb-1">{preview.title}</span>
+              {preview.body}
+            </>
+          ) : 'Nobody owes anything right now.'}
         </div>
       </div>
 
@@ -105,9 +127,10 @@ const sample = arrears[0];
         <button 
           type="button" 
           id="confirm-send-reminders-btn"
-          class="px-6 py-2.5 rounded-xl text-sm font-semibold bg-[#C04A26] text-white hover:bg-[#A93C1C] transition-all shadow-md hover:shadow-lg cursor-pointer flex items-center gap-2"
+          disabled={arrears.length === 0}
+          class="px-6 py-2.5 rounded-xl text-sm font-semibold bg-[#C04A26] text-white hover:bg-[#A93C1C] transition-all shadow-md hover:shadow-lg cursor-pointer flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <span>Send {arrears.length} reminders</span>
+          <span>Send {arrears.length} reminder{arrears.length === 1 ? '' : 's'}</span>
         </button>
       </div>
     </div>

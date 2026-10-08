@@ -1,94 +1,183 @@
 ---
 import DashboardLayout from '../layouts/DashboardLayout.astro';
-import { bedLabel, formatDate, formatKes, getPortfolio, monthLabel } from '../data/portfolio';
+import { bedLabel, getPortfolio, monthLabel } from '../data/portfolio';
 
 // This company's data only (the signed-in user's).
-const { company, plan, portfolioSummary } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+const { company, portfolioSummary } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
 const { settings } = company;
+const canEdit = Astro.locals.user!.role === 'owner';
+const depositRows = Object.entries(settings.depositSchedule).sort(([a], [b]) => Number(a) - Number(b));
 
-const planNames = { starter: 'Starter', growth: 'Growth', pro: 'Pro' } as const;
-const statusNames = { trial: 'Free trial', active: 'Active', past_due: 'Payment due', suspended: 'Suspended' } as const;
-const usage = [
-  { label: 'Units', used: plan.unitsUsed, limit: plan.unitLimit },
-  { label: 'Staff accounts', used: plan.staffUsed, limit: plan.staffLimit },
-];
+// The Makazi plan is managed by Codzure in the super-admin portal, not here.
 
 const card = 'bg-white rounded-3xl border border-[#E3E6DF] p-6 shadow-xs';
-const dt = 'text-[11px] font-semibold uppercase tracking-wider text-[#69847A]';
-const dd = 'text-sm font-semibold text-[#0D382B] mt-0.5';
+const label = 'block text-[11px] font-semibold uppercase tracking-wider text-[#69847A] mb-1.5';
+const input =
+  'w-full px-3.5 py-2.5 rounded-xl border border-[#E2E5DF] bg-[#FAFBF9] text-sm font-semibold text-[#0D382B] focus:outline-none focus:border-[#0D382B] disabled:bg-[#F3F4F0] disabled:text-[#5A6862]';
+const hint = 'text-[11px] text-[#73827C] mt-1';
+const fixed = 'text-sm font-semibold text-[#0D382B] mt-0.5';
 ---
 
 <DashboardLayout title={`Makazi — Settings`} currentPath="/settings">
   <div class="mb-8">
     <span class="text-xs font-semibold tracking-wider text-[#69847A] uppercase">{portfolioSummary}</span>
     <h1 class="text-3xl sm:text-4xl font-normal font-editorial text-[#0D382B] tracking-tight mt-1">Settings</h1>
-    <p class="text-xs text-[#69847A] mt-2">Read-only for now. Editing arrives with the database.</p>
+    <p class="text-xs text-[#69847A] mt-2">
+      {canEdit
+        ? 'Tenants see these in the Makazi app as soon as you save.'
+        : 'Only the owner can change these.'}
+    </p>
   </div>
 
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <section class={card}>
-      <h2 class="font-editorial text-2xl text-[#0D382B] mb-4">Company</h2>
-      <dl class="grid grid-cols-2 gap-4">
-        <div><dt class={dt}>Name</dt><dd class={dd}>{company.name}</dd></div>
-        <div><dt class={dt}>KRA PIN</dt><dd class={dd}>{company.kraPin}</dd></div>
-        <div><dt class={dt}>Company ID</dt><dd class={`${dd} font-mono`}>{company.slug}</dd></div>
-        <div><dt class={dt}>On Makazi since</dt><dd class={dd}>{monthLabel(settings.ledgerStartMonth)}</dd></div>
-      </dl>
-    </section>
-
-    <section class={card}>
-      <h2 class="font-editorial text-2xl text-[#0D382B] mb-4">Payments</h2>
-      <dl class="grid grid-cols-2 gap-4">
-        <div><dt class={dt}>M-Pesa Paybill</dt><dd class={`${dd} tabular-nums`}>{company.mpesaPaybill}</dd></div>
-        <div><dt class={dt}>Account number</dt><dd class={dd}>Unit code, e.g. RC-5A</dd></div>
-        <div><dt class={dt}>Bank</dt><dd class={dd}>{company.bankName}</dd></div>
-        <div><dt class={dt}>Bank account</dt><dd class={`${dd} tabular-nums`}>{company.bankAccount}</dd></div>
-      </dl>
-    </section>
-
-    <section class={card}>
-      <h2 class="font-editorial text-2xl text-[#0D382B] mb-4">Billing rules</h2>
-      <dl class="grid grid-cols-2 gap-4">
-        <div><dt class={dt}>Rent due</dt><dd class={dd}>Day {settings.dueDay} of the month</dd></div>
-        <div><dt class={dt}>Grace period</dt><dd class={dd}>Until day {settings.graceDay}, overdue after</dd></div>
-        <div>
-          <dt class={dt}>Deposits</dt>
-          <dd class={`${dd} tabular-nums`}>
-            {Object.entries(settings.depositSchedule).map(([beds, amount]) => (
-              <span class="block">{bedLabel(Number(beds))}: {formatKes(amount)}</span>
-            ))}
-          </dd>
+  <form id="settings-form" novalidate>
+    <fieldset disabled={!canEdit} class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <section class={card}>
+        <h2 class="font-editorial text-2xl text-[#0D382B] mb-4">Company</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="sm:col-span-2">
+            <label for="s-name" class={label}>Name</label>
+            <input id="s-name" name="name" class={input} value={company.name} maxlength="120" required />
+            <p class={hint}>On every screen of the app, receipts and statements.</p>
+          </div>
+          <div>
+            <label for="s-kra" class={label}>KRA PIN</label>
+            <input id="s-kra" name="kraPin" class={`${input} uppercase font-mono`} value={company.kraPin} maxlength="11" required />
+            <p class={hint}>Printed on receipts.</p>
+          </div>
+          <div>
+            <span class={label}>Company ID</span>
+            <p class={`${fixed} font-mono`}>{company.slug}</p>
+            <p class={hint}>On Makazi since {monthLabel(settings.ledgerStartMonth)}.</p>
+          </div>
         </div>
-        <div><dt class={dt}>Former tenants' records</dt><dd class={dd}>Kept {settings.recordRetentionMonths} months after move-out</dd></div>
-        <div class="col-span-2"><dt class={dt}>Move-in rent</dt><dd class={dd}>Charged for the days left in the month</dd></div>
-      </dl>
-    </section>
+      </section>
 
-    <section class={card}>
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="font-editorial text-2xl text-[#0D382B]">Makazi plan</h2>
-        <span class="px-3 py-1 rounded-full text-xs font-semibold border bg-[#F1F8E9] text-[#2E7D32] border-[#C8E6C9]">
-          {planNames[plan.plan]} · {statusNames[plan.status]}
-        </span>
-      </div>
-      {plan.trialEndsAt && <p class="text-xs text-[#69847A] mb-4">Trial ends {formatDate(plan.trialEndsAt)}.</p>}
-      <div class="space-y-4">
-        {usage.map((u) => {
-          const pct = Math.min(100, Math.round((u.used / u.limit) * 100));
-          return (
+      <section class={card}>
+        <h2 class="font-editorial text-2xl text-[#0D382B] mb-4">Payments</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="s-paybill" class={label}>M-Pesa Paybill</label>
+            <input id="s-paybill" name="mpesaPaybill" class={`${input} tabular-nums`} value={company.mpesaPaybill} inputmode="numeric" maxlength="7" required />
+            <p class={hint}>Shown on Pay rent in the app.</p>
+          </div>
+          <div>
+            <span class={label}>Account number</span>
+            <p class={fixed}>Unit code, e.g. RC-5A</p>
+            <p class={hint}>Each tenant's own, set by their unit.</p>
+          </div>
+          <div>
+            <label for="s-bank" class={label}>Bank</label>
+            <input id="s-bank" name="bankName" class={input} value={company.bankName} maxlength="80" required />
+          </div>
+          <div>
+            <label for="s-account" class={label}>Bank account</label>
+            <input id="s-account" name="bankAccount" class={`${input} tabular-nums`} value={company.bankAccount} inputmode="numeric" maxlength="24" required />
+            <p class={hint}>Shown for bank transfers in the app.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class={`${card} lg:col-span-2`}>
+        <h2 class="font-editorial text-2xl text-[#0D382B] mb-4">Billing rules</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label for="s-due" class={label}>Rent due (day of month)</label>
+            <input id="s-due" name="dueDay" type="number" min="1" max="28" class={`${input} tabular-nums`} value={settings.dueDay} required />
+          </div>
+          <div>
+            <label for="s-grace" class={label}>Grace period ends (day)</label>
+            <input id="s-grace" name="graceDay" type="number" min="1" max="28" class={`${input} tabular-nums`} value={settings.graceDay} required />
+            <p class={hint}>Overdue after this day.</p>
+          </div>
+          <div>
+            <label for="s-retention" class={label}>Former tenants' records (months)</label>
+            <input id="s-retention" name="recordRetentionMonths" type="number" min="1" max="24" class={`${input} tabular-nums`} value={settings.recordRetentionMonths} required />
+            <p class={hint}>How long they can still see statements after move-out.</p>
+          </div>
+          <div>
+            <span class={label}>Move-in rent</span>
+            <p class={fixed}>Days left in the month</p>
+          </div>
+          {depositRows.map(([beds, amount]) => (
             <div>
-              <div class="flex items-center justify-between text-xs mb-1.5">
-                <span class="text-[#69847A]">{u.label}</span>
-                <span class="font-semibold text-[#0D382B] tabular-nums">{u.used} of {u.limit}</span>
-              </div>
-              <div class="w-full bg-[#E3E6DF] h-2 rounded-full overflow-hidden">
-                <div class={`h-full rounded-full ${pct >= 90 ? 'bg-[#C04A26]' : 'bg-[#0D382B]'}`} style={`width: ${pct}%`}></div>
-              </div>
+              <label for={`s-deposit-${beds}`} class={label}>Deposit · {bedLabel(Number(beds))} (KES)</label>
+              <input id={`s-deposit-${beds}`} name={`deposit-${beds}`} data-beds={beds} type="number" min="0" step="500" class={`${input} tabular-nums`} value={amount} required />
             </div>
-          );
-        })}
+          ))}
+        </div>
+        <p class={`${hint} mt-4`}>
+          Due and grace days apply to every bill, including this month's. Deposits apply to tenants onboarded after you save.
+        </p>
+      </section>
+    </fieldset>
+
+    {canEdit && (
+      <div class="mt-6 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3">
+        <p data-field="error" role="alert" class="hidden text-xs text-[#C04A26] sm:mr-auto"></p>
+        <button type="reset" class="px-5 py-2.5 rounded-xl text-sm font-medium text-[#5A6862] hover:bg-[#F4F5F1] transition-colors cursor-pointer">
+          Undo changes
+        </button>
+        <button type="submit" data-field="submit" class="px-6 py-2.5 rounded-xl text-sm font-semibold bg-[#0D382B] text-white hover:bg-[#154637] transition-all shadow-md cursor-pointer disabled:opacity-60">
+          Save changes
+        </button>
       </div>
-      <p class="text-[11px] text-[#69847A] mt-4">Plans and limits are recorded but not enforced or billed yet.</p>
-    </section>
-  </div>
+    )}
+  </form>
 </DashboardLayout>
+
+<script>
+  function initSettingsPage() {
+    const form = document.getElementById('settings-form') as HTMLFormElement | null;
+    // Page loads come back through view transitions: bind once per form.
+    if (!form || form.dataset.bound) return;
+    form.dataset.bound = 'true';
+    const error = form.querySelector<HTMLElement>('[data-field="error"]');
+    const submit = form.querySelector<HTMLButtonElement>('[data-field="submit"]');
+    const value = (name: string) => (form.elements.namedItem(name) as HTMLInputElement | null)?.value ?? '';
+    const showError = (message: string | null) => {
+      if (!error) return;
+      error.textContent = message ?? '';
+      error.classList.toggle('hidden', !message);
+    };
+    form.addEventListener('reset', () => showError(null));
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!submit) return;
+      const depositSchedule: Record<string, string> = {};
+      form.querySelectorAll<HTMLInputElement>('input[data-beds]').forEach((el) => {
+        depositSchedule[el.dataset.beds!] = el.value;
+      });
+
+      showError(null);
+      submit.disabled = true;
+      try {
+        // The server checks every field; nothing shows as saved until it has.
+        const res = await fetch('/api/update-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: value('name'),
+            kraPin: value('kraPin'),
+            mpesaPaybill: value('mpesaPaybill'),
+            bankName: value('bankName'),
+            bankAccount: value('bankAccount'),
+            dueDay: value('dueDay'),
+            graceDay: value('graceDay'),
+            recordRetentionMonths: value('recordRetentionMonths'),
+            depositSchedule,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.error) throw new Error(data.error || 'Could not save settings');
+        window.makaziUi?.showToast('Settings saved', 'Tenants see the new details in the app.');
+        setTimeout(() => window.location.reload(), 800);
+      } catch (err: unknown) {
+        submit.disabled = false;
+        showError(err instanceof Error ? err.message : String(err));
+      }
+    });
+  }
+
+  document.addEventListener('astro:page-load', initSettingsPage);
+</script>

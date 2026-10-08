@@ -3,7 +3,7 @@ import { X, Building2, Plus, Trash2 } from '@lucide/astro';
 import { bedLabel, getPortfolio } from '../../data/portfolio';
 
 // This company's data only (the signed-in user's).
-const { company, plan, propertyViews, seed } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+const { company, propertyViews, seed } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
 
 // Managers first, so the usual choice is preselected; the owner can manage too.
 const managers = seed.staff
@@ -18,10 +18,8 @@ const defaults = { waterRate: first?.waterRate ?? 150, garbageFee: first?.garbag
 const existing = {
   names: propertyViews.map((p) => p.property.name.toLowerCase()),
   prefixes: propertyViews.map((p) => p.property.accountPrefix.toUpperCase()),
-  unitsUsed: plan.unitsUsed,
-  unitLimit: plan.unitLimit,
-  planName: plan.plan,
 };
+// Plan limits live in the Makazi super-admin portal, not here.
 
 const inputClass =
   'w-full px-4 py-2.5 rounded-xl border border-[#DCE0D7] focus:border-[#0D382B] focus:ring-2 focus:ring-[#0D382B]/10 outline-none text-sm text-[#17231E] bg-white';
@@ -146,7 +144,6 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
         <p class="text-[11px] text-[#73827C] mt-2">Bedrooms set the deposit ({bedroomOptions.map((b) => bedLabel(b)).join(', ')}, from Settings). New units start as Vacant.</p>
       </div>
 
-      <p id="plan-note" class="hidden text-xs rounded-xl p-3 bg-[#FFF8E1] text-[#7A5B02] border border-[#FFE082]"></p>
       <p id="add-property-error" role="alert" class="hidden text-sm text-[#C04A26]"></p>
 
       <div class="pt-4 flex items-center justify-end gap-3 border-t border-[#F0F2EE]">
@@ -160,7 +157,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
 <script type="application/json" id="add-property-context" set:html={JSON.stringify(existing).replace(/</g, '\\u003c')} />
 
 <script>
-  type Context = { names: string[]; prefixes: string[]; unitsUsed: number; unitLimit: number; planName: string };
+  type Context = { names: string[]; prefixes: string[] };
 
   function initAddPropertyModal() {
     const modal = document.getElementById('add-property-modal');
@@ -189,15 +186,6 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
       const count = labels().length;
       const countEl = document.getElementById('unit-count');
       if (countEl) countEl.textContent = `(${count})`;
-      const after = ctx.unitsUsed + count;
-      const note = document.getElementById('plan-note');
-      if (note) {
-        const over = after > ctx.unitLimit;
-        note.classList.toggle('hidden', !over);
-        if (over) {
-          note.textContent = `This takes you to ${after} units, over the ${ctx.unitLimit} on your ${ctx.planName} plan. Plans aren't enforced yet; Codzure will be in touch about an upgrade.`;
-        }
-      }
       rows!.querySelectorAll<HTMLButtonElement>('.unit-remove').forEach((b) => (b.disabled = count === 1));
     }
 
