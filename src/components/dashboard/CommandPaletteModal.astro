@@ -1,0 +1,150 @@
+---
+import { Search, X, User, Building, Receipt, ArrowRight, CornerDownLeft } from '@lucide/astro';
+import { getPortfolio, formatKes } from '../../data/portfolio';
+
+// This company's data only (the signed-in user's).
+const { payments, propertyViews } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+
+const recentPayments = payments.slice(0, 3);
+---
+
+<div 
+  id="command-palette-modal" 
+  class="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-200"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="command-palette-title"
+>
+  <div class="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-[#E7EAE4] overflow-hidden transform scale-95 transition-transform duration-200">
+    <!-- Search Bar -->
+    <div class="flex items-center gap-3 px-5 py-4 border-b border-[#F0F2EE]">
+      <Search class="w-5 h-5 text-[#73827C] flex-shrink-0" />
+      <input 
+        type="text" 
+        id="command-search-input" 
+        placeholder="Type a name, property, unit, or receipt ID..." 
+        autocomplete="off"
+        class="w-full bg-transparent text-sm sm:text-base text-[#17231E] placeholder:text-[#93A19B] outline-none font-medium"
+      />
+      <div class="flex items-center gap-1.5 flex-shrink-0">
+        <kbd class="px-2 py-0.5 text-[11px] font-semibold text-[#73827C] bg-[#F4F5F1] rounded-md border border-[#E1E4DC]">
+          ESC
+        </kbd>
+        <button 
+          type="button" 
+          id="close-command-modal-btn"
+          class="h-7 w-7 rounded-full bg-[#F4F5F1] text-[#73827C] hover:text-[#17231E] flex items-center justify-center transition-colors cursor-pointer"
+          aria-label="Close command palette"
+        >
+          <X class="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+
+    <!-- Results Container -->
+    <div id="command-results" class="max-h-[60vh] overflow-y-auto p-3 space-y-4">
+      <!-- Quick Navigation Section -->
+      <div class="command-section">
+        <p class="px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-[#73827C]">
+          Quick Actions
+        </p>
+        <div class="space-y-1">
+          <button 
+            type="button" 
+            class="command-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-left hover:bg-[#F4F5F1] transition-colors cursor-pointer group"
+            data-action="onboard"
+          >
+            <div class="flex items-center gap-3">
+              <span class="h-8 w-8 rounded-lg bg-[#0D382B]/10 text-[#0D382B] flex items-center justify-center font-bold text-sm">
+                +
+              </span>
+              <div>
+                <p class="text-sm font-medium text-[#17231E] group-hover:text-[#0D382B]">Onboard new tenant</p>
+                <p class="text-xs text-[#73827C]">Move a tenant into a vacant unit</p>
+              </div>
+            </div>
+            <CornerDownLeft class="w-4 h-4 text-[#A8B3AE] group-hover:text-[#17231E]" />
+          </button>
+
+          <button 
+            type="button" 
+            class="command-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-left hover:bg-[#F4F5F1] transition-colors cursor-pointer group"
+            data-action="reminders"
+          >
+            <div class="flex items-center gap-3">
+              <span class="h-8 w-8 rounded-lg bg-[#C04A26]/10 text-[#C04A26] flex items-center justify-center font-bold text-sm">
+                !
+              </span>
+              <div>
+                <p class="text-sm font-medium text-[#17231E] group-hover:text-[#C04A26]">Send payment reminders</p>
+                <p class="text-xs text-[#73827C]">Dispatch SMS & Email notices to overdue accounts</p>
+              </div>
+            </div>
+            <CornerDownLeft class="w-4 h-4 text-[#A8B3AE] group-hover:text-[#17231E]" />
+          </button>
+        </div>
+      </div>
+
+      <!-- Properties Section -->
+      <div class="command-section">
+        <p class="px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-[#73827C]">
+          Properties
+        </p>
+        <div class="space-y-1">
+          {propertyViews.map(p => (
+            <a 
+              href={`/tenants?property=${p.property.id}`}
+              class="command-item flex items-center justify-between px-3.5 py-2.5 rounded-xl hover:bg-[#F4F5F1] transition-colors group"
+            >
+              <div class="flex items-center gap-3">
+                <div class="h-8 w-8 rounded-lg bg-[#0D382B]/10 text-[#0D382B] flex items-center justify-center">
+                  <Building class="w-4 h-4" />
+                </div>
+                <div>
+                  <p class="text-sm font-medium text-[#17231E] group-hover:text-[#0D382B]">{p.property.name}</p>
+                  <p class="text-xs text-[#73827C]">{p.typeLabel} · {p.occupied}/{p.units.length} occupied · {p.collectionRate}% collected</p>
+                </div>
+              </div>
+              <ArrowRight class="w-4 h-4 text-[#A8B3AE] group-hover:text-[#17231E]" />
+            </a>
+          ))}
+        </div>
+      </div>
+
+      <!-- Tenants & Receipts Section -->
+      <div class="command-section">
+        <p class="px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-[#73827C]">
+          Recent Receipts
+        </p>
+        <div class="space-y-1">
+          {recentPayments.map(({ payment: p, view }) => (
+            <button 
+              type="button" 
+              class="command-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-left hover:bg-[#F4F5F1] transition-colors cursor-pointer group"
+              data-receipt-id={p.receiptNumber}
+            >
+              <div class="flex items-center gap-3">
+                <div class="h-8 w-8 rounded-lg bg-[#0D382B]/10 text-[#0D382B] flex items-center justify-center">
+                  <Receipt class="w-4 h-4" />
+                </div>
+                <div>
+                  <p class="text-sm font-medium text-[#17231E] group-hover:text-[#0D382B]">{view.tenant.name} — {p.receiptNumber}</p>
+                  <p class="text-xs text-[#73827C]">{view.unitLabel} · {formatKes(p.amount)}</p>
+                </div>
+              </div>
+              <span class="text-xs font-mono text-[#0D382B] font-medium">{p.reference}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Helper -->
+    <div class="px-5 py-3 bg-[#FAFBF9] border-t border-[#F0F2EE] flex items-center justify-between text-xs text-[#73827C]">
+      <span>Search any tenant name, property, or unit</span>
+      <div class="flex items-center gap-2">
+        <span>Use <kbd class="px-1.5 py-0.5 rounded bg-white border border-[#DCE0D7] text-[10px]">↑</kbd> <kbd class="px-1.5 py-0.5 rounded bg-white border border-[#DCE0D7] text-[10px]">↓</kbd> to navigate</span>
+      </div>
+    </div>
+  </div>
+</div>

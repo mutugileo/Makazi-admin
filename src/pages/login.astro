@@ -1,0 +1,128 @@
+---
+import '../styles/global.css';
+import { verifyPassword } from '../lib/auth/password';
+import { clearFailures, isLockedOut, recordFailure } from '../lib/auth/rate-limit';
+import { adminAccount, adminConfigured, createSession, safeNext } from '../lib/auth/session';
+
+// Developer credit in the footer.
+const BUILDER = { name: 'Codzure Solutions Ltd', url: 'https://codzure.com' };
+
+const next = safeNext(Astro.url.searchParams.get('next'));
+if (Astro.locals.user) return Astro.redirect(next, 303);
+
+const configured = adminConfigured();
+let error: string | null = null;
+let email = '';
+
+if (Astro.request.method === 'POST' && configured) {
+  const form = await Astro.request.formData();
+  email = String(form.get('email') ?? '').trim().toLowerCase();
+  const password = String(form.get('password') ?? '');
+  const key = `${email}|${Astro.clientAddress}`;
+  const lockout = isLockedOut(key);
+
+  if (lockout.locked) {
+    error = `Too many attempts. Try again in ${lockout.retryInMinutes} minute${lockout.retryInMinutes === 1 ? '' : 's'}.`;
+  } else {
+    const account = adminAccount()!;
+    // Always run the hash check so a wrong email takes as long as a wrong password.
+    const passwordOk = await verifyPassword(password, account.passwordHash);
+    if (passwordOk && email === account.email) {
+      clearFailures(key);
+      createSession(Astro.cookies, account, Astro.url.protocol === 'https:');
+      return Astro.redirect(next, 303);
+    }
+    recordFailure(key);
+    error = 'Email or password is incorrect.';
+  }
+}
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400&family=Nunito+Sans:opsz,wght@6..12,300..800&display=swap" rel="stylesheet" />
+    <title>Sign in · Makazi</title>
+  </head>
+  <!-- Same sand background as the dashboard (global.css). If the photo can't
+       load, its layer is removed and the page reads like the overview. -->
+  <body class="group min-h-screen bg-[#F3F4F0] text-[#17231E] antialiased">
+    <!-- Photo layer: forest green from the overview hero card while loading,
+         then the apartment photo with a light tint for contrast. -->
+    <div data-photo aria-hidden="true" class="fixed inset-0 bg-[#0D382B] group-data-[photo=failed]:hidden">
+      <img
+        src="/images/login-bg.webp"
+        alt=""
+        fetchpriority="high"
+        decoding="async"
+        class="h-full w-full object-cover"
+        onerror="document.body.dataset.photo = 'failed'"
+      />
+      <div class="absolute inset-0 bg-gradient-to-br from-[#0A261F]/55 via-[#0A261F]/25 to-[#0A261F]/65"></div>
+    </div>
+
+    <div class="relative min-h-screen flex flex-col">
+      <header class="px-6 sm:px-10 pt-6 sm:pt-8">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 rounded-xl bg-[#C6EE58] text-[#0A261F] font-bold text-xl flex items-center justify-center shadow-lg">M</div>
+          <div class="text-white drop-shadow group-data-[photo=failed]:text-[#17231E] group-data-[photo=failed]:drop-shadow-none">
+            <p class="font-editorial text-2xl leading-tight">Makazi</p>
+            <p class="text-xs text-white/80 group-data-[photo=failed]:text-[#73827C]">Staff portal · rent, bills and tenants</p>
+          </div>
+        </div>
+      </header>
+
+      <main class="flex-1 flex items-center justify-center lg:justify-end px-4 sm:px-10 lg:px-24 py-10">
+        <div class="w-full max-w-sm rounded-3xl border border-white/50 bg-white/70 backdrop-blur-xl backdrop-saturate-150 shadow-2xl shadow-black/30 p-6 sm:p-8 group-data-[photo=failed]:bg-white group-data-[photo=failed]:border-[#E7EAE4] group-data-[photo=failed]:shadow-sm">
+          <h1 class="font-editorial text-3xl text-[#0D382B]">Sign in</h1>
+          <p class="text-sm text-[#3D4D46] mt-1">Manage rent, bills and tenants.</p>
+
+          {configured ? (
+            <form method="post" class="mt-6 space-y-4" novalidate>
+              <div>
+                <label for="email" class="block text-xs font-semibold uppercase tracking-wider text-[#3D4D46] mb-1.5">Email</label>
+                <input id="email" name="email" type="email" required autocomplete="username" value={email} autofocus={!email}
+                  class="w-full px-4 py-2.5 rounded-xl border border-white/70 bg-white/80 group-data-[photo=failed]:border-[#DCE0D7] focus:bg-white focus:border-[#0D382B] focus:ring-2 focus:ring-[#0D382B]/15 outline-none text-sm transition-colors" />
+              </div>
+              <div>
+                <label for="password" class="block text-xs font-semibold uppercase tracking-wider text-[#3D4D46] mb-1.5">Password</label>
+                <input id="password" name="password" type="password" required autocomplete="current-password" autofocus={Boolean(email)}
+                  class="w-full px-4 py-2.5 rounded-xl border border-white/70 bg-white/80 group-data-[photo=failed]:border-[#DCE0D7] focus:bg-white focus:border-[#0D382B] focus:ring-2 focus:ring-[#0D382B]/15 outline-none text-sm transition-colors" />
+              </div>
+              {error && <p role="alert" class="text-sm font-medium text-[#B23E1C]">{error}</p>}
+              <button type="submit" class="w-full py-3 rounded-xl text-sm font-semibold bg-[#0D382B] text-white hover:bg-[#154637] transition-colors cursor-pointer shadow-lg shadow-[#0D382B]/20">
+                Sign in
+              </button>
+            </form>
+          ) : (
+            <div class="mt-4 space-y-3 text-sm text-[#3D4D46]">
+              <p>No admin account has been set up on this computer yet.</p>
+              <p>In the <code class="text-xs bg-white/80 px-1.5 py-0.5 rounded">PropAdmin</code> folder, run:</p>
+              <pre class="text-xs bg-white/80 rounded-xl p-3 overflow-x-auto">npm run admin:create -- --email you@example.com --name "Your Name"</pre>
+              <p>then restart the dev server and sign in with the password it prints.</p>
+            </div>
+          )}
+
+          <p class="text-xs text-[#3D4D46] mt-6 pt-4 border-t border-[#0D382B]/10">Tenants sign in on the Makazi app, not here.</p>
+        </div>
+      </main>
+
+      <footer class="px-6 sm:px-10 pb-5 text-center sm:text-right">
+        <p class="text-[11px] text-white/75 group-data-[photo=failed]:text-[#73827C]">
+          Built and maintained by{' '}
+          <a href={BUILDER.url} target="_blank" rel="noopener noreferrer"
+            class="font-semibold text-white underline-offset-2 hover:underline group-data-[photo=failed]:text-[#0D382B]">
+            {BUILDER.name}
+          </a>
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,84 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+import HeroMetricsCard from '../components/dashboard/HeroMetricsCard.astro';
+import KpiStack from '../components/dashboard/KpiStack.astro';
+import PropertyCollectionsCard from '../components/dashboard/PropertyCollectionsCard.astro';
+import RecentPaymentsCard from '../components/dashboard/RecentPaymentsCard.astro';
+import ArrearsCard from '../components/dashboard/ArrearsCard.astro';
+import LeasesActionCard from '../components/dashboard/LeasesActionCard.astro';
+import { FEATURES } from '../config/features';
+import GetStartedCard from '../components/dashboard/GetStartedCard.astro';
+import { getPortfolio } from '../data/portfolio';
+import { ChevronDown, Plus } from '@lucide/astro';
+
+// This company's data only (the signed-in user's).
+const { currentPeriod, gettingStarted } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+const showGetStarted = !gettingStarted.hasBills;
+
+const firstName = (Astro.locals.user?.name ?? 'there').split(' ')[0];
+// Same greeting as the tenant app ("Habari, David").
+const greeting = 'Habari';
+---
+
+<DashboardLayout title="Makazi — Portfolio Overview" currentPath="/">
+  <!-- Top Greeting & Action Header -->
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-7">
+    <div>
+      <span class="text-xs font-semibold tracking-widest text-[#5A6862] uppercase">
+        {greeting.toUpperCase()}, {firstName.toUpperCase()}
+      </span>
+      <h1 class="font-editorial text-4xl sm:text-5xl font-normal text-[#17231E] tracking-tight mt-1">
+        Portfolio overview
+      </h1>
+    </div>
+
+    <!-- Date selector & Primary Action -->
+    <div class="flex items-center gap-3 self-start md:self-auto">
+      <!-- Period Selector Dropdown Button -->
+      <div class="relative inline-block">
+        <button 
+          type="button" 
+          id="period-select-btn"
+          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white border border-[#E2E5DF] text-xs sm:text-sm font-medium text-[#17231E] shadow-sm hover:border-[#17231E] transition-all cursor-pointer"
+        >
+          <span>{currentPeriod}</span>
+          <ChevronDown class="w-3.5 h-3.5 text-[#5A6862]" />
+        </button>
+      </div>
+
+      <!-- Onboard Tenant Action Button -->
+      <button 
+        type="button" 
+        id="onboard-tenant-btn" 
+        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#0D382B] text-white text-xs sm:text-sm font-semibold hover:bg-[#154637] transition-all duration-200 shadow-md hover:shadow-lg cursor-pointer transform hover:-translate-y-0.5"
+      >
+        <Plus class="w-4 h-4 text-[#C6EE58]" />
+        <span>Onboard tenant</span>
+      </button>
+    </div>
+  </div>
+
+  {showGetStarted && <GetStartedCard />}
+
+  <!-- Primary Metrics: full-width hero card, then the 3 KPIs in a row -->
+  <div class="flex flex-col gap-6 mb-7">
+    <HeroMetricsCard />
+    <KpiStack />
+  </div>
+
+  <!-- Detailed Property & Operations Grid (2 Columns x 2 Rows) -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Collection By Property -->
+    <PropertyCollectionsCard />
+
+    <!-- Recent Payments -->
+    <RecentPaymentsCard />
+
+    <!-- Largest Arrears (full width when leases are hidden) -->
+    <div class={FEATURES.leases ? '' : 'lg:col-span-2'}>
+      <ArrearsCard />
+    </div>
+
+    {FEATURES.leases && <LeasesActionCard />}
+  </div>
+</DashboardLayout>

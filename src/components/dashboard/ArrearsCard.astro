@@ -1,0 +1,49 @@
+---
+import { getPortfolio, formatKes } from '../../data/portfolio';
+
+// This company's data only (the signed-in user's).
+const { arrears, lateLabel } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+
+const largestArrears = arrears.slice(0, 4);
+---
+
+<div id="arrears-section" class="bg-white rounded-3xl p-6 sm:p-7 border border-[#E7EAE4] shadow-sm hover:shadow-md transition-shadow">
+  <!-- Card Header -->
+  <div class="flex items-center justify-between mb-5 pb-2 border-b border-[#F0F2EE]">
+    <h3 class="font-editorial text-2xl sm:text-3xl font-normal text-[#17231E] tracking-tight">
+      Largest arrears
+    </h3>
+    <button 
+      type="button"
+      id="send-reminders-header-btn" 
+      class="text-xs sm:text-sm font-semibold text-[#0D382B] hover:text-[#185340] hover:underline transition-colors cursor-pointer"
+    >
+      Send reminders
+    </button>
+  </div>
+
+  <!-- Arrears List -->
+  {largestArrears.length === 0 ? (
+    <p class="py-6 text-center text-xs font-medium text-[#73827C]">Everyone is up to date.</p>
+  ) : (
+    <div class="divide-y divide-[#F2F4EF]">
+      {largestArrears.map((t) => (
+        <a href="/arrears" class="py-3.5 first:pt-1 last:pb-1 flex items-center justify-between group hover:bg-[#FFFBF9] px-2 -mx-2 rounded-xl transition-all">
+          <div class="min-w-0 pr-4">
+            <h4 class="text-sm font-semibold text-[#182621] group-hover:text-[#C04A26] transition-colors truncate">
+              {t.tenant.name}
+            </h4>
+            <p class="text-xs text-[#73827C] mt-0.5 truncate">
+              {t.unit.label} · {t.property.name} · <span class="text-[#A25032] font-medium">{lateLabel(t)}</span>
+            </p>
+          </div>
+          <div class="text-right flex-shrink-0">
+            <span class="text-sm sm:text-base font-semibold text-[#C04A26] tracking-tight tabular-nums">
+              {formatKes(t.balance)}
+            </span>
+          </div>
+        </a>
+      ))}
+    </div>
+  )}
+</div>

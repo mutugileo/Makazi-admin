@@ -1,0 +1,146 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+import { FEATURES } from '../config/features';
+
+// Hidden while the leases feature is off.
+if (!FEATURES.leases) return new Response('Not found', { status: 404 });
+import StatusBadge from '../components/ui/StatusBadge.astro';
+import { getPortfolio, formatKes } from '../data/portfolio';
+import { Plus, ChevronDown } from '@lucide/astro';
+
+// This company's data only (the signed-in user's).
+const { leaseStats, leases, portfolioSummary, currentPeriod } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+
+const allLeases = leases;
+---
+
+<DashboardLayout title="Makazi — Leases" currentPath="/leases">
+  <!-- Header & Actions -->
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+    <div>
+      <span class="text-xs font-semibold tracking-wider text-[#69847A] uppercase">
+        {portfolioSummary}
+      </span>
+      <h1 class="text-3xl sm:text-4xl font-normal font-editorial text-[#0D382B] tracking-tight mt-1">
+        Leases
+      </h1>
+    </div>
+
+    <div class="flex items-center gap-3 self-start md:self-auto">
+      <!-- Period Selector -->
+      <div class="relative inline-block">
+        <button 
+          type="button" 
+          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white border border-[#E3E6DF] text-xs font-semibold text-[#0D382B] shadow-xs hover:border-[#0D382B] transition-colors cursor-pointer"
+        >
+          <span>{currentPeriod}</span>
+          <ChevronDown class="w-4 h-4 text-[#69847A]" />
+        </button>
+      </div>
+
+      <!-- New Lease (Primary Action) -->
+      <button 
+        type="button" 
+        id="new-lease-btn"
+        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#0D382B] text-white text-xs font-semibold hover:bg-[#08221A] transition-all shadow-xs cursor-pointer"
+      >
+        <div class="h-4 w-4 rounded-full bg-[#C6EE58] text-[#0A261F] flex items-center justify-center font-bold text-xs">
+          <Plus class="w-3 h-3 stroke-[3]" />
+        </div>
+        <span>New lease</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Metric Counters Strip -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+    <div class="bg-white rounded-3xl border border-[#E3E6DF] p-5 flex items-center gap-4 shadow-xs">
+      <div class="h-12 w-12 rounded-2xl bg-[#F1F8E9] border border-[#C8E6C9] flex items-center justify-center text-xl font-bold text-[#2E7D32]">
+        {leaseStats.activeCount}
+      </div>
+      <div>
+        <span class="text-xs font-semibold text-[#0D382B] block">Active leases</span>
+        <span class="text-[11px] text-[#69847A]">Fully signed & compliant</span>
+      </div>
+    </div>
+    <div class="bg-white rounded-3xl border border-[#E3E6DF] p-5 flex items-center gap-4 shadow-xs">
+      <div class="h-12 w-12 rounded-2xl bg-[#FFF8E1] border border-[#FFE082] flex items-center justify-center text-xl font-bold text-[#B78103]">
+        {leaseStats.expiringCount}
+      </div>
+      <div>
+        <span class="text-xs font-semibold text-[#0D382B] block">Expiring soon</span>
+        <span class="text-[11px] text-[#69847A]">Due within 60 days</span>
+      </div>
+    </div>
+    <div class="bg-white rounded-3xl border border-[#E3E6DF] p-5 flex items-center gap-4 shadow-xs">
+      <div class="h-12 w-12 rounded-2xl bg-[#EFF6FF] border border-[#BFDBFE] flex items-center justify-center text-xl font-bold text-[#1E40AF]">
+        {leaseStats.awaitingSignatureCount}
+      </div>
+      <div>
+        <span class="text-xs font-semibold text-[#0D382B] block">Awaiting signature</span>
+        <span class="text-[11px] text-[#69847A]">Pending owner countersign</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leases Table -->
+  <div class="bg-white rounded-3xl border border-[#E3E6DF] overflow-hidden shadow-xs">
+    {allLeases.length === 0 ? (
+      <div class="p-12 text-center text-xs font-medium text-[#69847A]">
+        No lease records found.
+      </div>
+    ) : (
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-[#F8F9F6] border-b border-[#E3E6DF] text-[#69847A] uppercase text-[10px] font-semibold tracking-wider">
+            <tr>
+              <th scope="col" class="py-3.5 px-6">Lease</th>
+              <th scope="col" class="py-3.5 px-4">Tenant</th>
+              <th scope="col" class="py-3.5 px-4">Unit</th>
+              <th scope="col" class="py-3.5 px-4">Term</th>
+              <th scope="col" class="py-3.5 px-4">Rent</th>
+              <th scope="col" class="py-3.5 px-4">Status</th>
+              <th scope="col" class="py-3.5 px-6 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[#E3E6DF]">
+            {allLeases.map((lease) => (
+              <tr class={`hover:bg-[#F8F9F6]/60 transition-colors ${lease.status === 'Ended' ? 'opacity-70' : ''}`}>
+                <td class="py-4 px-6 font-mono font-medium text-[#0D382B]">
+                  {lease.leaseId}
+                </td>
+                <td class="py-4 px-4 font-semibold text-[#0D382B]">
+                  {lease.view.tenant.name}
+                </td>
+                <td class="py-4 px-4 text-[#69847A]">
+                  {lease.view.unitLabel}
+                </td>
+                <td class="py-4 px-4 text-[#69847A] whitespace-nowrap">
+                  {lease.term}
+                </td>
+                <td class="py-4 px-4 font-semibold text-[#0D382B] tabular-nums">
+                  {formatKes(lease.rent)}
+                </td>
+                <td class="py-4 px-4">
+                  <StatusBadge status={lease.status} />
+                </td>
+                <td class="py-4 px-6 text-right">
+                  {lease.action ? (
+                    <button 
+                      type="button"
+                      class="px-4 py-1.5 rounded-full border border-[#E3E6DF] hover:border-[#0D382B] text-xs font-semibold text-[#0D382B] bg-[#F8F9F6] hover:bg-white transition-colors cursor-pointer shadow-xs"
+                    >
+                      {lease.action}
+                    </button>
+                  ) : (
+                    <span class="text-xs text-[#69847A]">—</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </div>
+</DashboardLayout>

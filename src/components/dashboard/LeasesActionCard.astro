@@ -1,0 +1,46 @@
+---
+import { getPortfolio } from '../../data/portfolio';
+import StatusBadge from '../ui/StatusBadge.astro';
+
+// This company's data only (the signed-in user's).
+const { leasesNeedingAction } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+---
+
+<div id="leases-section" class="bg-white rounded-3xl p-6 sm:p-7 border border-[#E7EAE4] shadow-sm hover:shadow-md transition-shadow">
+  <!-- Card Header -->
+  <div class="flex items-center justify-between mb-5 pb-2 border-b border-[#F0F2EE]">
+    <h3 class="font-editorial text-2xl sm:text-3xl font-normal text-[#17231E] tracking-tight">
+      Leases needing action
+    </h3>
+    <a 
+      href="/leases"
+      id="view-all-leases-btn" 
+      class="text-xs sm:text-sm font-semibold text-[#0D382B] hover:text-[#185340] hover:underline transition-colors cursor-pointer"
+    >
+      All leases
+    </a>
+  </div>
+
+  <!-- Leases List -->
+  {leasesNeedingAction.length === 0 ? (
+    <p class="py-6 text-center text-xs font-medium text-[#73827C]">No leases need attention.</p>
+  ) : (
+    <div class="divide-y divide-[#F2F4EF]">
+      {leasesNeedingAction.map((lease) => (
+        <a href="/leases" class="py-3.5 first:pt-1 last:pb-1 flex items-center justify-between group hover:bg-[#F9FAF8] px-2 -mx-2 rounded-xl transition-all">
+          <div class="min-w-0 pr-4">
+            <h4 class="text-sm font-semibold text-[#182621] group-hover:text-[#0D382B] transition-colors truncate">
+              {lease.view.tenant.name}
+            </h4>
+            <p class="text-xs text-[#73827C] mt-0.5 truncate">
+              {lease.view.unit.label} · {lease.view.property.name} · {lease.note}
+            </p>
+          </div>
+          <div class="flex-shrink-0">
+            <StatusBadge status={lease.status} size="md" />
+          </div>
+        </a>
+      ))}
+    </div>
+  )}
+</div>

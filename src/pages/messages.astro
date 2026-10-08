@@ -1,0 +1,163 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+import { getPortfolio } from '../data/portfolio';
+import { ChevronDown } from '@lucide/astro';
+
+// This company's data only (the signed-in user's).
+const { portfolioSummary, staffById, threads, currentPeriod, whenLabel } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+
+// Rendered per request, so the open thread comes from ?thread=<tenancy id>.
+const requested = Astro.url.searchParams.get('thread');
+const active = threads.find((t) => t.view.tenancy.id === requested) ?? threads[0];
+---
+
+<DashboardLayout title="Makazi — Messages" currentPath="/messages">
+  <!-- Header & Actions -->
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+    <div>
+      <span class="text-xs font-semibold tracking-wider text-[#69847A] uppercase">
+        {portfolioSummary}
+      </span>
+      <h1 class="text-3xl sm:text-4xl font-normal font-editorial text-[#0D382B] tracking-tight mt-1">
+        Messages
+      </h1>
+    </div>
+
+    <div class="flex items-center gap-3 self-start md:self-auto">
+      <!-- Period Selector -->
+      <div class="relative inline-block">
+        <button 
+          type="button" 
+          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white border border-[#E3E6DF] text-xs font-semibold text-[#0D382B] shadow-xs hover:border-[#0D382B] transition-colors cursor-pointer"
+        >
+          <span>{currentPeriod}</span>
+          <ChevronDown class="w-4 h-4 text-[#69847A]" />
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Messages: one thread per tenancy, same records as the tenant app -->
+  {threads.length === 0 ? (
+    <div class="p-12 text-center bg-white rounded-3xl border border-[#E3E6DF] text-xs font-medium text-[#69847A] shadow-xs">
+      No messages yet.
+    </div>
+  ) : (
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <nav class="lg:col-span-4 bg-white rounded-3xl border border-[#E3E6DF] divide-y divide-[#E3E6DF] overflow-hidden shadow-xs" aria-label="Conversations">
+        {threads.map((thread) => {
+          const isActive = thread === active;
+          return (
+            <a
+              href={`/messages?thread=${thread.view.tenancy.id}`}
+              aria-current={isActive ? 'page' : undefined}
+              class={`block p-5 transition-colors ${isActive ? 'bg-[#F8F9F6] border-l-4 border-[#0D382B]' : 'hover:bg-[#F8F9F6]/60'}`}
+            >
+              <div class="flex items-center justify-between gap-2">
+                <h2 class="text-sm font-semibold text-[#0D382B] truncate">{thread.view.tenant.name}</h2>
+                <span class="text-[10px] text-[#69847A] whitespace-nowrap">{whenLabel(thread.last.sentAt)}</span>
+              </div>
+              <p class="text-xs text-[#69847A] mt-0.5">{thread.view.unitLabel}</p>
+              <div class="flex items-center gap-2 mt-2">
+                <p class={`text-xs truncate flex-1 ${thread.unread ? 'font-semibold text-[#0D382B]' : 'text-[#5A6862]'}`}>
+                  {thread.last.sender === 'staff' && 'You: '}{thread.last.body}
+                </p>
+                {thread.unread > 0 && (
+                  <span class="h-5 min-w-5 px-1.5 rounded-full bg-[#C04A26] text-white text-[10px] font-bold flex items-center justify-center" aria-label={`${thread.unread} unread`}>
+                    {thread.unread}
+                  </span>
+                )}
+              </div>
+            </a>
+          );
+        })}
+      </nav>
+
+      <section class="lg:col-span-8 bg-white rounded-3xl border border-[#E3E6DF] flex flex-col justify-between min-h-[520px] shadow-xs overflow-hidden">
+        <div class="p-5 border-b border-[#E3E6DF] bg-[#F8F9F6]/50">
+          <h2 class="text-base font-semibold text-[#0D382B]">{active.view.tenant.name}</h2>
+          <p class="text-xs text-[#69847A]">{active.view.unitLabel} · {active.view.tenant.phone}</p>
+        </div>
+
+        <div class="p-6 space-y-4 flex-1 overflow-y-auto">
+          {active.messages.map((msg) => {
+            const outgoing = msg.sender === 'staff';
+            const author = outgoing ? staffById.get(msg.staffId ?? '')?.name ?? 'Staff' : active.view.tenant.name.split(' ')[0];
+            return (
+              <div class={`flex flex-col ${outgoing ? 'items-end' : 'items-start'}`}>
+                <div class={`max-w-lg p-3.5 text-xs ${
+                  outgoing
+                    ? 'bg-[#0D382B] text-white rounded-2xl rounded-tr-none shadow-xs'
+                    : 'bg-[#F3F4F0] border border-[#E3E6DF] text-[#0D382B] rounded-2xl rounded-tl-none shadow-xs'
+                }`}>
+                  {msg.body}
+                </div>
+                <span class="text-[10px] text-[#69847A] mt-1 px-1">{author} · {whenLabel(msg.sentAt)}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        <div class="p-4 border-t border-[#E3E6DF] bg-white">
+          <form id="chat-send-form" data-tenancy={active.view.tenancy.id} class="flex items-center gap-3">
+            <input
+              type="text"
+              name="body"
+              placeholder={`Message ${active.view.tenant.name.split(' ')[0]}…`}
+              aria-label="Message"
+              class="flex-1 px-4 py-2.5 rounded-full border border-[#E3E6DF] bg-[#F8F9F6] text-xs text-[#0D382B] placeholder:text-[#69847A] focus:border-[#0D382B] focus:ring-1 focus:ring-[#0D382B] outline-none shadow-xs"
+            />
+            <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#0D382B] text-white text-xs font-semibold hover:bg-[#08221A] transition-all shadow-xs cursor-pointer">
+              Send
+            </button>
+          </form>
+        </div>
+      </section>
+    </div>
+  )}
+</DashboardLayout>
+
+<script>
+  const form = document.getElementById('chat-send-form') as HTMLFormElement | null;
+  const input = form?.querySelector('input[name="body"]') as HTMLInputElement | null;
+  const tenancyId = form?.dataset.tenancy;
+
+  let typingTimeout: any = null;
+  input?.addEventListener('input', () => {
+    if (!tenancyId) return;
+    if (typingTimeout) clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => {
+      fetch('/api/typing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenancyId, isTyping: true }),
+      }).catch(() => {});
+    }, 200);
+  });
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const body = input?.value.trim() ?? '';
+    if (!body || !tenancyId) return;
+
+    const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+    if (submitBtn) submitBtn.disabled = true;
+
+    try {
+      const res = await fetch('/api/send-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenancyId, body }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Failed to send message');
+
+      if (input) input.value = '';
+      window.location.reload();
+    } catch (err: unknown) {
+      if (submitBtn) submitBtn.disabled = false;
+      const msg = err instanceof Error ? err.message : String(err);
+      window.makaziUi?.showToast('Error', msg);
+    }
+  });
+</script>

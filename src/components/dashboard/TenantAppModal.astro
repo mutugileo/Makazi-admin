@@ -1,0 +1,97 @@
+---
+import { X, Smartphone, ExternalLink, CheckCircle2, Shield, ArrowUpRight } from '@lucide/astro';
+import { FEATURES } from '../../config/features';
+import { getPortfolio } from '../../data/portfolio';
+
+// This company's data only (the signed-in user's).
+const { company } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+
+// What the Makazi app does today; keep in step with the Flutter app.
+const appFeatures = [
+  'Monthly bill: rent, water (units × rate), garbage and anything carried forward',
+  `Pay by M-Pesa Paybill ${company.mpesaPaybill} (account = unit code) or bank transfer`,
+  'Receipts for every payment and a statement of payments',
+  'Repair requests with photos, tracked Open → In progress → Resolved',
+  'Messages with their property manager',
+  'Sign in with phone number and password, then a 4-digit PIN',
+];
+---
+
+<div 
+  id="tenant-app-modal" 
+  class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-200"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="tenant-app-modal-title"
+>
+  <div class="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-[#E7EAE4] overflow-hidden transform scale-95 transition-transform duration-200">
+    <!-- Header -->
+    <div class="p-6 bg-[#0A261F] text-white flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-2xl bg-[#C6EE58] text-[#0A261F] flex items-center justify-center font-bold">
+          <Smartphone class="w-5 h-5" />
+        </div>
+        <div>
+          <h3 id="tenant-app-modal-title" class="font-editorial text-2xl font-normal text-white">
+            Makazi app for tenants
+          </h3>
+          <p class="text-xs text-[#93BDB0]">Android & iOS</p>
+        </div>
+      </div>
+      <button 
+        type="button" 
+        id="close-tenant-app-btn"
+        class="h-8 w-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
+        aria-label="Close modal"
+      >
+        <X class="w-4 h-4" />
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div class="p-6 space-y-5">
+      <p class="text-xs sm:text-sm text-[#5A6862] leading-relaxed">
+        {company.name} tenants use the Makazi app to see what they owe, pay, and get help. They only ever see their own unit.
+      </p>
+
+      <ul class="space-y-3 bg-[#FAFBF9] rounded-2xl p-4 border border-[#E7EAE4] text-xs">
+        {appFeatures.map((feature) => (
+          <li class="flex items-start gap-2.5 text-[#17231E]">
+            <CheckCircle2 class="w-4 h-4 text-[#0D382B] flex-shrink-0 mt-px" />
+            <span>{feature}</span>
+          </li>
+        ))}
+        {FEATURES.leases && (
+          <li class="flex items-start gap-2.5 text-[#17231E]">
+            <CheckCircle2 class="w-4 h-4 text-[#0D382B] flex-shrink-0 mt-px" />
+            <span>Digital lease signing with tamper-proof audit trail</span>
+          </li>
+        )}
+      </ul>
+
+      <div class="p-4 rounded-2xl bg-[#0D382B]/5 border border-[#0D382B]/10 text-xs text-[#2C3B34] leading-relaxed">
+        <p class="font-semibold text-[#0D382B] mb-1">Giving a tenant access</p>
+        Onboard them (or use <strong>Tenants → Reset password</strong>), then share the one-time password.
+        They sign in with the phone number on their record and choose their own password.
+      </div>
+
+      <!-- Actions -->
+      <div class="pt-2 flex items-center justify-end gap-3">
+        <button 
+          type="button" 
+          id="dismiss-tenant-app-btn"
+          class="px-5 py-2.5 rounded-xl text-sm font-medium text-[#5A6862] hover:bg-[#F4F5F1] transition-colors cursor-pointer"
+        >
+          Close
+        </button>
+        <a
+          href="/tenants"
+          class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-[#0D382B] text-white hover:bg-[#154637] transition-all shadow-md cursor-pointer"
+        >
+          <span>Go to tenants</span>
+          <ArrowUpRight class="w-4 h-4" />
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

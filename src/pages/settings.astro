@@ -1,0 +1,94 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+import { bedLabel, formatDate, formatKes, getPortfolio, monthLabel } from '../data/portfolio';
+
+// This company's data only (the signed-in user's).
+const { company, plan, portfolioSummary } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+const { settings } = company;
+
+const planNames = { starter: 'Starter', growth: 'Growth', pro: 'Pro' } as const;
+const statusNames = { trial: 'Free trial', active: 'Active', past_due: 'Payment due', suspended: 'Suspended' } as const;
+const usage = [
+  { label: 'Units', used: plan.unitsUsed, limit: plan.unitLimit },
+  { label: 'Staff accounts', used: plan.staffUsed, limit: plan.staffLimit },
+];
+
+const card = 'bg-white rounded-3xl border border-[#E3E6DF] p-6 shadow-xs';
+const dt = 'text-[11px] font-semibold uppercase tracking-wider text-[#69847A]';
+const dd = 'text-sm font-semibold text-[#0D382B] mt-0.5';
+---
+
+<DashboardLayout title={`Makazi — Settings`} currentPath="/settings">
+  <div class="mb-8">
+    <span class="text-xs font-semibold tracking-wider text-[#69847A] uppercase">{portfolioSummary}</span>
+    <h1 class="text-3xl sm:text-4xl font-normal font-editorial text-[#0D382B] tracking-tight mt-1">Settings</h1>
+    <p class="text-xs text-[#69847A] mt-2">Read-only for now. Editing arrives with the database.</p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <section class={card}>
+      <h2 class="font-editorial text-2xl text-[#0D382B] mb-4">Company</h2>
+      <dl class="grid grid-cols-2 gap-4">
+        <div><dt class={dt}>Name</dt><dd class={dd}>{company.name}</dd></div>
+        <div><dt class={dt}>KRA PIN</dt><dd class={dd}>{company.kraPin}</dd></div>
+        <div><dt class={dt}>Company ID</dt><dd class={`${dd} font-mono`}>{company.slug}</dd></div>
+        <div><dt class={dt}>On Makazi since</dt><dd class={dd}>{monthLabel(settings.ledgerStartMonth)}</dd></div>
+      </dl>
+    </section>
+
+    <section class={card}>
+      <h2 class="font-editorial text-2xl text-[#0D382B] mb-4">Payments</h2>
+      <dl class="grid grid-cols-2 gap-4">
+        <div><dt class={dt}>M-Pesa Paybill</dt><dd class={`${dd} tabular-nums`}>{company.mpesaPaybill}</dd></div>
+        <div><dt class={dt}>Account number</dt><dd class={dd}>Unit code, e.g. RC-5A</dd></div>
+        <div><dt class={dt}>Bank</dt><dd class={dd}>{company.bankName}</dd></div>
+        <div><dt class={dt}>Bank account</dt><dd class={`${dd} tabular-nums`}>{company.bankAccount}</dd></div>
+      </dl>
+    </section>
+
+    <section class={card}>
+      <h2 class="font-editorial text-2xl text-[#0D382B] mb-4">Billing rules</h2>
+      <dl class="grid grid-cols-2 gap-4">
+        <div><dt class={dt}>Rent due</dt><dd class={dd}>Day {settings.dueDay} of the month</dd></div>
+        <div><dt class={dt}>Grace period</dt><dd class={dd}>Until day {settings.graceDay}, overdue after</dd></div>
+        <div>
+          <dt class={dt}>Deposits</dt>
+          <dd class={`${dd} tabular-nums`}>
+            {Object.entries(settings.depositSchedule).map(([beds, amount]) => (
+              <span class="block">{bedLabel(Number(beds))}: {formatKes(amount)}</span>
+            ))}
+          </dd>
+        </div>
+        <div><dt class={dt}>Former tenants' records</dt><dd class={dd}>Kept {settings.recordRetentionMonths} months after move-out</dd></div>
+        <div class="col-span-2"><dt class={dt}>Move-in rent</dt><dd class={dd}>Charged for the days left in the month</dd></div>
+      </dl>
+    </section>
+
+    <section class={card}>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-editorial text-2xl text-[#0D382B]">Makazi plan</h2>
+        <span class="px-3 py-1 rounded-full text-xs font-semibold border bg-[#F1F8E9] text-[#2E7D32] border-[#C8E6C9]">
+          {planNames[plan.plan]} · {statusNames[plan.status]}
+        </span>
+      </div>
+      {plan.trialEndsAt && <p class="text-xs text-[#69847A] mb-4">Trial ends {formatDate(plan.trialEndsAt)}.</p>}
+      <div class="space-y-4">
+        {usage.map((u) => {
+          const pct = Math.min(100, Math.round((u.used / u.limit) * 100));
+          return (
+            <div>
+              <div class="flex items-center justify-between text-xs mb-1.5">
+                <span class="text-[#69847A]">{u.label}</span>
+                <span class="font-semibold text-[#0D382B] tabular-nums">{u.used} of {u.limit}</span>
+              </div>
+              <div class="w-full bg-[#E3E6DF] h-2 rounded-full overflow-hidden">
+                <div class={`h-full rounded-full ${pct >= 90 ? 'bg-[#C04A26]' : 'bg-[#0D382B]'}`} style={`width: ${pct}%`}></div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <p class="text-[11px] text-[#69847A] mt-4">Plans and limits are recorded but not enforced or billed yet.</p>
+    </section>
+  </div>
+</DashboardLayout>

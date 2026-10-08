@@ -1,0 +1,142 @@
+---
+import { 
+  LayoutGrid, 
+  Building2, 
+  Users, 
+  FileText, 
+ CreditCard,
+  ReceiptText, 
+  AlertTriangle, 
+  Wrench, 
+  MessageSquare, 
+  BarChart2,
+  Settings, 
+  LogOut
+} from '@lucide/astro';
+import { getPortfolio } from '../../data/portfolio';
+import { FEATURES } from '../../config/features';
+
+// This company's data only (the signed-in user's).
+const { company, repairStats, stats, unreadThreadCount } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+
+interface Props {
+  currentPath?: string;
+}
+
+const { currentPath = '/' } = Astro.props;
+const user = Astro.locals.user;
+const adminName = user?.name ?? 'Admin';
+const adminRole = user?.role === 'owner' ? 'Owner' : 'Staff';
+const adminInitials = adminName
+  .split(/\s+/)
+  .filter(Boolean)
+  .slice(0, 2)
+  .map((part) => part[0].toUpperCase())
+  .join('');
+const openRepairsCount = repairStats.openCount;
+
+const navItems = [
+  { name: 'Overview', href: '/', icon: LayoutGrid, active: currentPath === '/' },
+  { name: 'Properties', href: '/properties', icon: Building2, active: currentPath === '/properties' },
+  { name: 'Tenants', href: '/tenants', icon: Users, active: currentPath === '/tenants' },
+  ...(FEATURES.leases ? [{ name: 'Leases', href: '/leases', icon: FileText, active: currentPath === '/leases' }] : []),
+  { name: 'Monthly bills', href: '/bills', icon: ReceiptText, active: currentPath === '/bills' },
+  { name: 'Payments & receipts', href: '/payments', icon: CreditCard, active: currentPath === '/payments' },
+  { name: 'Arrears', href: '/arrears', icon: AlertTriangle, active: currentPath === '/arrears', badge: stats.tenantsOverdueCount ? stats.tenantsOverdueCount.toString() : undefined, badgeType: 'alert' },
+  { name: 'Maintenance', href: '/maintenance', icon: Wrench, active: currentPath === '/maintenance', badge: openRepairsCount.toString(), badgeType: 'neutral' },
+  { name: 'Messages', href: '/messages', icon: MessageSquare, active: currentPath === '/messages', badge: unreadThreadCount ? unreadThreadCount.toString() : undefined, badgeType: 'neutral' },
+  { name: 'Reports', href: '/reports', icon: BarChart2, active: currentPath === '/reports' },
+  { name: 'Settings', href: '/settings', icon: Settings, active: currentPath === '/settings' },
+];
+---
+
+<aside 
+  id="app-sidebar"
+  class="fixed inset-y-0 left-0 z-40 w-64 lg:w-72 bg-[#0A261F] text-[#8FA69C] flex flex-col justify-between transition-transform duration-300 -translate-x-full lg:translate-x-0 border-r border-[#143B30]/60 select-none"
+>
+  <div class="flex flex-col flex-1 overflow-y-auto px-4 py-6">
+    <!-- Brand Logo -->
+    <div class="flex items-center gap-3 px-2 mb-8">
+      <div class="h-10 w-10 rounded-xl bg-[#C6EE58] text-[#0A261F] font-bold text-xl flex items-center justify-center shadow-lg shadow-[#C6EE58]/10 flex-shrink-0">
+        M
+      </div>
+      <div class="min-w-0">
+        <h1 class="font-editorial text-2xl font-normal text-white tracking-wide leading-tight">
+          Makazi
+        </h1>
+        <p class="text-xs text-[#7F9C90] truncate font-medium">
+          {company.name}
+        </p>
+      </div>
+    </div>
+
+    <!-- Workspace Navigation -->
+    <div class="space-y-6">
+      <div>
+        <p class="px-3 text-[11px] font-semibold uppercase tracking-widest text-[#5C796E] mb-2.5">
+          WORKSPACE
+        </p>
+        <nav class="space-y-1">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <a
+                href={item.href}
+                class={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all group ${
+                  item.active 
+                    ? 'bg-[#153F33] text-white shadow-sm' 
+                    : 'text-[#8FA69C] hover:bg-[#10342A] hover:text-white'
+                }`}
+              >
+                <div class="flex items-center gap-3 min-w-0">
+                  <Icon class={`w-4 h-4 flex-shrink-0 transition-colors ${item.active ? 'text-[#C6EE58]' : 'text-[#729285] group-hover:text-white'}`} />
+                  <span class="truncate">{item.name}</span>
+                </div>
+
+                {item.badge && (
+                  <span class={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                    item.badgeType === 'alert'
+                      ? 'bg-[#D95B34] text-white ring-2 ring-[#D95B34]/20'
+                      : 'bg-[#184638] text-[#93BDB0]'
+                  }`}>
+                    {item.badge}
+                  </span>
+                )}
+              </a>
+            );
+          })}
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  <!-- User Footer Profile -->
+  <div class="p-4 border-t border-[#143B30]/60 bg-[#08201A]/60">
+    <div class="flex items-center justify-between p-2 rounded-xl">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="h-10 w-10 rounded-full bg-[#184E3F] text-[#C6EE58] font-semibold text-sm flex items-center justify-center border border-[#276251] flex-shrink-0">
+          {adminInitials}
+        </div>
+        <div class="min-w-0 text-left">
+          <p class="text-sm font-semibold text-white truncate leading-tight">
+            {adminName}
+          </p>
+          <p class="text-xs text-[#7F9C90] truncate font-medium" title={user?.email}>
+            {adminRole} · {user?.email}
+          </p>
+        </div>
+      </div>
+      <form method="post" action="/logout">
+        <button type="submit" class="p-2 rounded-lg text-[#5C796E] hover:text-white hover:bg-[#12362C] transition-colors cursor-pointer" aria-label="Sign out" title="Sign out">
+          <LogOut class="w-4 h-4" />
+        </button>
+      </form>
+    </div>
+  </div>
+</aside>
+
+<!-- Backdrop overlay for mobile sidebar -->
+<div 
+  id="sidebar-backdrop" 
+  class="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm hidden lg:hidden transition-opacity duration-300"
+></div>

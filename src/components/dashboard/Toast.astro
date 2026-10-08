@@ -1,0 +1,17 @@
+---
+import { Check } from '@lucide/astro';
+---
+
+<div 
+  id="dashboard-toast" 
+  class="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-[#0A261F] text-white px-5 py-4 rounded-2xl shadow-2xl border border-[#143B30] opacity-0 translate-y-4 pointer-events-none transition-all duration-300"
+  role="alert"
+>
+  <div class="h-7 w-7 rounded-xl bg-[#C6EE58] text-[#0A261F] flex items-center justify-center font-bold text-sm flex-shrink-0">
+    <Check class="w-4 h-4 stroke-[3]" />
+  </div>
+  <div>
+    <p id="toast-title" class="text-sm font-semibold text-[#F3F4F0]">Action successful</p>
+    <p id="toast-message" class="text-xs text-[#8EA89D]">Your changes have been saved.</p>
+  </div>
+</div>

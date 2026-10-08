@@ -1,0 +1,76 @@
+---
+import { getPortfolio, formatKes } from '../../data/portfolio';
+import { ArrowRight } from '@lucide/astro';
+
+// This company's data only (the signed-in user's).
+const { repairStats, stats, graceDay } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+
+const openRepairsCount = repairStats.openCount;
+const highPriorityRepairsCount = repairStats.highPriorityOpen;
+---
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+  <!-- Card 1: Outstanding -->
+  <div class="group bg-white rounded-3xl p-6 border border-[#E7EAE4] shadow-sm hover:shadow-md hover:border-[#D6DAD1] transition-all duration-200 flex items-center justify-between">
+    <div>
+      <span class="text-xs sm:text-sm text-[#73827C] font-medium tracking-normal">Outstanding</span>
+      <h3 class="font-editorial text-3xl sm:text-4xl font-normal text-[#C04A26] mt-1.5 tracking-tight">
+        {formatKes(stats.outstandingAmount)}
+      </h3>
+      <p class="text-xs sm:text-sm text-[#73827C] mt-1">
+        {stats.tenantsOverdueCount} overdue (past the {graceDay}th) · {stats.tenantsInGraceCount} in grace period
+        {stats.formerTenantsOwing > 0 && (
+          <span class="block text-[11px]">+ {formatKes(stats.formerTenantsOwing)} owed by former tenants</span>
+        )}
+      </p>
+    </div>
+    <a 
+      href="/arrears" 
+      aria-label="View arrears details"
+      class="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-[#F4F5F1] text-[#2C3B34] flex items-center justify-center transition-all duration-200 group-hover:bg-[#0D382B] group-hover:text-white group-hover:translate-x-0.5 shadow-sm"
+    >
+      <ArrowRight class="w-4 h-4" />
+    </a>
+  </div>
+
+  <!-- Card 2: Occupancy -->
+  <div class="group bg-white rounded-3xl p-6 border border-[#E7EAE4] shadow-sm hover:shadow-md hover:border-[#D6DAD1] transition-all duration-200 flex items-center justify-between">
+    <div>
+      <span class="text-xs sm:text-sm text-[#73827C] font-medium tracking-normal">Occupancy</span>
+      <h3 class="font-editorial text-3xl sm:text-4xl font-normal text-[#17231E] mt-1.5 tracking-tight">
+        {stats.occupancyRate}%
+      </h3>
+      <p class="text-xs sm:text-sm text-[#73827C] mt-1">
+        {stats.totalUnits === 0 ? 'No units yet' : `${stats.occupiedUnits} of ${stats.totalUnits} units let`}
+      </p>
+    </div>
+    <a 
+      href="/properties" 
+      aria-label="View property occupancy details"
+      class="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-[#F4F5F1] text-[#2C3B34] flex items-center justify-center transition-all duration-200 group-hover:bg-[#0D382B] group-hover:text-white group-hover:translate-x-0.5 shadow-sm"
+    >
+      <ArrowRight class="w-4 h-4" />
+    </a>
+  </div>
+
+  <!-- Card 3: Open repairs -->
+  <div class="group bg-white rounded-3xl p-6 border border-[#E7EAE4] shadow-sm hover:shadow-md hover:border-[#D6DAD1] transition-all duration-200 flex items-center justify-between">
+    <div>
+      <span class="text-xs sm:text-sm text-[#73827C] font-medium tracking-normal">Open repairs</span>
+      <h3 class="font-editorial text-3xl sm:text-4xl font-normal text-[#17231E] mt-1.5 tracking-tight">
+        {openRepairsCount}
+      </h3>
+      <p class="text-xs sm:text-sm text-[#73827C] mt-1">
+        {highPriorityRepairsCount} high priority
+      </p>
+    </div>
+    <a 
+      href="/maintenance"
+      id="open-repairs-btn"
+      aria-label="View maintenance tickets"
+      class="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-[#F4F5F1] text-[#2C3B34] flex items-center justify-center transition-all duration-200 group-hover:bg-[#0D382B] group-hover:text-white group-hover:translate-x-0.5 shadow-sm cursor-pointer"
+    >
+      <ArrowRight class="w-4 h-4" />
+    </a>
+  </div>
+</div>

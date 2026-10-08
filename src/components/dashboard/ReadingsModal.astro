@@ -1,0 +1,206 @@
+---
+import { X, Gauge } from '@lucide/astro';
+import { getPortfolio, addMonthsLabel, addMonths, monthLabel } from '../../data/portfolio';
+
+// This company's data only (the signed-in user's).
+const { activeTenancies, lastReading, currentMonth } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+
+const rows = activeTenancies
+  .map((t) => ({ view: t, last: lastReading(t.unit.id) }))
+  .sort(
+    (a, b) =>
+      a.view.property.name.localeCompare(b.view.property.name) ||
+      a.view.unit.label.localeCompare(b.view.unit.label, undefined, { numeric: true }),
+  );
+
+// Options for billing month
+const nextMonthCode = addMonths(currentMonth, 1);
+const nextMonth = addMonthsLabel(currentMonth, 1);
+const currentMonthLbl = monthLabel(currentMonth);
+---
+
+<div 
+  id="readings-modal" 
+  class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-200"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="readings-title"
+>
+  <div class="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-[#E7EAE4] overflow-hidden transform scale-95 transition-transform duration-200">
+    <div class="flex items-center justify-between p-6 border-b border-[#F0F2EE]">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-xl bg-[#0D382B] text-[#C6EE58] flex items-center justify-center">
+          <Gauge class="w-5 h-5" />
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h3 id="readings-title" class="font-editorial text-2xl font-normal text-[#17231E]">Meter readings for</h3>
+            <select id="readings-month-select" class="px-2.5 py-1 bg-[#F4F5F1] rounded-xl text-xs font-semibold text-[#0D382B] border border-[#DCE0D7] outline-none cursor-pointer">
+              <option value={nextMonthCode} selected>{nextMonth}</option>
+              <option value={currentMonth}>{currentMonthLbl}</option>
+            </select>
+          </div>
+          <p class="text-xs text-[#73827C]">Units used × each property's water rate will be applied to the bill.</p>
+        </div>
+      </div>
+      <button type="button" data-close class="h-8 w-8 rounded-full bg-[#F4F5F1] text-[#73827C] hover:text-[#17231E] flex items-center justify-center transition-colors cursor-pointer" aria-label="Close">
+        <X class="w-4 h-4" />
+      </button>
+    </div>
+
+    <form id="readings-form" class="max-h-[65vh] overflow-y-auto" novalidate>
+      <table class="w-full text-left text-xs tabular-nums">
+        <thead class="bg-[#F8F9F6] border-b border-[#E3E6DF] text-[#69847A] uppercase text-[10px] font-semibold tracking-wider sticky top-0">
+          <tr>
+            <th class="py-3 px-6">Unit</th>
+            <th class="py-3 px-3 text-right">Last</th>
+            <th class="py-3 px-3">New reading</th>
+            <th class="py-3 px-3 text-right">Units</th>
+            <th class="py-3 px-3 text-right">Rate</th>
+            <th class="py-3 px-6 text-right">Water</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[#E3E6DF]">
+          {rows.length === 0 && (
+            <tr>
+              <td colspan="6" class="py-10 px-6 text-center text-xs text-[#69847A]">
+                No occupied units yet. Readings start once tenants have moved in.
+              </td>
+            </tr>
+          )}
+          {rows.map(({ view, last }) => (
+            <tr class="reading-row" data-unit-id={view.unit.id} data-month={nextMonthCode} data-last={last.value} data-rate={view.property.waterRate}>
+              <td class="py-2.5 px-6">
+                <span class="font-semibold text-[#0D382B]">{view.unit.label}</span>
+                <span class="text-[#69847A]"> · {view.property.name}</span>
+                <span class="block text-[11px] text-[#69847A]">{view.tenant.name}</span>
+              </td>
+              <td class="py-2.5 px-3 text-right text-[#69847A]">{last.value.toLocaleString('en-KE')}</td>
+              <td class="py-2.5 px-3">
+                <input type="number" min={last.value} step="1" inputmode="numeric" aria-label={`New reading for ${view.unit.label}`}
+                  class="reading-input w-28 px-3 py-1.5 rounded-lg border border-[#DCE0D7] focus:border-[#0D382B] outline-none text-sm" />
+              </td>
+              <td class="py-2.5 px-3 text-right units-cell text-[#69847A]">—</td>
+              <td class="py-2.5 px-3 text-right text-[#69847A] whitespace-nowrap">KES {view.property.waterRate}/unit</td>
+              <td class="py-2.5 px-6 text-right water-cell font-semibold text-[#0D382B]">—</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div class="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-[#F0F2EE]">
+        <p id="readings-summary" class="text-xs text-[#69847A]">Enter readings to preview water charges.</p>
+        <div class="flex items-center gap-3">
+          <button type="button" data-close class="px-5 py-2.5 rounded-xl text-sm font-medium text-[#5A6862] hover:bg-[#F4F5F1] transition-colors cursor-pointer">Cancel</button>
+          <button type="submit" class="px-6 py-2.5 rounded-xl text-sm font-semibold bg-[#0D382B] text-white hover:bg-[#154637] transition-all shadow-md cursor-pointer">Save readings</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  const modal = document.getElementById('readings-modal')!;
+  const form = document.getElementById('readings-form') as HTMLFormElement;
+  const kes = (n: number) => `KES ${n.toLocaleString('en-KE')}`;
+
+  function recalc() {
+    let entered = 0;
+    let invalid = 0;
+    let total = 0;
+    modal.querySelectorAll<HTMLTableRowElement>('.reading-row').forEach((row) => {
+      const input = row.querySelector<HTMLInputElement>('.reading-input')!;
+      const last = Number(row.dataset.last);
+      const rate = Number(row.dataset.rate);
+      const unitsCell = row.querySelector('.units-cell')!;
+      const waterCell = row.querySelector('.water-cell')!;
+      if (input.value === '') {
+        unitsCell.textContent = '—';
+        waterCell.textContent = '—';
+        input.classList.remove('border-[#C04A26]');
+        return;
+      }
+      const value = Number(input.value);
+      const ok = Number.isInteger(value) && value >= last;
+      input.classList.toggle('border-[#C04A26]', !ok);
+      entered++;
+      if (!ok) {
+        invalid++;
+        unitsCell.textContent = 'Below last';
+        waterCell.textContent = '—';
+        return;
+      }
+      const units = value - last;
+      total += units * rate;
+      unitsCell.textContent = String(units);
+      waterCell.textContent = kes(units * rate);
+    });
+    const summary = document.getElementById('readings-summary')!;
+    summary.textContent = invalid
+      ? `${invalid} reading${invalid > 1 ? 's are' : ' is'} lower than last month. Check the meter.`
+      : entered
+        ? `${entered} of ${modal.querySelectorAll('.reading-row').length} units read · ${kes(total)} water to bill`
+        : 'Enter readings to preview water charges.';
+    summary.classList.toggle('text-[#C04A26]', invalid > 0);
+    return { entered, invalid };
+  }
+
+  const monthSelect = document.getElementById('readings-month-select') as HTMLSelectElement | null;
+  monthSelect?.addEventListener('change', () => {
+    const selectedMonth = monthSelect.value;
+    modal.querySelectorAll<HTMLTableRowElement>('.reading-row').forEach((row) => {
+      row.dataset.month = selectedMonth;
+    });
+    recalc();
+  });
+
+  form.addEventListener('input', recalc);
+  modal.querySelectorAll('[data-close]').forEach((el) =>
+    el.addEventListener('click', () => window.makaziUi?.hideModal('readings-modal')),
+  );
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const { entered, invalid } = recalc();
+    if (invalid || !entered) return;
+
+    const selectedMonth = monthSelect?.value || (modal.querySelector('.reading-row') as HTMLElement | null)?.dataset.month;
+    const readings: Array<{ unitId: string; month: string; value: number }> = [];
+    modal.querySelectorAll<HTMLTableRowElement>('.reading-row').forEach((row) => {
+      const input = row.querySelector<HTMLInputElement>('.reading-input')!;
+      if (input.value !== '') {
+        readings.push({
+          unitId: row.dataset.unitId!,
+          month: selectedMonth || row.dataset.month!,
+          value: Number(input.value),
+        });
+      }
+    });
+
+    const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving...';
+    }
+
+    try {
+      const res = await fetch('/api/record-reading', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ readings }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Failed to save readings');
+
+      window.makaziUi?.hideModal('readings-modal');
+      window.makaziUi?.showToast('Readings saved', `Successfully saved ${readings.length} meter reading(s).`);
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      window.makaziUi?.showToast('Error', msg);
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save readings';
+      }
+    }
+  });
+</script>

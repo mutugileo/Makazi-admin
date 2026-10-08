@@ -1,0 +1,114 @@
+---
+import { getPortfolio, formatKes } from '../../data/portfolio';
+
+// This company's data only (the signed-in user's).
+const { stats, sixMonthsHistory } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+
+// Bars are scaled against the largest month billed. Labels switch to
+// thousands when the portfolio bills under a million a month.
+const maxExpected = Math.max(1, ...sixMonthsHistory.map((m) => m.expected));
+const unit = maxExpected >= 1_000_000 ? { div: 1_000_000, label: 'KES M', digits: 2 } : { div: 1_000, label: "KES '000", digits: 0 };
+const maxBarValue = Math.max(1, maxExpected / unit.div);
+---
+
+<div data-animate-bars class="relative overflow-hidden rounded-3xl bg-[#0D382B] text-white p-7 lg:p-8 shadow-xl border border-[#144838]/60 transition-all duration-300">
+  <!-- Subtle decorative ambient wave/rings matching high-fidelity screenshot -->
+  <div class="pointer-events-none absolute -right-20 -top-20 h-96 w-96 rounded-full bg-emerald-500/10 blur-3xl"></div>
+  <svg class="pointer-events-none absolute inset-0 h-full w-full opacity-15" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+    <path d="M0,80 Q250,20 500,70 T1000,50 L1000,0 L0,0 Z" fill="rgba(198, 238, 88, 0.08)"></path>
+    <path d="M0,140 Q300,70 600,120 T1200,90 L1200,0 L0,0 Z" fill="rgba(255, 255, 255, 0.03)"></path>
+  </svg>
+
+  <div class="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-end">
+    <!-- Left Hero Metrics -->
+    <div class="lg:col-span-7 flex flex-col justify-between">
+      <div>
+        <span class="text-xs font-semibold tracking-widest text-[#93BDB0] uppercase">
+          COLLECTED THIS MONTH
+        </span>
+        <h2 class="font-editorial text-4xl sm:text-5xl lg:text-6xl font-normal tracking-tight text-white mt-3 mb-2">
+          {formatKes(stats.collectedThisMonth)}
+        </h2>
+        <p class="text-sm text-[#93BDB0] font-medium">
+          {stats.expectedThisMonth === 0
+            ? 'No bills issued this month yet'
+            : <>of {formatKes(stats.expectedThisMonth)} billed (rent, water, garbage) · <span class="text-white font-semibold">{stats.collectionRate}%</span></>}
+        </p>
+        {stats.depositsThisMonth > 0 && (
+          <p class="text-xs text-[#93BDB0]/80 mt-1">
+            Excludes {formatKes(stats.depositsThisMonth)} in new deposits, held separately
+          </p>
+        )}
+
+        <!-- Progress Bar -->
+        <div class="w-full bg-[#18493B] h-2 rounded-full mt-4 overflow-hidden p-0.5">
+          <div 
+            class="bar-x bg-[#C6EE58] h-full rounded-full"
+            style={`width: ${Math.min(stats.collectionRate, 100)}%; --bar-delay: 150ms`}
+          ></div>
+        </div>
+      </div>
+
+      <!-- Payment Source Breakdown -->
+      <div class="flex flex-wrap items-center gap-6 mt-7 pt-4 border-t border-[#1B4B3D]/70 text-xs sm:text-sm">
+        <div class="flex items-center gap-2 group cursor-pointer transition-transform hover:translate-x-0.5">
+          <span class="h-2 w-2 rounded-full bg-[#C6EE58] ring-4 ring-[#C6EE58]/20"></span>
+          <span class="text-[#93BDB0]">M-Pesa</span>
+          <span class="font-semibold text-white tracking-wide">{formatKes(stats.mpesaTotal)}</span>
+        </div>
+        <div class="flex items-center gap-2 group cursor-pointer transition-transform hover:translate-x-0.5">
+          <span class="h-2 w-2 rounded-full bg-[#52B79A] ring-4 ring-[#52B79A]/20"></span>
+          <span class="text-[#93BDB0]">Bank</span>
+          <span class="font-semibold text-white tracking-wide">{formatKes(stats.bankTotal)}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Bar Chart -->
+    <div class="lg:col-span-5 bg-[#092B21]/60 rounded-2xl p-5 border border-[#164436]/70 backdrop-blur-sm">
+      <div class="flex items-center justify-between text-xs text-[#93BDB0] mb-5">
+        <span class="font-medium tracking-wide">Last 6 months</span>
+        <span class="font-semibold tracking-wider text-[#93BDB0]/80">{unit.label}</span>
+      </div>
+
+      <!-- Interactive Chart Columns -->
+      <div class="grid grid-cols-6 gap-2 sm:gap-3 items-end h-44 pb-2 px-1">
+        {sixMonthsHistory.map((item, i) => {
+          const amount = item.collected / unit.div;
+          const heightPercent = Math.round((amount / maxBarValue) * 100);
+          return (
+            <div class="group relative flex flex-col items-center justify-end h-full">
+              <!-- Floating Tooltip on Hover -->
+              <div class="absolute -top-12 opacity-0 group-hover:opacity-100 group-hover:-top-14 transition-all duration-200 pointer-events-none z-30 bg-[#061913] text-white text-[11px] font-medium py-1.5 px-2.5 rounded-lg shadow-xl border border-[#1E5242] whitespace-nowrap">
+                <span class="font-semibold text-[#C6EE58]">{item.label}</span>: {formatKes(item.collected)} ({item.rate}%)
+                <div class="absolute left-1/2 -bottom-1 -translate-x-1/2 border-4 border-transparent border-t-[#061913]"></div>
+              </div>
+
+              <!-- Top Value Label -->
+              <span class={`text-[11px] mb-1 font-medium transition-colors ${item.isCurrent ? 'text-[#C6EE58] font-semibold' : 'text-[#93BDB0] group-hover:text-white'}`}>
+                {amount.toFixed(unit.digits)}
+              </span>
+
+              <!-- Bar Pillar -->
+              <div class="w-full bg-[#143D31] rounded-t-md overflow-hidden flex items-end h-32 p-0.5">
+                <div
+                  class={`bar-y w-full rounded-t-sm transition-[filter,background-color] duration-200 group-hover:brightness-110 cursor-pointer ${
+                    item.isCurrent 
+                      ? 'bg-[#C6EE58] shadow-lg shadow-[#C6EE58]/20' 
+                      : 'bg-[#1C5141] group-hover:bg-[#256653]'
+                  }`}
+                  style={`height: ${heightPercent}%; --bar-delay: ${250 + i * 90}ms`}
+                ></div>
+              </div>
+
+              <!-- Bottom Month Label -->
+              <span class={`text-[11px] mt-2 font-medium tracking-tight ${item.isCurrent ? 'text-white font-semibold' : 'text-[#8EAFA3]'}`}>
+                {item.month}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  </div>
+</div>

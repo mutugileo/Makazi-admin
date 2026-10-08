@@ -1,0 +1,55 @@
+---
+import { CheckCircle2, Circle, ArrowRight } from '@lucide/astro';
+import { getPortfolio } from '../../data/portfolio';
+
+// This company's data only (the signed-in user's).
+const { gettingStarted, company } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+
+const steps = [
+  {
+    done: gettingStarted.hasProperties,
+    title: 'Add a property',
+    body: 'An apartment block or a group of houses, with its units, water rate and garbage fee.',
+    href: '/properties',
+    action: 'Add property',
+  },
+  {
+    done: gettingStarted.hasTenants,
+    title: 'Onboard your tenants',
+    body: 'Each tenant gets a move-in bill (deposit and rent) and a one-time password for the Makazi app.',
+    href: '/tenants',
+    action: 'Onboard tenant',
+  },
+  {
+    done: gettingStarted.hasBills,
+    title: 'Bills go out on the 1st',
+    body: `Record the caretaker's meter readings before the 1st. Tenants pay by M-Pesa Paybill ${company.mpesaPaybill}.`,
+    href: '/bills',
+    action: 'Monthly bills',
+  },
+];
+const next = steps.findIndex((s) => !s.done);
+---
+
+<section class="bg-white rounded-3xl border border-[#E7EAE4] p-6 sm:p-7 shadow-sm mb-7" aria-labelledby="get-started-title">
+  <p class="text-xs font-semibold uppercase tracking-widest text-[#69847A]">Welcome to Makazi</p>
+  <h2 id="get-started-title" class="font-editorial text-3xl text-[#0D382B] mt-1">Get {company.name} set up</h2>
+  <ol class="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+    {steps.map((step, i) => (
+      <li class={`rounded-2xl border p-4 flex flex-col ${i === next ? 'border-[#0D382B] bg-[#F8F9F6]' : 'border-[#E7EAE4]'}`}>
+        <div class="flex items-center gap-2">
+          {step.done
+            ? <CheckCircle2 class="w-5 h-5 text-[#2E7D32]" />
+            : <Circle class="w-5 h-5 text-[#A8B3AE]" />}
+          <span class={`text-sm font-semibold ${step.done ? 'text-[#69847A] line-through' : 'text-[#0D382B]'}`}>{i + 1}. {step.title}</span>
+        </div>
+        <p class="text-xs text-[#5A6862] mt-2 leading-relaxed flex-1">{step.body}</p>
+        {i === next && (
+          <a href={step.href} class="mt-3 inline-flex items-center gap-1.5 self-start px-4 py-2 rounded-full bg-[#0D382B] text-white text-xs font-semibold hover:bg-[#08221A]">
+            {step.action} <ArrowRight class="w-3.5 h-3.5" />
+          </a>
+        )}
+      </li>
+    ))}
+  </ol>
+</section>

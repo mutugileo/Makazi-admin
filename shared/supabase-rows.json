@@ -1,0 +1,2943 @@
+{
+  "companies": [
+    {
+      "id": "harborridge",
+      "slug": "harborridge",
+      "name": "HarborRidge Limited",
+      "kra_pin": "P051234567X",
+      "mpesa_paybill": "522533",
+      "bank_name": "NCBA Bank, Westlands",
+      "bank_account": "1004558231",
+      "settings": {
+        "ledgerStartMonth": "2026-05",
+        "dueDay": 5,
+        "graceDay": 20,
+        "depositSchedule": {
+          "1": 25000,
+          "2": 30000
+        },
+        "recordRetentionMonths": 6
+      },
+      "sequences": {
+        "receipt": 379,
+        "repairTicket": 1047
+      },
+      "subscription": {
+        "plan": "growth",
+        "status": "active",
+        "unitLimit": 100,
+        "staffLimit": 10,
+        "trialEndsAt": null
+      }
+    },
+    {
+      "id": "savanna",
+      "slug": "savanna",
+      "name": "Savanna Homes Ltd",
+      "kra_pin": "P052765431Q",
+      "mpesa_paybill": "400200",
+      "bank_name": "Equity Bank, Nakuru",
+      "bank_account": "0170299934455",
+      "settings": {
+        "ledgerStartMonth": "2026-07",
+        "dueDay": 1,
+        "graceDay": 10,
+        "depositSchedule": {
+          "1": 15000,
+          "2": 20000
+        },
+        "recordRetentionMonths": 12
+      },
+      "sequences": {
+        "receipt": 115,
+        "repairTicket": 2002
+      },
+      "subscription": {
+        "plan": "starter",
+        "status": "trial",
+        "unitLimit": 20,
+        "staffLimit": 3,
+        "trialEndsAt": "2026-10-31"
+      }
+    },
+    {
+      "id": "acacia",
+      "slug": "acacia",
+      "name": "Acacia Rentals",
+      "kra_pin": "P053318822K",
+      "mpesa_paybill": "247900",
+      "bank_name": "KCB Bank, Thika",
+      "bank_account": "1290033451",
+      "settings": {
+        "ledgerStartMonth": "2026-10",
+        "dueDay": 5,
+        "graceDay": 15,
+        "depositSchedule": {
+          "1": 10000,
+          "2": 15000
+        },
+        "recordRetentionMonths": 6
+      },
+      "sequences": {
+        "receipt": 0,
+        "repairTicket": 0
+      },
+      "subscription": {
+        "plan": "starter",
+        "status": "trial",
+        "unitLimit": 20,
+        "staffLimit": 3,
+        "trialEndsAt": "2026-11-06"
+      }
+    }
+  ],
+  "staff": [
+    {
+      "id": "s-owner",
+      "company_id": "harborridge",
+      "name": "HarborRidge Admin",
+      "role": "owner",
+      "phone": null,
+      "property_ids": []
+    },
+    {
+      "id": "s-njoki",
+      "company_id": "harborridge",
+      "name": "Njoki Kariuki",
+      "role": "manager",
+      "phone": "0711 000 222",
+      "property_ids": []
+    },
+    {
+      "id": "s-otieno",
+      "company_id": "harborridge",
+      "name": "Otieno Ouma",
+      "role": "caretaker",
+      "phone": "0722 000 333",
+      "property_ids": [
+        "kilimani-heights",
+        "riverside-court"
+      ]
+    },
+    {
+      "id": "s-achieng",
+      "company_id": "harborridge",
+      "name": "Achieng Atieno",
+      "role": "caretaker",
+      "phone": "0733 000 444",
+      "property_ids": [
+        "mvuli-gardens",
+        "ngong-road"
+      ]
+    },
+    {
+      "id": "s-sv-owner",
+      "company_id": "savanna",
+      "name": "Savanna Admin",
+      "role": "owner",
+      "phone": null,
+      "property_ids": []
+    },
+    {
+      "id": "s-wanjiru",
+      "company_id": "savanna",
+      "name": "Wanjiru Maina",
+      "role": "manager",
+      "phone": "0711 600 101",
+      "property_ids": []
+    },
+    {
+      "id": "s-ndirangu",
+      "company_id": "savanna",
+      "name": "Kamau Ndirangu",
+      "role": "caretaker",
+      "phone": "0722 600 202",
+      "property_ids": []
+    },
+    {
+      "id": "s-acacia-owner",
+      "company_id": "acacia",
+      "name": "Acacia Admin",
+      "role": "owner",
+      "phone": null,
+      "property_ids": []
+    }
+  ],
+  "properties": [
+    {
+      "id": "kilimani-heights",
+      "company_id": "harborridge",
+      "manager_id": "s-njoki",
+      "name": "Kilimani Heights",
+      "type": "apartments",
+      "address": "Argwings Kodhek Rd, Kilimani",
+      "account_prefix": "KH",
+      "water_rate": 150,
+      "garbage_fee": 250,
+      "rate_history": [
+        {
+          "from": "2026-05",
+          "waterRate": 150,
+          "garbageFee": 250
+        }
+      ]
+    },
+    {
+      "id": "riverside-court",
+      "company_id": "harborridge",
+      "manager_id": "s-njoki",
+      "name": "Riverside Court",
+      "type": "apartments",
+      "address": "Riverside Dr, Westlands",
+      "account_prefix": "RC",
+      "water_rate": 150,
+      "garbage_fee": 250,
+      "rate_history": [
+        {
+          "from": "2026-05",
+          "waterRate": 150,
+          "garbageFee": 250
+        }
+      ]
+    },
+    {
+      "id": "mvuli-gardens",
+      "company_id": "harborridge",
+      "manager_id": "s-njoki",
+      "name": "Mvuli Gardens",
+      "type": "houses",
+      "address": "Mvuli Rd, Westlands",
+      "account_prefix": "MG",
+      "water_rate": 150,
+      "garbage_fee": 250,
+      "rate_history": [
+        {
+          "from": "2026-05",
+          "waterRate": 150,
+          "garbageFee": 250
+        }
+      ]
+    },
+    {
+      "id": "ngong-road",
+      "company_id": "harborridge",
+      "manager_id": "s-njoki",
+      "name": "Ngong Road Residences",
+      "type": "apartments",
+      "address": "Ngong Rd, Adams Arcade",
+      "account_prefix": "NR",
+      "water_rate": 150,
+      "garbage_fee": 250,
+      "rate_history": [
+        {
+          "from": "2026-05",
+          "waterRate": 130,
+          "garbageFee": 250
+        },
+        {
+          "from": "2026-09",
+          "waterRate": 150,
+          "garbageFee": 250
+        }
+      ]
+    },
+    {
+      "id": "milimani-court",
+      "company_id": "savanna",
+      "manager_id": "s-wanjiru",
+      "name": "Milimani Court",
+      "type": "apartments",
+      "address": "Milimani, Nakuru",
+      "account_prefix": "MC",
+      "water_rate": 120,
+      "garbage_fee": 200,
+      "rate_history": [
+        {
+          "from": "2026-07",
+          "waterRate": 120,
+          "garbageFee": 200
+        }
+      ]
+    },
+    {
+      "id": "lanet-cottages",
+      "company_id": "savanna",
+      "manager_id": "s-wanjiru",
+      "name": "Lanet Cottages",
+      "type": "houses",
+      "address": "Lanet, Nakuru",
+      "account_prefix": "LC",
+      "water_rate": 120,
+      "garbage_fee": 300,
+      "rate_history": [
+        {
+          "from": "2026-07",
+          "waterRate": 120,
+          "garbageFee": 300
+        }
+      ]
+    }
+  ],
+  "units": [
+    {
+      "id": "kh-a03",
+      "company_id": "harborridge",
+      "property_id": "kilimani-heights",
+      "label": "A03",
+      "bedrooms": 1
+    },
+    {
+      "id": "kh-a12",
+      "company_id": "harborridge",
+      "property_id": "kilimani-heights",
+      "label": "A12",
+      "bedrooms": 1
+    },
+    {
+      "id": "kh-b04",
+      "company_id": "harborridge",
+      "property_id": "kilimani-heights",
+      "label": "B04",
+      "bedrooms": 2
+    },
+    {
+      "id": "kh-c09",
+      "company_id": "harborridge",
+      "property_id": "kilimani-heights",
+      "label": "C09",
+      "bedrooms": 2
+    },
+    {
+      "id": "kh-d02",
+      "company_id": "harborridge",
+      "property_id": "kilimani-heights",
+      "label": "D02",
+      "bedrooms": 1
+    },
+    {
+      "id": "rc-1c",
+      "company_id": "harborridge",
+      "property_id": "riverside-court",
+      "label": "1C",
+      "bedrooms": 1
+    },
+    {
+      "id": "rc-2a",
+      "company_id": "harborridge",
+      "property_id": "riverside-court",
+      "label": "2A",
+      "bedrooms": 2
+    },
+    {
+      "id": "rc-3b",
+      "company_id": "harborridge",
+      "property_id": "riverside-court",
+      "label": "3B",
+      "bedrooms": 2
+    },
+    {
+      "id": "rc-5a",
+      "company_id": "harborridge",
+      "property_id": "riverside-court",
+      "label": "5A",
+      "bedrooms": 2
+    },
+    {
+      "id": "mg-2",
+      "company_id": "harborridge",
+      "property_id": "mvuli-gardens",
+      "label": "MG-2",
+      "bedrooms": 2
+    },
+    {
+      "id": "mg-4",
+      "company_id": "harborridge",
+      "property_id": "mvuli-gardens",
+      "label": "MG-4",
+      "bedrooms": 2
+    },
+    {
+      "id": "mg-6",
+      "company_id": "harborridge",
+      "property_id": "mvuli-gardens",
+      "label": "MG-6",
+      "bedrooms": 2
+    },
+    {
+      "id": "nr-114",
+      "company_id": "harborridge",
+      "property_id": "ngong-road",
+      "label": "114",
+      "bedrooms": 1
+    },
+    {
+      "id": "nr-207",
+      "company_id": "harborridge",
+      "property_id": "ngong-road",
+      "label": "207",
+      "bedrooms": 1
+    },
+    {
+      "id": "nr-312",
+      "company_id": "harborridge",
+      "property_id": "ngong-road",
+      "label": "312",
+      "bedrooms": 1
+    },
+    {
+      "id": "nr-405",
+      "company_id": "harborridge",
+      "property_id": "ngong-road",
+      "label": "405",
+      "bedrooms": 1
+    },
+    {
+      "id": "mc-1",
+      "company_id": "savanna",
+      "property_id": "milimani-court",
+      "label": "1",
+      "bedrooms": 1
+    },
+    {
+      "id": "mc-2",
+      "company_id": "savanna",
+      "property_id": "milimani-court",
+      "label": "2",
+      "bedrooms": 1
+    },
+    {
+      "id": "mc-3",
+      "company_id": "savanna",
+      "property_id": "milimani-court",
+      "label": "3",
+      "bedrooms": 2
+    },
+    {
+      "id": "mc-4",
+      "company_id": "savanna",
+      "property_id": "milimani-court",
+      "label": "4",
+      "bedrooms": 2
+    },
+    {
+      "id": "lc-a",
+      "company_id": "savanna",
+      "property_id": "lanet-cottages",
+      "label": "A",
+      "bedrooms": 2
+    },
+    {
+      "id": "lc-b",
+      "company_id": "savanna",
+      "property_id": "lanet-cottages",
+      "label": "B",
+      "bedrooms": 2
+    }
+  ],
+  "tenants": [
+    {
+      "id": "t-wanjiku",
+      "company_id": "harborridge",
+      "name": "Wanjiku Kamau",
+      "phone": "0712 448 203",
+      "email": "wanjiku.kamau@example.com"
+    },
+    {
+      "id": "t-brian",
+      "company_id": "harborridge",
+      "name": "Brian Otieno",
+      "phone": "0722 913 054",
+      "email": "brian.otieno@example.com"
+    },
+    {
+      "id": "t-samuel",
+      "company_id": "harborridge",
+      "name": "Samuel Mutua",
+      "phone": "0727 640 205",
+      "email": "samuel.mutua@example.com"
+    },
+    {
+      "id": "t-peter",
+      "company_id": "harborridge",
+      "name": "Peter Odhiambo",
+      "phone": "0798 266 015",
+      "email": "peter.odhiambo@example.com"
+    },
+    {
+      "id": "t-esther",
+      "company_id": "harborridge",
+      "name": "Esther Mutheu",
+      "phone": "0711 302 774",
+      "email": "esther.mutheu@example.com"
+    },
+    {
+      "id": "t-ian",
+      "company_id": "harborridge",
+      "name": "Ian Ndegwa",
+      "phone": "0701 554 210",
+      "email": "ian.ndegwa@example.com"
+    },
+    {
+      "id": "t-joseph",
+      "company_id": "harborridge",
+      "name": "Joseph Kariuki",
+      "phone": "0720 671 093",
+      "email": "joseph.kariuki@example.com"
+    },
+    {
+      "id": "t-amina",
+      "company_id": "harborridge",
+      "name": "Amina Hassan",
+      "phone": "0757 118 640",
+      "email": "amina.hassan@example.com"
+    },
+    {
+      "id": "t-david",
+      "company_id": "harborridge",
+      "name": "David Mwangi",
+      "phone": "0733 605 118",
+      "email": "david.mwangi@example.com"
+    },
+    {
+      "id": "t-grace",
+      "company_id": "harborridge",
+      "name": "Grace Njeri",
+      "phone": "0710 225 981",
+      "email": "grace.njeri@example.com"
+    },
+    {
+      "id": "t-mercy",
+      "company_id": "harborridge",
+      "name": "Mercy Chebet",
+      "phone": "0729 840 377",
+      "email": "mercy.chebet@example.com"
+    },
+    {
+      "id": "t-kevin",
+      "company_id": "harborridge",
+      "name": "Kevin Kiprop",
+      "phone": "0790 118 462",
+      "email": "kevin.kiprop@example.com"
+    },
+    {
+      "id": "t-faith",
+      "company_id": "harborridge",
+      "name": "Faith Achieng",
+      "phone": "0708 352 917",
+      "email": "faith.achieng@example.com"
+    },
+    {
+      "id": "t-lucy",
+      "company_id": "harborridge",
+      "name": "Lucy Wambui",
+      "phone": "0745 902 336",
+      "email": "lucy.wambui@example.com"
+    },
+    {
+      "id": "t-joy",
+      "company_id": "harborridge",
+      "name": "Joy Wairimu",
+      "phone": "0768 430 552",
+      "email": "joy.wairimu@example.com"
+    },
+    {
+      "id": "t-barasa",
+      "company_id": "savanna",
+      "name": "Otieno Barasa",
+      "phone": "0714 220 871",
+      "email": "otieno.barasa@example.com"
+    },
+    {
+      "id": "t-naliaka",
+      "company_id": "savanna",
+      "name": "Naliaka Wekesa",
+      "phone": "0723 555 019",
+      "email": "naliaka.wekesa@example.com"
+    },
+    {
+      "id": "t-kipchumba",
+      "company_id": "savanna",
+      "name": "Kipchumba Rotich",
+      "phone": "0790 664 302",
+      "email": "kipchumba.rotich@example.com"
+    },
+    {
+      "id": "t-akinyi",
+      "company_id": "savanna",
+      "name": "Akinyi Odera",
+      "phone": "0741 908 116",
+      "email": "akinyi.odera@example.com"
+    },
+    {
+      "id": "t-muthoni",
+      "company_id": "savanna",
+      "name": "Muthoni Gitau",
+      "phone": "0702 373 845",
+      "email": "muthoni.gitau@example.com"
+    }
+  ],
+  "tenancies": [
+    {
+      "id": "L-2207",
+      "company_id": "harborridge",
+      "tenant_id": "t-wanjiku",
+      "unit_id": "kh-a12",
+      "rent": 25000,
+      "deposit": 25000,
+      "move_in": "2026-04-01",
+      "move_out": null,
+      "lease_start": "2026-04-01",
+      "lease_end": "2027-03-31",
+      "opening_balance": 0,
+      "opening_reading": null,
+      "renewal": null,
+      "move_out_note": null,
+      "deposit_refund": null
+    },
+    {
+      "id": "L-2192",
+      "company_id": "harborridge",
+      "tenant_id": "t-brian",
+      "unit_id": "kh-b04",
+      "rent": 30000,
+      "deposit": 30000,
+      "move_in": "2026-01-01",
+      "move_out": null,
+      "lease_start": "2026-01-01",
+      "lease_end": "2026-12-31",
+      "opening_balance": 0,
+      "opening_reading": null,
+      "renewal": null,
+      "move_out_note": null,
+      "deposit_refund": null
+    },
+    {
+      "id": "L-2121",
+      "company_id": "harborridge",
+      "tenant_id": "t-samuel",
+      "unit_id": "kh-c09",
+      "rent": 30000,
+      "deposit": 30000,
+      "move_in": "2025-02-01",
+      "move_out": null,
+      "lease_start": "2026-02-01",
+      "lease_end": "2027-01-31",
+      "opening_balance": 0,
+      "opening_reading": null,
+      "renewal": null,
+      "move_out_note": null,
+      "deposit_refund": null
+    },
+    {
+      "id": "L-2138",
+      "company_id": "harborridge",
+      "tenant_id": "t-peter",
+      "unit_id": "kh-a03",
+      "rent": 25000,
+      "deposit": 25000,
+      "move_in": "2025-06-01",
+      "move_out": null,
+      "lease_start": "2025-06-01",
+      "lease_end": "2027-05-31",
+      "opening_balance": 0,
+      "opening_reading": null,
+      "renewal": null,
+      "move_out_note": null,
+      "deposit_refund": null
+    },
+    {
+      "id": "L-2044",
+      "company_id": "harborridge",
+      "tenant_id": "t-esther",
+      "unit_id": "kh-d02",
+      "rent": 24000,
+      "deposit": 25000,
+      "move_in": "2024-08-01",
+      "move_out": "2026-07-31",
+      "lease_start": "2025-08-01",
+      "lease_end": "2026-07-31",
+      "opening_balance": 4000,
+      "opening_reading": null,
+      "renewal": null,
+      "move_out_note": "Left owing a balance after the deposit was applied. Promised to clear by M-Pesa.",
+      "deposit_refund": null
+    },
+    {
+      "id": "L-2150",
+      "company_id": "harborridge",
+      "tenant_id": "t-ian",
+      "unit_id": "rc-1c",
+      "rent": 24000,
+      "deposit": 25000,
+      "move_in": "2025-09-01",
+      "move_out": null,
+      "lease_start": "2025-09-01",
+      "lease_end": "2027-08-31",
+      "opening_balance": 0,
+      "opening_reading": null,
+      "renewal": null,
+      "move_out_note": null,
+      "deposit_refund": null
+    },
+    {
+      "id": "L-2179",
+      "company_id": "harborridge",
+      "tenant_id": "t-amina",
+      "unit_id": "rc-3b",
+      "rent": 30000,
+      "deposit": 30000,
+      "move_in": "2025-12-01",
+      "move_out": null,
+      "lease_start": "2025-12-01",
+      "lease_end": "2026-11-30",
+      "opening_balance": 0,
+      "opening_reading": null,
+      "renewal": null,
+      "move_out_note": null,
+      "deposit_refund": null
+    },
+    {
+      "id": "L-2160",
+      "company_id": "harborridge",
+      "tenant_id": "t-david",
+      "unit_id": "rc-5a",
+      "rent": 30000,
+      "deposit": 30000,
+      "move_in": "2025-11-01",
+      "move_out": null,
+      "lease_start": "2025-11-01",
+      "lease_end": "2026-10-31",
+      "opening_balance": 0,
+      "opening_reading": null,
+      "renewal": {
+        "leaseId": "L-2231",
+        "rent": 31500,
+        "start": "2026-11-01",
+        "end": "2027-10-31",
+        "status": "Awaiting signature"
+      },
+      "move_out_note": null,
+      "deposit_refund": null
+    },
+    {
+      "id": "L-2071",
+      "company_id": "harborridge",
+      "tenant_id": "t-joseph",
+      "unit_id": "rc-2a",
+      "rent": 30000,
+      "deposit": 30000,
+      "move_in": "2025-03-01",
+      "move_out": "2026-08-31",
+      "lease_start": "2025-03-01",
+      "lease_end": "2026-08-31",
+      "opening_balance": 0,
+      "opening_reading": null,
+      "renewal": null,
+      "move_out_note": "Unit handed back in good condition. Deposit balance refunded by M-Pesa.",
+      "deposit_refund": {
+        "date": "2026-09-08",
+        "method": "M-Pesa",
+        "reference": "SH7Q2KD81M"
+      }
+    },
+    {
+      "id": "L-2154",
+      "company_id": "harborridge",
+      "tenant_id": "t-grace",
+      "unit_id": "mg-2",
+      "rent": 32000,
+      "deposit": 30000,
+      "move_in": "2025-07-01",
+      "move_out": null,
+      "lease_start": "2025-07-01",
+      "lease_end": "2027-06-30",
+      "opening_balance": 0,
+      "opening_reading": null,
+      "renewal": null,
+      "move_out_note": null,
+      "deposit_refund": null
+    },
+    {
+      "id": "L-2198",
+      "company_id": "harborridge",
+      "tenant_id": "t-mercy",
+      "unit_id": "mg-6",
+      "rent": 32000,
+      "deposit": 30000,
+      "move_in": "2026-02-01",
+      "move_out": null,
+      "lease_start": "2026-02-01",
+      "lease_end": "2027-01-31",
+      "opening_balance": 0,
+      "opening_reading": null,
+      "renewal": null,
+      "move_out_note": null,
+      "deposit_refund": null
+    },
+    {
+      "id": "L-2185",
+      "company_id": "harborridge",
+      "tenant_id": "t-kevin",
+      "unit_id": "nr-114",
+      "rent": 20000,
+      "deposit": 25000,
+      "move_in": "2025-11-01",
+      "move_out": null,
+      "lease_start": "2025-11-01",
+      "lease_end": "2026-10-31",
+      "opening_balance": 0,
+      "opening_reading": null,
+      "renewal": null,
+      "move_out_note": null,
+      "deposit_refund": null
+    },
+    {
+      "id": "L-2166",
+      "company_id": "harborridge",
+      "tenant_id": "t-faith",
+      "unit_id": "nr-207",
+      "rent": 20000,
+      "deposit": 25000,
+      "move_in": "2025-10-01",
+      "move_out": null,
+      "lease_start": "2025-10-01",
+      "lease_end": "2026-12-31",
+      "opening_balance": 0,
+      "opening_reading": null,
+      "renewal": null,
+      "move_out_note": null,
+      "deposit_refund": null
+    },
+    {
+      "id": "L-2172",
+      "company_id": "harborridge",
+      "tenant_id": "t-lucy",
+      "unit_id": "nr-312",
+      "rent": 20000,
+      "deposit": 25000,
+      "move_in": "2025-11-01",
+      "move_out": null,
+      "lease_start": "2025-11-01",
+      "lease_end": "2026-12-31",
+      "opening_balance": 0,
+      "opening_reading": null,
+      "renewal": null,
+      "move_out_note": null,
+      "deposit_refund": null
+    },
+    {
+      "id": "L-2240",
+      "company_id": "harborridge",
+      "tenant_id": "t-joy",
+      "unit_id": "nr-405",
+      "rent": 20000,
+      "deposit": 25000,
+      "move_in": "2026-09-16",
+      "move_out": null,
+      "lease_start": "2026-09-16",
+      "lease_end": "2027-09-15",
+      "opening_balance": 0,
+      "opening_reading": 665,
+      "renewal": null,
+      "move_out_note": null,
+      "deposit_refund": null
+    },
+    {
+      "id": "SV-101",
+      "company_id": "savanna",
+      "tenant_id": "t-barasa",
+      "unit_id": "mc-1",
+      "rent": 12000,
+      "deposit": 15000,
+      "move_in": "2025-05-01",
+      "move_out": null,
+      "lease_start": "2026-05-01",
+      "lease_end": "2027-04-30",
+      "opening_balance": 0,
+      "opening_reading": null,
+      "renewal": null,
+      "move_out_note": null,
+      "deposit_refund": null
+    },
+    {
+      "id": "SV-102",
+      "company_id": "savanna",
+      "tenant_id": "t-naliaka",
+      "unit_id": "mc-3",
+      "rent": 18000,
+      "deposit": 20000,
+      "move_in": "2026-01-01",
+      "move_out": null,
+      "lease_start": "2026-01-01",
+      "lease_end": "2026-12-31",
+      "opening_balance": 0,
+      "opening_reading": null,
+      "renewal": null,
+      "move_out_note": null,
+      "deposit_refund": null
+    },
+    {
+      "id": "SV-103",
+      "company_id": "savanna",
+      "tenant_id": "t-kipchumba",
+      "unit_id": "lc-a",
+      "rent": 22000,
+      "deposit": 20000,
+      "move_in": "2025-09-01",
+      "move_out": null,
+      "lease_start": "2025-09-01",
+      "lease_end": "2026-11-30",
+      "opening_balance": 0,
+      "opening_reading": null,
+      "renewal": null,
+      "move_out_note": null,
+      "deposit_refund": null
+    },
+    {
+      "id": "SV-104",
+      "company_id": "savanna",
+      "tenant_id": "t-akinyi",
+      "unit_id": "mc-2",
+      "rent": 12000,
+      "deposit": 15000,
+      "move_in": "2026-08-12",
+      "move_out": null,
+      "lease_start": "2026-08-12",
+      "lease_end": "2027-08-11",
+      "opening_balance": 0,
+      "opening_reading": 271,
+      "renewal": null,
+      "move_out_note": null,
+      "deposit_refund": null
+    },
+    {
+      "id": "SV-105",
+      "company_id": "savanna",
+      "tenant_id": "t-muthoni",
+      "unit_id": "lc-b",
+      "rent": 22000,
+      "deposit": 20000,
+      "move_in": "2025-03-01",
+      "move_out": "2026-08-31",
+      "lease_start": "2025-03-01",
+      "lease_end": "2026-08-31",
+      "opening_balance": 0,
+      "opening_reading": null,
+      "renewal": null,
+      "move_out_note": "Moved to Nairobi for work. Deposit balance refunded.",
+      "deposit_refund": {
+        "date": "2026-09-05",
+        "method": "M-Pesa",
+        "reference": "SH9KT2ZQ4D"
+      }
+    }
+  ],
+  "meter_readings": [
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-a03",
+      "month": "2026-04",
+      "value": 831
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-a03",
+      "month": "2026-05",
+      "value": 839
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-a03",
+      "month": "2026-06",
+      "value": 853
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-a03",
+      "month": "2026-07",
+      "value": 861
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-a03",
+      "month": "2026-08",
+      "value": 877
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-a03",
+      "month": "2026-09",
+      "value": 896
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-a03",
+      "month": "2026-10",
+      "value": 915
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-a12",
+      "month": "2026-04",
+      "value": 616
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-a12",
+      "month": "2026-05",
+      "value": 629
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-a12",
+      "month": "2026-06",
+      "value": 637
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-a12",
+      "month": "2026-07",
+      "value": 647
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-a12",
+      "month": "2026-08",
+      "value": 662
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-a12",
+      "month": "2026-09",
+      "value": 680
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-a12",
+      "month": "2026-10",
+      "value": 690
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-b04",
+      "month": "2026-04",
+      "value": 929
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-b04",
+      "month": "2026-05",
+      "value": 948
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-b04",
+      "month": "2026-06",
+      "value": 956
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-b04",
+      "month": "2026-07",
+      "value": 966
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-b04",
+      "month": "2026-08",
+      "value": 974
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-b04",
+      "month": "2026-09",
+      "value": 989
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-b04",
+      "month": "2026-10",
+      "value": 1001
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-c09",
+      "month": "2026-04",
+      "value": 874
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-c09",
+      "month": "2026-05",
+      "value": 885
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-c09",
+      "month": "2026-06",
+      "value": 897
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-c09",
+      "month": "2026-07",
+      "value": 915
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-c09",
+      "month": "2026-08",
+      "value": 932
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-c09",
+      "month": "2026-09",
+      "value": 939
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-c09",
+      "month": "2026-10",
+      "value": 957
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-d02",
+      "month": "2026-04",
+      "value": 815
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-d02",
+      "month": "2026-05",
+      "value": 832
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-d02",
+      "month": "2026-06",
+      "value": 846
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-d02",
+      "month": "2026-07",
+      "value": 860
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-d02",
+      "month": "2026-08",
+      "value": 872
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-d02",
+      "month": "2026-09",
+      "value": 872
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "kh-d02",
+      "month": "2026-10",
+      "value": 872
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "rc-1c",
+      "month": "2026-04",
+      "value": 464
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "rc-1c",
+      "month": "2026-05",
+      "value": 472
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "rc-1c",
+      "month": "2026-06",
+      "value": 482
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "rc-1c",
+      "month": "2026-07",
+      "value": 492
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "rc-1c",
+      "month": "2026-08",
+      "value": 504
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "rc-1c",
+      "month": "2026-09",
+      "value": 523
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "rc-1c",
+      "month": "2026-10",
+      "value": 537
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "rc-2a",
+      "month": "2026-04",
+      "value": 270
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "rc-2a",
+      "month": "2026-05",
+      "value": 289
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "rc-2a",
+      "month": "2026-06",
+      "value": 300
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "rc-2a",
+      "month": "2026-07",
+      "value": 308
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "rc-2a",
+      "month": "2026-08",
+      "value": 317
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "rc-2a",
+      "month": "2026-09",
+      "value": 327
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "rc-2a",
+      "month": "2026-10",
+      "value": 327
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "rc-3b",
+      "month": "2026-04",
+      "value": 775
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "rc-3b",
+      "month": "2026-05",
+      "value": 791
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "rc-3b",
+      "month": "2026-06",
+      "value": 799
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "rc-3b",
+      "month": "2026-07",
+      "value": 808
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "rc-3b",
+      "month": "2026-08",
+      "value": 819
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "rc-3b",
+      "month": "2026-09",
+      "value": 828
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "rc-3b",
+      "month": "2026-10",
+      "value": 840
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "rc-5a",
+      "month": "2026-04",
+      "value": 276
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "rc-5a",
+      "month": "2026-05",
+      "value": 287
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "rc-5a",
+      "month": "2026-06",
+      "value": 305
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "rc-5a",
+      "month": "2026-07",
+      "value": 313
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "rc-5a",
+      "month": "2026-08",
+      "value": 324
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "rc-5a",
+      "month": "2026-09",
+      "value": 332
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "rc-5a",
+      "month": "2026-10",
+      "value": 347
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "mg-2",
+      "month": "2026-04",
+      "value": 556
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "mg-2",
+      "month": "2026-05",
+      "value": 585
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "mg-2",
+      "month": "2026-06",
+      "value": 612
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "mg-2",
+      "month": "2026-07",
+      "value": 637
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "mg-2",
+      "month": "2026-08",
+      "value": 654
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "mg-2",
+      "month": "2026-09",
+      "value": 680
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "mg-2",
+      "month": "2026-10",
+      "value": 702
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "mg-4",
+      "month": "2026-04",
+      "value": 928
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "mg-4",
+      "month": "2026-05",
+      "value": 928
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "mg-4",
+      "month": "2026-06",
+      "value": 928
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "mg-4",
+      "month": "2026-07",
+      "value": 928
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "mg-4",
+      "month": "2026-08",
+      "value": 928
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "mg-4",
+      "month": "2026-09",
+      "value": 928
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "mg-4",
+      "month": "2026-10",
+      "value": 928
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "mg-6",
+      "month": "2026-04",
+      "value": 140
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "mg-6",
+      "month": "2026-05",
+      "value": 169
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "mg-6",
+      "month": "2026-06",
+      "value": 189
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "mg-6",
+      "month": "2026-07",
+      "value": 211
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "mg-6",
+      "month": "2026-08",
+      "value": 232
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "mg-6",
+      "month": "2026-09",
+      "value": 260
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "mg-6",
+      "month": "2026-10",
+      "value": 286
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "nr-114",
+      "month": "2026-04",
+      "value": 649
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "nr-114",
+      "month": "2026-05",
+      "value": 660
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "nr-114",
+      "month": "2026-06",
+      "value": 679
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "nr-114",
+      "month": "2026-07",
+      "value": 696
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "nr-114",
+      "month": "2026-08",
+      "value": 708
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "nr-114",
+      "month": "2026-09",
+      "value": 719
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "nr-114",
+      "month": "2026-10",
+      "value": 728
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "nr-207",
+      "month": "2026-04",
+      "value": 357
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "nr-207",
+      "month": "2026-05",
+      "value": 367
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "nr-207",
+      "month": "2026-06",
+      "value": 380
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "nr-207",
+      "month": "2026-07",
+      "value": 390
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "nr-207",
+      "month": "2026-08",
+      "value": 408
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "nr-207",
+      "month": "2026-09",
+      "value": 420
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "nr-207",
+      "month": "2026-10",
+      "value": 437
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "nr-312",
+      "month": "2026-04",
+      "value": 608
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "nr-312",
+      "month": "2026-05",
+      "value": 622
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "nr-312",
+      "month": "2026-06",
+      "value": 631
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "nr-312",
+      "month": "2026-07",
+      "value": 642
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "nr-312",
+      "month": "2026-08",
+      "value": 658
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "nr-312",
+      "month": "2026-09",
+      "value": 668
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "nr-312",
+      "month": "2026-10",
+      "value": 676
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "nr-405",
+      "month": "2026-04",
+      "value": 665
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "nr-405",
+      "month": "2026-05",
+      "value": 665
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "nr-405",
+      "month": "2026-06",
+      "value": 665
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "nr-405",
+      "month": "2026-07",
+      "value": 665
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "nr-405",
+      "month": "2026-08",
+      "value": 665
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "nr-405",
+      "month": "2026-09",
+      "value": 665
+    },
+    {
+      "company_id": "harborridge",
+      "unit_id": "nr-405",
+      "month": "2026-10",
+      "value": 681
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "mc-1",
+      "month": "2026-06",
+      "value": 948
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "mc-1",
+      "month": "2026-07",
+      "value": 960
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "mc-1",
+      "month": "2026-08",
+      "value": 967
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "mc-1",
+      "month": "2026-09",
+      "value": 981
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "mc-1",
+      "month": "2026-10",
+      "value": 991
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "mc-2",
+      "month": "2026-06",
+      "value": 271
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "mc-2",
+      "month": "2026-07",
+      "value": 271
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "mc-2",
+      "month": "2026-08",
+      "value": 271
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "mc-2",
+      "month": "2026-09",
+      "value": 288
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "mc-2",
+      "month": "2026-10",
+      "value": 295
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "mc-3",
+      "month": "2026-06",
+      "value": 228
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "mc-3",
+      "month": "2026-07",
+      "value": 237
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "mc-3",
+      "month": "2026-08",
+      "value": 247
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "mc-3",
+      "month": "2026-09",
+      "value": 266
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "mc-3",
+      "month": "2026-10",
+      "value": 279
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "mc-4",
+      "month": "2026-06",
+      "value": 323
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "mc-4",
+      "month": "2026-07",
+      "value": 323
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "mc-4",
+      "month": "2026-08",
+      "value": 323
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "mc-4",
+      "month": "2026-09",
+      "value": 323
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "mc-4",
+      "month": "2026-10",
+      "value": 323
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "lc-a",
+      "month": "2026-06",
+      "value": 916
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "lc-a",
+      "month": "2026-07",
+      "value": 936
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "lc-a",
+      "month": "2026-08",
+      "value": 965
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "lc-a",
+      "month": "2026-09",
+      "value": 987
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "lc-a",
+      "month": "2026-10",
+      "value": 1013
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "lc-b",
+      "month": "2026-06",
+      "value": 528
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "lc-b",
+      "month": "2026-07",
+      "value": 551
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "lc-b",
+      "month": "2026-08",
+      "value": 567
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "lc-b",
+      "month": "2026-09",
+      "value": 592
+    },
+    {
+      "company_id": "savanna",
+      "unit_id": "lc-b",
+      "month": "2026-10",
+      "value": 592
+    }
+  ],
+  "payments": [
+    {
+      "receipt_number": "RCT-2605-0301",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2071",
+      "amount": 33100,
+      "date": "2026-05-01",
+      "time": "09:44",
+      "method": "M-Pesa",
+      "reference": "SX46QZG313"
+    },
+    {
+      "receipt_number": "RCT-2605-0302",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2207",
+      "amount": 27200,
+      "date": "2026-05-01",
+      "time": "10:25",
+      "method": "M-Pesa",
+      "reference": "SBMRN5FU8D"
+    },
+    {
+      "receipt_number": "RCT-2605-0303",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2179",
+      "amount": 32650,
+      "date": "2026-05-01",
+      "time": "14:15",
+      "method": "M-Pesa",
+      "reference": "SASD78TTRT"
+    },
+    {
+      "receipt_number": "RCT-2605-0304",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2172",
+      "amount": 22070,
+      "date": "2026-05-02",
+      "time": "09:03",
+      "method": "M-Pesa",
+      "reference": "SJX301KG53"
+    },
+    {
+      "receipt_number": "RCT-2605-0305",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2150",
+      "amount": 25450,
+      "date": "2026-05-02",
+      "time": "11:57",
+      "method": "M-Pesa",
+      "reference": "SVF0QYD8PL"
+    },
+    {
+      "receipt_number": "RCT-2605-0306",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2160",
+      "amount": 31900,
+      "date": "2026-05-02",
+      "time": "16:05",
+      "method": "M-Pesa",
+      "reference": "SQWESR3DFP"
+    },
+    {
+      "receipt_number": "RCT-2605-0307",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2121",
+      "amount": 31900,
+      "date": "2026-05-02",
+      "time": "17:10",
+      "method": "M-Pesa",
+      "reference": "SCVUECS921"
+    },
+    {
+      "receipt_number": "RCT-2605-0308",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2138",
+      "amount": 26450,
+      "date": "2026-05-03",
+      "time": "09:28",
+      "method": "M-Pesa",
+      "reference": "SDCAQVYQRS"
+    },
+    {
+      "receipt_number": "RCT-2605-0309",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2154",
+      "amount": 36600,
+      "date": "2026-05-03",
+      "time": "09:41",
+      "method": "Bank",
+      "reference": "FT2605037950"
+    },
+    {
+      "receipt_number": "RCT-2605-0310",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2166",
+      "amount": 10800,
+      "date": "2026-05-03",
+      "time": "14:40",
+      "method": "M-Pesa",
+      "reference": "SPANZPT2RJ"
+    },
+    {
+      "receipt_number": "RCT-2605-0311",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2198",
+      "amount": 36600,
+      "date": "2026-05-04",
+      "time": "11:35",
+      "method": "Bank",
+      "reference": "FT2605047883"
+    },
+    {
+      "receipt_number": "RCT-2605-0312",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2192",
+      "amount": 33100,
+      "date": "2026-05-04",
+      "time": "13:37",
+      "method": "M-Pesa",
+      "reference": "SL0R2LHQLG"
+    },
+    {
+      "receipt_number": "RCT-2605-0313",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2185",
+      "amount": 21680,
+      "date": "2026-05-05",
+      "time": "12:52",
+      "method": "M-Pesa",
+      "reference": "SU16MURAU3"
+    },
+    {
+      "receipt_number": "RCT-2605-0314",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2044",
+      "amount": 24000,
+      "date": "2026-05-06",
+      "time": "11:42",
+      "method": "M-Pesa",
+      "reference": "SU2V9F93CJ"
+    },
+    {
+      "receipt_number": "RCT-2605-0315",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2166",
+      "amount": 10750,
+      "date": "2026-05-18",
+      "time": "14:01",
+      "method": "M-Pesa",
+      "reference": "SVU9QLSBVA"
+    },
+    {
+      "receipt_number": "RCT-2606-0316",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2071",
+      "amount": 31900,
+      "date": "2026-06-01",
+      "time": "12:02",
+      "method": "M-Pesa",
+      "reference": "SNMPDSCFUP"
+    },
+    {
+      "receipt_number": "RCT-2606-0317",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2207",
+      "amount": 26450,
+      "date": "2026-06-01",
+      "time": "16:40",
+      "method": "M-Pesa",
+      "reference": "SN7PZT4LF5"
+    },
+    {
+      "receipt_number": "RCT-2606-0318",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2179",
+      "amount": 31450,
+      "date": "2026-06-01",
+      "time": "18:16",
+      "method": "M-Pesa",
+      "reference": "ST1PHUR3KY"
+    },
+    {
+      "receipt_number": "RCT-2606-0319",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2121",
+      "amount": 32050,
+      "date": "2026-06-02",
+      "time": "11:37",
+      "method": "M-Pesa",
+      "reference": "SZZ0JG7RCS"
+    },
+    {
+      "receipt_number": "RCT-2606-0320",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2160",
+      "amount": 32950,
+      "date": "2026-06-02",
+      "time": "13:14",
+      "method": "M-Pesa",
+      "reference": "SK5HHPMY5L"
+    },
+    {
+      "receipt_number": "RCT-2606-0321",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2172",
+      "amount": 21420,
+      "date": "2026-06-02",
+      "time": "14:09",
+      "method": "M-Pesa",
+      "reference": "SJPVWRA0W9"
+    },
+    {
+      "receipt_number": "RCT-2606-0322",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2150",
+      "amount": 25750,
+      "date": "2026-06-02",
+      "time": "14:44",
+      "method": "M-Pesa",
+      "reference": "SE2HNB6TTZ"
+    },
+    {
+      "receipt_number": "RCT-2606-0323",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2154",
+      "amount": 36300,
+      "date": "2026-06-03",
+      "time": "11:20",
+      "method": "Bank",
+      "reference": "FT2606035647"
+    },
+    {
+      "receipt_number": "RCT-2606-0324",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2166",
+      "amount": 11000,
+      "date": "2026-06-03",
+      "time": "13:45",
+      "method": "M-Pesa",
+      "reference": "SKVQPBJT8V"
+    },
+    {
+      "receipt_number": "RCT-2606-0325",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2138",
+      "amount": 27350,
+      "date": "2026-06-03",
+      "time": "19:38",
+      "method": "M-Pesa",
+      "reference": "SFSXFVQGVA"
+    },
+    {
+      "receipt_number": "RCT-2606-0326",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2198",
+      "amount": 35250,
+      "date": "2026-06-04",
+      "time": "09:15",
+      "method": "Bank",
+      "reference": "FT2606046477"
+    },
+    {
+      "receipt_number": "RCT-2606-0327",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2192",
+      "amount": 31450,
+      "date": "2026-06-04",
+      "time": "11:42",
+      "method": "M-Pesa",
+      "reference": "SF8L1E2ZJT"
+    },
+    {
+      "receipt_number": "RCT-2606-0328",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2185",
+      "amount": 22720,
+      "date": "2026-06-05",
+      "time": "10:10",
+      "method": "M-Pesa",
+      "reference": "SN2RQ4E2VB"
+    },
+    {
+      "receipt_number": "RCT-2606-0329",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2166",
+      "amount": 10940,
+      "date": "2026-06-18",
+      "time": "07:40",
+      "method": "M-Pesa",
+      "reference": "SH5ZX9J8TS"
+    },
+    {
+      "receipt_number": "RCT-2607-0330",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2207",
+      "amount": 26750,
+      "date": "2026-07-01",
+      "time": "10:40",
+      "method": "M-Pesa",
+      "reference": "SQ5G7EVLTK"
+    },
+    {
+      "receipt_number": "RCT-2607-0331",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2071",
+      "amount": 31450,
+      "date": "2026-07-01",
+      "time": "10:43",
+      "method": "M-Pesa",
+      "reference": "SSWN17PM66"
+    },
+    {
+      "receipt_number": "RCT-2607-0101",
+      "company_id": "savanna",
+      "tenancy_id": "SV-101",
+      "amount": 13640,
+      "date": "2026-07-01",
+      "time": "13:49",
+      "method": "M-Pesa",
+      "reference": "SFERG2PJ60"
+    },
+    {
+      "receipt_number": "RCT-2607-0332",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2179",
+      "amount": 31600,
+      "date": "2026-07-01",
+      "time": "13:58",
+      "method": "M-Pesa",
+      "reference": "SL1KJ4CXP0"
+    },
+    {
+      "receipt_number": "RCT-2607-0102",
+      "company_id": "savanna",
+      "tenancy_id": "SV-105",
+      "amount": 25060,
+      "date": "2026-07-01",
+      "time": "15:48",
+      "method": "M-Pesa",
+      "reference": "SVBHTPB4ZP"
+    },
+    {
+      "receipt_number": "RCT-2607-0103",
+      "company_id": "savanna",
+      "tenancy_id": "SV-102",
+      "amount": 19280,
+      "date": "2026-07-01",
+      "time": "17:36",
+      "method": "M-Pesa",
+      "reference": "SBCQ50N65U"
+    },
+    {
+      "receipt_number": "RCT-2607-0333",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2172",
+      "amount": 21680,
+      "date": "2026-07-02",
+      "time": "07:09",
+      "method": "M-Pesa",
+      "reference": "SQZC5KM4Q0"
+    },
+    {
+      "receipt_number": "RCT-2607-0334",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2121",
+      "amount": 32950,
+      "date": "2026-07-02",
+      "time": "11:28",
+      "method": "M-Pesa",
+      "reference": "SYVVA84SJS"
+    },
+    {
+      "receipt_number": "RCT-2607-0335",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2150",
+      "amount": 25750,
+      "date": "2026-07-02",
+      "time": "14:27",
+      "method": "M-Pesa",
+      "reference": "SL2U2SYRP0"
+    },
+    {
+      "receipt_number": "RCT-2607-0336",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2160",
+      "amount": 31450,
+      "date": "2026-07-02",
+      "time": "16:16",
+      "method": "M-Pesa",
+      "reference": "SC15RBEZN2"
+    },
+    {
+      "receipt_number": "RCT-2607-0337",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2166",
+      "amount": 10800,
+      "date": "2026-07-03",
+      "time": "18:33",
+      "method": "M-Pesa",
+      "reference": "SF1PV7NNM7"
+    },
+    {
+      "receipt_number": "RCT-2607-0338",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2154",
+      "amount": 36000,
+      "date": "2026-07-03",
+      "time": "19:24",
+      "method": "Bank",
+      "reference": "FT2607031502"
+    },
+    {
+      "receipt_number": "RCT-2607-0339",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2138",
+      "amount": 26450,
+      "date": "2026-07-03",
+      "time": "19:35",
+      "method": "M-Pesa",
+      "reference": "SQ7JXWP1NU"
+    },
+    {
+      "receipt_number": "RCT-2607-0340",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2192",
+      "amount": 31750,
+      "date": "2026-07-04",
+      "time": "11:38",
+      "method": "M-Pesa",
+      "reference": "SMLTD9G69S"
+    },
+    {
+      "receipt_number": "RCT-2607-0104",
+      "company_id": "savanna",
+      "tenancy_id": "SV-103",
+      "amount": 24700,
+      "date": "2026-07-04",
+      "time": "12:29",
+      "method": "Bank",
+      "reference": "FT2607043834"
+    },
+    {
+      "receipt_number": "RCT-2607-0341",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2198",
+      "amount": 35550,
+      "date": "2026-07-04",
+      "time": "15:16",
+      "method": "Bank",
+      "reference": "FT2607042509"
+    },
+    {
+      "receipt_number": "RCT-2607-0342",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2185",
+      "amount": 22460,
+      "date": "2026-07-05",
+      "time": "18:49",
+      "method": "M-Pesa",
+      "reference": "SKNG2L0UME"
+    },
+    {
+      "receipt_number": "RCT-2607-0343",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2044",
+      "amount": 33000,
+      "date": "2026-07-12",
+      "time": "08:14",
+      "method": "M-Pesa",
+      "reference": "ST0CPBKAQS"
+    },
+    {
+      "receipt_number": "RCT-2607-0344",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2166",
+      "amount": 10750,
+      "date": "2026-07-18",
+      "time": "12:58",
+      "method": "M-Pesa",
+      "reference": "SRKNJWDK14"
+    },
+    {
+      "receipt_number": "RCT-2608-0345",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2179",
+      "amount": 31900,
+      "date": "2026-08-01",
+      "time": "07:59",
+      "method": "M-Pesa",
+      "reference": "SE8ZUT6F4L"
+    },
+    {
+      "receipt_number": "RCT-2608-0105",
+      "company_id": "savanna",
+      "tenancy_id": "SV-105",
+      "amount": 24220,
+      "date": "2026-08-01",
+      "time": "16:25",
+      "method": "M-Pesa",
+      "reference": "SN74GL4AYZ"
+    },
+    {
+      "receipt_number": "RCT-2608-0346",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2071",
+      "amount": 31600,
+      "date": "2026-08-01",
+      "time": "19:01",
+      "method": "M-Pesa",
+      "reference": "SPGKUPD6P5"
+    },
+    {
+      "receipt_number": "RCT-2608-0106",
+      "company_id": "savanna",
+      "tenancy_id": "SV-102",
+      "amount": 19400,
+      "date": "2026-08-01",
+      "time": "19:09",
+      "method": "M-Pesa",
+      "reference": "SXPFKK8LJB"
+    },
+    {
+      "receipt_number": "RCT-2608-0107",
+      "company_id": "savanna",
+      "tenancy_id": "SV-101",
+      "amount": 13040,
+      "date": "2026-08-01",
+      "time": "19:49",
+      "method": "M-Pesa",
+      "reference": "SBVZFRHU8R"
+    },
+    {
+      "receipt_number": "RCT-2608-0347",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2207",
+      "amount": 27500,
+      "date": "2026-08-01",
+      "time": "19:57",
+      "method": "M-Pesa",
+      "reference": "SFWMCHBJDE"
+    },
+    {
+      "receipt_number": "RCT-2608-0348",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2121",
+      "amount": 32800,
+      "date": "2026-08-02",
+      "time": "07:41",
+      "method": "M-Pesa",
+      "reference": "SNP9U111CW"
+    },
+    {
+      "receipt_number": "RCT-2608-0349",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2150",
+      "amount": 26050,
+      "date": "2026-08-02",
+      "time": "09:33",
+      "method": "M-Pesa",
+      "reference": "SBZWFHXZTX"
+    },
+    {
+      "receipt_number": "RCT-2608-0350",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2172",
+      "amount": 22330,
+      "date": "2026-08-02",
+      "time": "19:59",
+      "method": "M-Pesa",
+      "reference": "SJUT7QKUXZ"
+    },
+    {
+      "receipt_number": "RCT-2608-0351",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2166",
+      "amount": 11300,
+      "date": "2026-08-03",
+      "time": "09:58",
+      "method": "M-Pesa",
+      "reference": "SXJRMTLGAV"
+    },
+    {
+      "receipt_number": "RCT-2608-0352",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2154",
+      "amount": 34800,
+      "date": "2026-08-03",
+      "time": "12:39",
+      "method": "Bank",
+      "reference": "FT2608036314"
+    },
+    {
+      "receipt_number": "RCT-2608-0353",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2138",
+      "amount": 27650,
+      "date": "2026-08-03",
+      "time": "15:00",
+      "method": "M-Pesa",
+      "reference": "STFWGYWPL0"
+    },
+    {
+      "receipt_number": "RCT-2608-0354",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2192",
+      "amount": 31450,
+      "date": "2026-08-04",
+      "time": "12:05",
+      "method": "M-Pesa",
+      "reference": "SNA1Y246GS"
+    },
+    {
+      "receipt_number": "RCT-2608-0355",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2160",
+      "amount": 31900,
+      "date": "2026-08-04",
+      "time": "17:02",
+      "method": "Bank",
+      "reference": "FT2608048230"
+    },
+    {
+      "receipt_number": "RCT-2608-0108",
+      "company_id": "savanna",
+      "tenancy_id": "SV-103",
+      "amount": 25780,
+      "date": "2026-08-04",
+      "time": "17:56",
+      "method": "Bank",
+      "reference": "FT2608043809"
+    },
+    {
+      "receipt_number": "RCT-2608-0356",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2198",
+      "amount": 35400,
+      "date": "2026-08-04",
+      "time": "20:05",
+      "method": "Bank",
+      "reference": "FT2608042752"
+    },
+    {
+      "receipt_number": "RCT-2608-0357",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2185",
+      "amount": 10000,
+      "date": "2026-08-09",
+      "time": "10:52",
+      "method": "M-Pesa",
+      "reference": "SGCJB3SQMC"
+    },
+    {
+      "receipt_number": "RCT-2608-0109",
+      "company_id": "savanna",
+      "tenancy_id": "SV-104",
+      "amount": 22942,
+      "date": "2026-08-12",
+      "time": "14:42",
+      "method": "M-Pesa",
+      "reference": "ST00YEYHPK"
+    },
+    {
+      "receipt_number": "RCT-2608-0358",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2166",
+      "amount": 11290,
+      "date": "2026-08-18",
+      "time": "11:50",
+      "method": "M-Pesa",
+      "reference": "SGRH4BSLU4"
+    },
+    {
+      "receipt_number": "RCT-2609-0110",
+      "company_id": "savanna",
+      "tenancy_id": "SV-104",
+      "amount": 14240,
+      "date": "2026-09-01",
+      "time": "15:06",
+      "method": "M-Pesa",
+      "reference": "SD16SJNPZ2"
+    },
+    {
+      "receipt_number": "RCT-2609-0359",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2207",
+      "amount": 27950,
+      "date": "2026-09-01",
+      "time": "17:59",
+      "method": "M-Pesa",
+      "reference": "SS9UKC1MVT"
+    },
+    {
+      "receipt_number": "RCT-2609-0360",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2179",
+      "amount": 31600,
+      "date": "2026-09-01",
+      "time": "19:22",
+      "method": "M-Pesa",
+      "reference": "SEQ1XCGU4C"
+    },
+    {
+      "receipt_number": "RCT-2609-0111",
+      "company_id": "savanna",
+      "tenancy_id": "SV-101",
+      "amount": 13880,
+      "date": "2026-09-01",
+      "time": "19:29",
+      "method": "M-Pesa",
+      "reference": "SSSNUDKTF4"
+    },
+    {
+      "receipt_number": "RCT-2609-0112",
+      "company_id": "savanna",
+      "tenancy_id": "SV-102",
+      "amount": 20480,
+      "date": "2026-09-01",
+      "time": "20:29",
+      "method": "M-Pesa",
+      "reference": "SJS5FR1974"
+    },
+    {
+      "receipt_number": "RCT-2609-0361",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2150",
+      "amount": 27100,
+      "date": "2026-09-02",
+      "time": "15:48",
+      "method": "M-Pesa",
+      "reference": "SCKLL1NGE2"
+    },
+    {
+      "receipt_number": "RCT-2609-0362",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2121",
+      "amount": 31300,
+      "date": "2026-09-02",
+      "time": "17:51",
+      "method": "M-Pesa",
+      "reference": "SAWWJVZHNS"
+    },
+    {
+      "receipt_number": "RCT-2609-0363",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2172",
+      "amount": 21750,
+      "date": "2026-09-02",
+      "time": "20:33",
+      "method": "M-Pesa",
+      "reference": "SFS370SWDH"
+    },
+    {
+      "receipt_number": "RCT-2609-0364",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2138",
+      "amount": 28100,
+      "date": "2026-09-03",
+      "time": "09:12",
+      "method": "M-Pesa",
+      "reference": "SNGC4L1SXS"
+    },
+    {
+      "receipt_number": "RCT-2609-0365",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2160",
+      "amount": 30000,
+      "date": "2026-09-03",
+      "time": "15:10",
+      "method": "M-Pesa",
+      "reference": "SAGB3A477F"
+    },
+    {
+      "receipt_number": "RCT-2609-0366",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2166",
+      "amount": 11000,
+      "date": "2026-09-03",
+      "time": "16:09",
+      "method": "M-Pesa",
+      "reference": "ST0YFGP6WW"
+    },
+    {
+      "receipt_number": "RCT-2609-0367",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2154",
+      "amount": 36150,
+      "date": "2026-09-03",
+      "time": "17:56",
+      "method": "Bank",
+      "reference": "FT2609037356"
+    },
+    {
+      "receipt_number": "RCT-2609-0368",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2240",
+      "amount": 35250,
+      "date": "2026-09-16",
+      "time": "08:20",
+      "method": "M-Pesa",
+      "reference": "SXR9BZMHQX"
+    },
+    {
+      "receipt_number": "RCT-2609-0369",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2166",
+      "amount": 11050,
+      "date": "2026-09-18",
+      "time": "07:39",
+      "method": "M-Pesa",
+      "reference": "SL4W26D4R6"
+    },
+    {
+      "receipt_number": "RCT-2609-0370",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2198",
+      "amount": 38000,
+      "date": "2026-09-29",
+      "time": "08:08",
+      "method": "Bank",
+      "reference": "FT2609299759"
+    },
+    {
+      "receipt_number": "RCT-2610-0371",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2207",
+      "amount": 26750,
+      "date": "2026-10-01",
+      "time": "08:46",
+      "method": "M-Pesa",
+      "reference": "SVWEDWJGSF"
+    },
+    {
+      "receipt_number": "RCT-2610-0113",
+      "company_id": "savanna",
+      "tenancy_id": "SV-104",
+      "amount": 13040,
+      "date": "2026-10-01",
+      "time": "13:13",
+      "method": "M-Pesa",
+      "reference": "SBJ9W2UKPX"
+    },
+    {
+      "receipt_number": "RCT-2610-0372",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2179",
+      "amount": 32050,
+      "date": "2026-10-01",
+      "time": "13:29",
+      "method": "M-Pesa",
+      "reference": "SRSUPMBAYR"
+    },
+    {
+      "receipt_number": "RCT-2610-0114",
+      "company_id": "savanna",
+      "tenancy_id": "SV-101",
+      "amount": 13400,
+      "date": "2026-10-01",
+      "time": "17:53",
+      "method": "M-Pesa",
+      "reference": "SKUJE07YT2"
+    },
+    {
+      "receipt_number": "RCT-2610-0373",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2160",
+      "amount": 15000,
+      "date": "2026-10-02",
+      "time": "10:21",
+      "method": "M-Pesa",
+      "reference": "SWULAPG9YP"
+    },
+    {
+      "receipt_number": "RCT-2610-0374",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2121",
+      "amount": 32950,
+      "date": "2026-10-02",
+      "time": "11:57",
+      "method": "M-Pesa",
+      "reference": "SMFFUPY1K2"
+    },
+    {
+      "receipt_number": "RCT-2610-0375",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2240",
+      "amount": 22650,
+      "date": "2026-10-02",
+      "time": "18:12",
+      "method": "M-Pesa",
+      "reference": "SSYPXV9RT2"
+    },
+    {
+      "receipt_number": "RCT-2610-0376",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2150",
+      "amount": 26350,
+      "date": "2026-10-02",
+      "time": "18:54",
+      "method": "M-Pesa",
+      "reference": "SLNWHTLCMQ"
+    },
+    {
+      "receipt_number": "RCT-2610-0115",
+      "company_id": "savanna",
+      "tenancy_id": "SV-102",
+      "amount": 8000,
+      "date": "2026-10-03",
+      "time": "13:30",
+      "method": "M-Pesa",
+      "reference": "SM6Q6JL1YG"
+    },
+    {
+      "receipt_number": "RCT-2610-0377",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2154",
+      "amount": 35550,
+      "date": "2026-10-03",
+      "time": "18:17",
+      "method": "Bank",
+      "reference": "FT2610033501"
+    },
+    {
+      "receipt_number": "RCT-2610-0378",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2166",
+      "amount": 10000,
+      "date": "2026-10-03",
+      "time": "20:21",
+      "method": "M-Pesa",
+      "reference": "SS6SMG5Q20"
+    },
+    {
+      "receipt_number": "RCT-2610-0379",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2198",
+      "amount": 34600,
+      "date": "2026-10-04",
+      "time": "13:00",
+      "method": "Bank",
+      "reference": "FT2610048116"
+    }
+  ],
+  "repair_tickets": [
+    {
+      "id": "MT-1047",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2172",
+      "unit_id": "nr-312",
+      "category": "plumbing",
+      "priority": "high",
+      "status": "open",
+      "title": "Kitchen sink leaking under cabinet",
+      "description": "Leaking quite badly under the sink. A bucket is catching it for now.",
+      "has_photo": true,
+      "created_at": "2026-10-06T07:40:00+03:00",
+      "resolved_at": null,
+      "assigned_to": null,
+      "resolution_note": null
+    },
+    {
+      "id": "MT-1046",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2166",
+      "unit_id": "nr-207",
+      "category": "electrical",
+      "priority": "low",
+      "status": "open",
+      "title": "Corridor light out on 2nd floor",
+      "description": "The corridor light outside 207 has been off for two nights.",
+      "has_photo": false,
+      "created_at": "2026-10-05T19:12:00+03:00",
+      "resolved_at": null,
+      "assigned_to": null,
+      "resolution_note": null
+    },
+    {
+      "id": "MT-1044",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2150",
+      "unit_id": "rc-1c",
+      "category": "plumbing",
+      "priority": "medium",
+      "status": "in_progress",
+      "title": "Water heater not heating",
+      "description": "Shower water stays cold even after an hour.",
+      "has_photo": false,
+      "created_at": "2026-09-28T08:05:00+03:00",
+      "resolved_at": null,
+      "assigned_to": "Otieno Fundi Services",
+      "resolution_note": null
+    },
+    {
+      "id": "MT-1041",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2207",
+      "unit_id": "kh-a12",
+      "category": "carpentry",
+      "priority": "low",
+      "status": "in_progress",
+      "title": "Balcony door lock stiff",
+      "description": "The balcony door lock is hard to turn.",
+      "has_photo": false,
+      "created_at": "2026-09-26T17:30:00+03:00",
+      "resolved_at": null,
+      "assigned_to": "Otieno Ouma (caretaker)",
+      "resolution_note": null
+    },
+    {
+      "id": "MT-1039",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2160",
+      "unit_id": "rc-5a",
+      "category": "electrical",
+      "priority": "high",
+      "status": "resolved",
+      "title": "Socket in bedroom sparks",
+      "description": "The socket by the bed sparks when anything is plugged in.",
+      "has_photo": true,
+      "created_at": "2026-09-22T21:10:00+03:00",
+      "resolved_at": "2026-09-24T11:00:00+03:00",
+      "assigned_to": "Otieno Fundi Services",
+      "resolution_note": "Socket and faceplate replaced."
+    },
+    {
+      "id": "MT-1038",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2154",
+      "unit_id": "mg-2",
+      "category": "security",
+      "priority": "medium",
+      "status": "resolved",
+      "title": "Gate remote not working",
+      "description": "The gate remote stopped opening the main gate.",
+      "has_photo": false,
+      "created_at": "2026-09-20T07:15:00+03:00",
+      "resolved_at": "2026-09-22T10:30:00+03:00",
+      "assigned_to": "Achieng Atieno (caretaker)",
+      "resolution_note": "Remote reprogrammed and battery replaced."
+    },
+    {
+      "id": "MT-2002",
+      "company_id": "savanna",
+      "tenancy_id": "SV-102",
+      "unit_id": "mc-3",
+      "category": "plumbing",
+      "priority": "medium",
+      "status": "open",
+      "title": "Bathroom tap dripping",
+      "description": "The bathroom tap drips all night.",
+      "has_photo": false,
+      "created_at": "2026-10-04T20:15:00+03:00",
+      "resolved_at": null,
+      "assigned_to": null,
+      "resolution_note": null
+    },
+    {
+      "id": "MT-2001",
+      "company_id": "savanna",
+      "tenancy_id": "SV-101",
+      "unit_id": "mc-1",
+      "category": "electrical",
+      "priority": "low",
+      "status": "resolved",
+      "title": "Kitchen bulb holder loose",
+      "description": "The bulb holder in the kitchen is hanging loose.",
+      "has_photo": false,
+      "created_at": "2026-09-12T09:00:00+03:00",
+      "resolved_at": "2026-09-13T16:00:00+03:00",
+      "assigned_to": "Kamau Ndirangu (caretaker)",
+      "resolution_note": "Holder refitted."
+    }
+  ],
+  "messages": [
+    {
+      "id": "msg-101",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2172",
+      "sender": "tenant",
+      "staff_id": null,
+      "body": "Hi, the kitchen sink is leaking quite badly. I have put a bucket under it.",
+      "sent_at": "2026-10-06T07:41:00+03:00",
+      "read_by_staff_at": "2026-10-06T07:50:00+03:00"
+    },
+    {
+      "id": "msg-102",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2172",
+      "sender": "staff",
+      "staff_id": "s-njoki",
+      "body": "Thanks Lucy. I have logged it as MT-1047. A plumber will come by before noon.",
+      "sent_at": "2026-10-06T07:55:00+03:00",
+      "read_by_staff_at": null
+    },
+    {
+      "id": "msg-103",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2172",
+      "sender": "tenant",
+      "staff_id": null,
+      "body": "Okay, I will be home. Thank you.",
+      "sent_at": "2026-10-06T08:02:00+03:00",
+      "read_by_staff_at": null
+    },
+    {
+      "id": "msg-201",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2160",
+      "sender": "tenant",
+      "staff_id": null,
+      "body": "I sent the renewal back with a question about the 5% increase. Can we discuss?",
+      "sent_at": "2026-10-05T18:20:00+03:00",
+      "read_by_staff_at": "2026-10-06T09:05:00+03:00"
+    },
+    {
+      "id": "msg-202",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2160",
+      "sender": "staff",
+      "staff_id": "s-njoki",
+      "body": "Hi David, the increase matches the market review for Riverside Court. Happy to keep the deposit as is so nothing extra is due.",
+      "sent_at": "2026-10-06T09:12:00+03:00",
+      "read_by_staff_at": null
+    },
+    {
+      "id": "msg-301",
+      "company_id": "harborridge",
+      "tenancy_id": "L-2185",
+      "sender": "tenant",
+      "staff_id": null,
+      "body": "I will clear half by Friday and the rest by the 20th.",
+      "sent_at": "2026-10-05T20:45:00+03:00",
+      "read_by_staff_at": null
+    },
+    {
+      "id": "msg-901",
+      "company_id": "savanna",
+      "tenancy_id": "SV-102",
+      "sender": "tenant",
+      "staff_id": null,
+      "body": "Hello, the bathroom tap is dripping all night. Can someone look at it?",
+      "sent_at": "2026-10-04T20:16:00+03:00",
+      "read_by_staff_at": "2026-10-05T08:00:00+03:00"
+    },
+    {
+      "id": "msg-902",
+      "company_id": "savanna",
+      "tenancy_id": "SV-102",
+      "sender": "staff",
+      "staff_id": "s-wanjiru",
+      "body": "Hi Naliaka, Kamau will pass by tomorrow morning to fix it.",
+      "sent_at": "2026-10-05T08:10:00+03:00",
+      "read_by_staff_at": null
+    }
+  ]
+}

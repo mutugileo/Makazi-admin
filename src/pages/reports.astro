@@ -1,0 +1,81 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+import { dashboardData } from '../data/dashboardData';
+import { getPortfolio } from '../data/portfolio';
+import { ChevronDown, Download, FileSpreadsheet } from '@lucide/astro';
+
+// This company's data only (the signed-in user's).
+const { portfolioSummary, currentPeriod } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+
+const { reportsList } = dashboardData;
+---
+
+<DashboardLayout title="Makazi — Reports" currentPath="/reports">
+  <!-- Header & Actions -->
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+    <div>
+      <span class="text-xs font-semibold tracking-wider text-[#69847A] uppercase">
+        {portfolioSummary}
+      </span>
+      <h1 class="text-3xl sm:text-4xl font-normal font-editorial text-[#0D382B] tracking-tight mt-1">
+        Reports
+      </h1>
+    </div>
+
+    <div class="flex items-center gap-3 self-start md:self-auto">
+      <!-- Period Selector -->
+      <div class="relative inline-block">
+        <button 
+          type="button" 
+          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white border border-[#E3E6DF] text-xs font-semibold text-[#0D382B] shadow-xs hover:border-[#0D382B] transition-colors cursor-pointer"
+        >
+          <span>{currentPeriod}</span>
+          <ChevronDown class="w-4 h-4 text-[#69847A]" />
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reports Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+    {reportsList.map((report) => (
+      <div class="bg-white rounded-3xl border border-[#E3E6DF] p-6 sm:p-7 flex flex-col justify-between shadow-xs hover:border-[#69847A]/50 transition-colors">
+        <div>
+          <h2 class="text-base font-semibold text-[#0D382B]">
+            {report.title}
+          </h2>
+          <p class="text-xs text-[#69847A] mt-2 leading-relaxed">
+            {report.description}
+          </p>
+        </div>
+
+        {'href' in report ? (
+          <div class="flex items-center gap-3 mt-6 pt-5 border-t border-[#E3E6DF]">
+            <a href={report.href} class="px-4 py-2 rounded-full bg-[#0D382B] text-white text-xs font-semibold hover:bg-[#08221A] transition-colors shadow-xs">
+              Open bills sheet
+            </a>
+          </div>
+        ) : (
+        <div class="flex items-center gap-3 mt-6 pt-5 border-t border-[#E3E6DF]">
+          <button 
+            type="button"
+            class="report-export-btn px-4 py-2 rounded-full border border-[#E3E6DF] hover:border-[#0D382B] text-xs font-semibold text-[#0D382B] bg-[#F8F9F6] hover:bg-white transition-colors cursor-pointer shadow-xs"
+            data-type="CSV"
+            data-title={report.title}
+          >
+            Export CSV
+          </button>
+          <button 
+            type="button"
+            class="report-export-btn px-4 py-2 rounded-full border border-[#E3E6DF] hover:border-[#0D382B] text-xs font-semibold text-[#0D382B] bg-[#F8F9F6] hover:bg-white transition-colors cursor-pointer shadow-xs"
+            data-type="PDF"
+            data-title={report.title}
+          >
+            Export PDF
+          </button>
+        </div>
+        )}
+      </div>
+    ))}
+  </div>
+</DashboardLayout>

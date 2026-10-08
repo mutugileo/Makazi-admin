@@ -1,0 +1,115 @@
+---
+import { X, Send } from '@lucide/astro';
+import { getPortfolio, formatKes } from '../../data/portfolio';
+
+// This company's data only (the signed-in user's).
+const { arrears, company, graceDay, lateLabel, currentPeriod } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+
+const totalArrears = arrears.reduce((acc, t) => acc + t.balance, 0);
+const sample = arrears[0];
+---
+
+<div 
+  id="send-reminders-modal" 
+  class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-200"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="reminders-modal-title"
+>
+  <div class="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-[#E7EAE4] overflow-hidden transform scale-95 transition-transform duration-200">
+    <!-- Header -->
+    <div class="flex items-center justify-between p-6 border-b border-[#F0F2EE]">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-xl bg-[#FFF1EC] text-[#C04A26] flex items-center justify-center">
+          <Send class="w-5 h-5" />
+        </div>
+        <div>
+          <h3 id="reminders-modal-title" class="font-editorial text-2xl font-normal text-[#17231E]">
+            Send payment reminders
+          </h3>
+          <p class="text-xs text-[#73827C]">{arrears.length} tenants with a balance · Total {formatKes(totalArrears)}</p>
+        </div>
+      </div>
+      <button 
+        type="button" 
+        id="close-reminders-modal-btn"
+        class="h-8 w-8 rounded-full bg-[#F4F5F1] text-[#73827C] hover:text-[#17231E] flex items-center justify-center transition-colors cursor-pointer"
+        aria-label="Close modal"
+      >
+        <X class="w-4 h-4" />
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div class="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+      <!-- Target Tenants Summary -->
+      <div class="space-y-2">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-[#5A6862]">
+          Recipients ({arrears.length})
+        </label>
+        <div class="bg-[#F8F9F7] rounded-2xl p-3 border border-[#E7EAE4] divide-y divide-[#EAECE6] text-xs">
+          {arrears.map(t => (
+            <div class="py-2 first:pt-1 last:pb-1 flex items-center justify-between gap-3">
+              <div class="min-w-0">
+                <span class="font-semibold text-[#17231E]">{t.tenant.name}</span>
+                <span class="text-[#73827C]"> ({t.unitLabel} · {lateLabel(t)})</span>
+              </div>
+              <span class="font-semibold text-[#C04A26] tabular-nums whitespace-nowrap">{formatKes(t.balance)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <!-- Channel Selection -->
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-[#5A6862] mb-2">
+          Dispatch Channels
+        </label>
+        <div class="grid grid-cols-3 gap-3">
+          <label class="flex items-center gap-2 p-3 rounded-xl border border-[#0D382B] bg-[#0D382B]/5 cursor-pointer text-xs font-semibold text-[#0D382B]">
+            <input type="checkbox" checked class="rounded text-[#0D382B] focus:ring-0" />
+            <span>SMS Alert</span>
+          </label>
+          <label class="flex items-center gap-2 p-3 rounded-xl border border-[#0D382B] bg-[#0D382B]/5 cursor-pointer text-xs font-semibold text-[#0D382B]">
+            <input type="checkbox" checked class="rounded text-[#0D382B] focus:ring-0" />
+            <span>Email</span>
+          </label>
+          <label class="flex items-center gap-2 p-3 rounded-xl border border-[#DCE0D7] hover:border-[#CBD1C5] cursor-pointer text-xs font-medium text-[#5A6862]">
+            <input type="checkbox" class="rounded text-[#0D382B] focus:ring-0" />
+            <span>In-App Push</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Message Preview -->
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-[#5A6862] mb-1.5">
+          Message preview{sample && ` (${sample.tenant.name})`}
+        </label>
+        <div class="p-3.5 bg-[#FAFBF9] rounded-xl border border-[#E2E5DF] text-xs text-[#2C3B34] font-mono leading-relaxed">
+          {sample
+            ? `"${company.name}: Dear ${sample.tenant.name.split(' ')[0]}, your balance is ${formatKes(sample.balance)} (rent, water, garbage and any unpaid amount from earlier months). Please pay by ${graceDay} ${currentPeriod.split(' ')[0]} via M-Pesa Paybill ${company.mpesaPaybill}, Account ${sample.accountNumber}. Your ${currentPeriod} bill is in the Makazi app."`
+            : 'Nobody owes anything right now.'}
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="pt-3 flex items-center justify-end gap-3 border-t border-[#F0F2EE]">
+        <button 
+          type="button" 
+          id="cancel-reminders-btn"
+          class="px-5 py-2.5 rounded-xl text-sm font-medium text-[#5A6862] hover:bg-[#F4F5F1] transition-colors cursor-pointer"
+        >
+          Cancel
+        </button>
+        <button 
+          type="button" 
+          id="confirm-send-reminders-btn"
+          class="px-6 py-2.5 rounded-xl text-sm font-semibold bg-[#C04A26] text-white hover:bg-[#A93C1C] transition-all shadow-md hover:shadow-lg cursor-pointer flex items-center gap-2"
+        >
+          <span>Send {arrears.length} reminders</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

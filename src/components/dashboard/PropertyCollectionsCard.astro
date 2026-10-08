@@ -1,0 +1,50 @@
+---
+import { getPortfolio, formatKes } from '../../data/portfolio';
+
+// This company's data only (the signed-in user's).
+const { propertyViews, currentPeriod } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+---
+
+<div id="properties-section" data-animate-bars class="bg-white rounded-3xl p-6 sm:p-7 border border-[#E7EAE4] shadow-sm hover:shadow-md transition-shadow">
+  <!-- Card Header -->
+  <div class="flex items-center justify-between mb-6 pb-2 border-b border-[#F0F2EE]">
+    <h3 class="font-editorial text-2xl sm:text-3xl font-normal text-[#17231E] tracking-tight">
+      Collection by property
+    </h3>
+    <span class="text-xs sm:text-sm text-[#73827C] font-medium">
+      {currentPeriod}
+    </span>
+  </div>
+
+  <!-- Properties List -->
+  {propertyViews.length === 0 && (
+    <p class="py-6 text-center text-xs font-medium text-[#73827C]">
+      No properties yet. <a href="/properties" class="font-semibold text-[#0D382B] hover:underline">Add your first property</a>.
+    </p>
+  )}
+  <div class="space-y-6">
+    {propertyViews.map((p, i) => (
+      <a href={`/tenants?property=${p.property.id}`} class="group cursor-pointer block">
+        <div class="flex items-center justify-between text-sm mb-2.5 gap-3">
+          <span class="font-medium text-[#1E2E27] group-hover:text-[#0D382B] transition-colors truncate">
+            {p.property.name}
+            <span class="ml-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#73827C]">{p.typeLabel}</span>
+          </span>
+          <span class="text-xs sm:text-sm text-[#73827C] whitespace-nowrap tabular-nums">
+            <span class="font-semibold text-[#17231E]">{formatKes(p.collected)}</span>
+            <span class="mx-1.5 opacity-60">·</span>
+            <span class={`font-medium ${p.collectionRate >= 100 ? 'text-[#0D382B]' : 'text-[#73827C]'}`}>{p.collectionRate}%</span>
+          </span>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="w-full bg-[#EAECE6] h-2 rounded-full overflow-hidden p-0.5">
+          <div 
+            class="bar-x bg-[#124B3A] h-full rounded-full transition-colors duration-200 group-hover:bg-[#0D382B]"
+            style={`width: ${Math.min(p.collectionRate, 100)}%; --bar-delay: ${i * 120}ms`}
+          ></div>
+        </div>
+      </a>
+    ))}
+  </div>
+</div>

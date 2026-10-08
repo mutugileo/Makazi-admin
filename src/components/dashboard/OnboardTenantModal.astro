@@ -1,0 +1,302 @@
+---
+import { X, UserPlus } from '@lucide/astro';
+import { getPortfolio, bedLabel } from '../../data/portfolio';
+import { FEATURES } from '../../config/features';
+
+// This company's data only (the signed-in user's).
+const { depositSchedule, lastReading, propertyViews, asOf } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+
+const vacantUnits = propertyViews.flatMap((p) =>
+  p.units
+    .filter((u) => !u.occupant)
+    .map((u) => ({
+      property: p.property,
+      unit: u.unit,
+      reading: lastReading(u.unit.id).value,
+      deposit: depositSchedule[String(u.unit.bedrooms)] ?? 0,
+    })),
+);
+
+// Default move-in: the 1st of next month.
+const [y, m] = asOf.split('-').map(Number);
+const nextFirst = new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10);
+
+const inputClass =
+  'w-full px-4 py-2.5 rounded-xl border border-[#DCE0D7] focus:border-[#0D382B] focus:ring-2 focus:ring-[#0D382B]/10 outline-none text-sm text-[#17231E] bg-white';
+const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#5A6862] mb-1.5';
+---
+
+<div
+  id="onboard-tenant-modal"
+  class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-200"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="onboard-modal-title"
+>
+  <div class="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-[#E7EAE4] overflow-hidden transform scale-95 transition-transform duration-200">
+    <!-- Header -->
+    <div class="flex items-center justify-between p-6 border-b border-[#F0F2EE]">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-xl bg-[#0D382B] text-[#C6EE58] flex items-center justify-center">
+          <UserPlus class="w-5 h-5" />
+        </div>
+        <div>
+          <h3 id="onboard-modal-title" class="font-editorial text-2xl font-normal text-[#17231E]">
+            Onboard new tenant
+          </h3>
+          <p class="text-xs text-[#73827C]">Move into a vacant unit. First bill: deposit plus rent for the days left in the month.</p>
+        </div>
+      </div>
+      <button
+        type="button"
+        id="close-onboard-modal-btn"
+        class="h-8 w-8 rounded-full bg-[#F4F5F1] text-[#73827C] hover:text-[#17231E] flex items-center justify-center transition-colors cursor-pointer"
+        aria-label="Close modal"
+      >
+        <X class="w-4 h-4" />
+      </button>
+    </div>
+
+    <!-- Form -->
+    <form id="onboard-tenant-form" class="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+      <div>
+        <label for="tenant-full-name" class={labelClass}>Full name</label>
+        <input type="text" id="tenant-full-name" required placeholder="Official legal name" class={inputClass} />
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label for="tenant-phone" class={labelClass}>Phone number <span class="normal-case font-normal">(app sign-in)</span></label>
+          <input type="tel" id="tenant-phone" required placeholder="07XX XXX XXX" pattern="0[17][0-9 ]{8,11}" class={inputClass} />
+        </div>
+        <div>
+          <label for="tenant-email" class={labelClass}>Email <span class="normal-case font-normal">(optional)</span></label>
+          <input type="email" id="tenant-email" placeholder="For receipts" class={inputClass} />
+        </div>
+      </div>
+
+      <div>
+        <label for="tenant-unit" class={labelClass}>Vacant unit</label>
+        {vacantUnits.length === 0 ? (
+          <p class="text-sm text-[#73827C]">
+            {propertyViews.length === 0
+              ? <>No units yet. <a href="/properties" class="font-semibold text-[#0D382B] hover:underline">Add a property</a> with its units first.</>
+              : 'No vacant units. Add units to a property or move a tenant out first.'}
+          </p>
+        ) : (
+          <select id="tenant-unit" required class={inputClass}>
+            {propertyViews.filter((p) => p.vacant > 0).map((p) => (
+              <optgroup label={`${p.property.name} · ${p.typeLabel}`}>
+                {vacantUnits.filter((v) => v.property.id === p.property.id).map((v) => (
+                  <option
+                    value={v.unit.id}
+                    data-garbage={v.property.garbageFee}
+                    data-water-rate={v.property.waterRate}
+                    data-reading={v.reading}
+                    data-deposit={v.deposit}
+                  >
+                    {v.unit.label} · {bedLabel(v.unit.bedrooms)} · {v.property.name}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        )}
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label for="tenant-rent" class={labelClass}>Monthly rent (KES)</label>
+          <input type="number" id="tenant-rent" required min="1" step="1" inputmode="numeric" placeholder="e.g. 45000" class={`${inputClass} tabular-nums`} />
+        </div>
+        <div>
+          <label for="tenant-deposit" class={labelClass}>Deposit (KES)</label>
+          <input type="number" id="tenant-deposit" required min="0" step="1" inputmode="numeric" placeholder="Set by bedrooms" class={`${inputClass} tabular-nums`} />
+          <p class="text-[11px] text-[#73827C] mt-1">{Object.entries(depositSchedule).map(([b, amount]) => `${bedLabel(Number(b))}: KES ${amount.toLocaleString('en-KE')}`).join(' · ')}</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label for="tenant-move-in" class={labelClass}>Move-in date</label>
+          <input type="date" id="tenant-move-in" required value={nextFirst} class={inputClass} />
+        </div>
+        <div>
+          <label for="tenant-opening-reading" class={labelClass}>Opening water reading</label>
+          <input type="number" id="tenant-opening-reading" required min="0" step="1" inputmode="numeric" class={`${inputClass} tabular-nums`} />
+        </div>
+      </div>
+
+      {FEATURES.leases && (
+      <div>
+        <label for="tenant-lease-term" class={labelClass}>Lease term</label>
+        <select id="tenant-lease-term" class={inputClass}>
+          <option value="12">12 months (standard)</option>
+          <option value="6">6 months</option>
+          <option value="24">24 months</option>
+        </select>
+      </div>
+      )}
+
+      <!-- Move-in bill preview -->
+      <div class="rounded-2xl bg-[#F8F9F7] border border-[#E7EAE4] p-4 text-sm tabular-nums">
+        <p class="text-xs font-semibold uppercase tracking-wider text-[#5A6862] mb-3">Move-in bill</p>
+        <div class="space-y-2">
+          <div class="flex justify-between"><span class="text-[#73827C]">Deposit (held, refundable)</span><span id="preview-deposit" class="font-medium text-[#17231E]">—</span></div>
+          <div class="flex justify-between"><span class="text-[#73827C]">Rent <span id="preview-rent-days" class="text-[11px]"></span></span><span id="preview-rent" class="font-medium text-[#17231E]">—</span></div>
+          <div class="flex justify-between"><span class="text-[#73827C]">Garbage</span><span id="preview-garbage" class="font-medium text-[#17231E]">—</span></div>
+          <div class="flex justify-between pt-2 border-t border-[#E7EAE4]"><span class="font-semibold text-[#17231E]">Due on move-in</span><span id="preview-total" class="font-bold text-[#17231E]">—</span></div>
+        </div>
+        <p class="text-[11px] text-[#73827C] mt-3">Rent is charged for the days left in the move-in month. Water starts on the next bill, from the opening reading. Normal monthly bills follow.</p>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="pt-4 flex items-center justify-end gap-3 border-t border-[#F0F2EE]">
+        <button
+          type="button"
+          id="cancel-onboard-btn"
+          class="px-5 py-2.5 rounded-xl text-sm font-medium text-[#5A6862] hover:bg-[#F4F5F1] transition-colors cursor-pointer"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          class="px-6 py-2.5 rounded-xl text-sm font-semibold bg-[#0D382B] text-white hover:bg-[#154637] transition-all shadow-md hover:shadow-lg cursor-pointer flex items-center gap-2"
+        >
+          <span>Save & issue move-in bill</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  const form = document.getElementById('onboard-tenant-form') as HTMLFormElement | null;
+  const unitSelect = document.getElementById('tenant-unit') as HTMLSelectElement | null;
+  const rentInput = document.getElementById('tenant-rent') as HTMLInputElement | null;
+  const depositInput = document.getElementById('tenant-deposit') as HTMLInputElement | null;
+  const readingInput = document.getElementById('tenant-opening-reading') as HTMLInputElement | null;
+  const moveInInput = document.getElementById('tenant-move-in') as HTMLInputElement | null;
+  const kes = (n: number) => `KES ${n.toLocaleString('en-KE')}`;
+  let depositTouched = false;
+
+  function selectedUnit() {
+    return unitSelect?.selectedOptions[0] ?? null;
+  }
+
+  function syncReading() {
+    const option = selectedUnit();
+    if (!option || !readingInput) return;
+    readingInput.value = option.dataset.reading ?? '';
+    readingInput.min = option.dataset.reading ?? '0';
+    if (depositInput && !depositTouched) depositInput.value = option.dataset.deposit ?? '';
+  }
+
+  // Same rule as proratedRent in lib/billing.ts.
+  function prorate(rent: number, iso: string): { amount: number; days: number; of: number } {
+    const [y, m, d] = iso.split('-').map(Number);
+    const of = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const days = of - d + 1;
+    return days >= of || !d ? { amount: rent, days: of, of } : { amount: Math.round((rent * days) / of), days, of };
+  }
+
+  function updatePreview() {
+    const rent = Number(rentInput?.value) || 0;
+    const deposit = Number(depositInput?.value) || 0;
+    const prorated = prorate(rent, moveInInput?.value ?? '');
+    const garbage = Number(selectedUnit()?.dataset.garbage) || 0;
+    const set = (id: string, text: string) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    };
+    set('preview-deposit', rent || deposit ? kes(deposit) : '—');
+    set('preview-rent', rent ? kes(prorated.amount) : '—');
+    set('preview-rent-days', rent && prorated.days < prorated.of ? `(${prorated.days} of ${prorated.of} days)` : '');
+    set('preview-garbage', unitSelect ? kes(garbage) : '—');
+    set('preview-total', rent ? kes(deposit + prorated.amount + garbage) : '—');
+  }
+
+  unitSelect?.addEventListener('change', () => {
+    syncReading();
+    updatePreview();
+  });
+  rentInput?.addEventListener('input', updatePreview);
+  moveInInput?.addEventListener('input', updatePreview);
+  depositInput?.addEventListener('input', () => {
+    depositTouched = depositInput.value !== '';
+    updatePreview();
+  });
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!form.reportValidity()) return;
+    const name = (document.getElementById('tenant-full-name') as HTMLInputElement).value.trim();
+    const phone = (document.getElementById('tenant-phone') as HTMLInputElement).value.trim();
+    const email = (document.getElementById('tenant-email') as HTMLInputElement).value.trim();
+    const unitId = unitSelect?.value ?? '';
+    const rent = Number(rentInput?.value) || 0;
+    const deposit = Number(depositInput?.value) || 0;
+    const moveIn = moveInInput?.value ?? '';
+    const openingReading = Number(readingInput?.value) || 0;
+    const leaseTerm = (document.getElementById('tenant-lease-term') as HTMLSelectElement | null)?.value ?? '12';
+
+    const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving...';
+    }
+
+    try {
+      const res = await fetch('/api/onboard-tenant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          phone,
+          email,
+          unitId,
+          rent,
+          deposit,
+          moveIn,
+          openingReading,
+          leaseTerm,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Failed to onboard tenant');
+      }
+
+      window.makaziUi?.hideModal('onboard-tenant-modal');
+      const resetModal = document.getElementById('reset-password-modal');
+      if (resetModal && data.temporaryPassword) {
+        const setText = (field: string, text: string) => {
+          const el = resetModal.querySelector(`[data-field="${field}"]`);
+          if (el) el.textContent = text;
+        };
+        const msg = `${resetModal.dataset.company || 'Makazi'}: your Makazi one-time password is ${data.temporaryPassword}. Sign in with ${phone}, then choose your own password. It expires in 72 hours.`;
+        setText('who', `${name} · signs in with ${phone}`);
+        setText('password', data.temporaryPassword);
+        setText('message', msg);
+        window.makaziUi?.showModal('reset-password-modal');
+      } else {
+        window.makaziUi?.showToast(
+          'Tenant onboarded',
+          `${name} onboarded. Password: ${data.temporaryPassword || 'Ready'}`,
+        );
+        setTimeout(() => window.location.reload(), 1500);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      window.makaziUi?.showToast('Error', msg);
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save & issue move-in bill';
+      }
+    }
+  });
+
+  syncReading();
+  updatePreview();
+</script>

@@ -1,0 +1,31 @@
+---
+// Bill and lease statuses. Colours match the Flutter app's AppColors.status*.
+interface Props {
+  status: string;
+  size?: 'sm' | 'md';
+}
+
+const { status, size = 'sm' } = Astro.props;
+
+const tones: Record<string, { box: string; dot: string }> = {
+  Paid: { box: 'bg-[#F1F8E9] text-[#2E7D32] border-[#C8E6C9]', dot: 'bg-[#2E7D32]' },
+  Active: { box: 'bg-[#F1F8E9] text-[#2E7D32] border-[#C8E6C9]', dot: 'bg-[#2E7D32]' },
+  Occupied: { box: 'bg-[#F1F8E9] text-[#2E7D32] border-[#C8E6C9]', dot: 'bg-[#2E7D32]' },
+  Partial: { box: 'bg-[#FFF8E1] text-[#B78103] border-[#FFE082]', dot: 'bg-[#B78103]' },
+  Expiring: { box: 'bg-[#FFF8E1] text-[#B78103] border-[#FFE082]', dot: 'bg-[#B78103]' },
+  Unpaid: { box: 'bg-[#FDEEE9] text-[#C04A26] border-[#F6C6B8]', dot: 'bg-[#C04A26]' },
+  Credit: { box: 'bg-[#EFF6FF] text-[#1E40AF] border-[#BFDBFE]', dot: 'bg-[#1E40AF]' },
+  'Awaiting signature': { box: 'bg-[#EFF6FF] text-[#1E40AF] border-[#BFDBFE]', dot: 'bg-[#1E40AF]' },
+  Vacant: { box: 'bg-[#F3F4F0] text-[#5A6862] border-[#DCE0D7]', dot: 'bg-[#8FA69C]' },
+  Ended: { box: 'bg-[#F3F4F0] text-[#5A6862] border-[#DCE0D7]', dot: 'bg-[#8FA69C]' },
+  'Moved out': { box: 'bg-[#F3F4F0] text-[#5A6862] border-[#DCE0D7]', dot: 'bg-[#8FA69C]' },
+};
+
+const tone = tones[status] ?? tones.Ended;
+const sizing = size === 'md' ? 'px-3 py-1 text-xs' : 'px-2.5 py-1 text-[11px]';
+---
+
+<span class={`inline-flex items-center gap-1.5 rounded-full font-semibold border whitespace-nowrap ${sizing} ${tone.box}`}>
+  <span class={`h-1.5 w-1.5 rounded-full ${tone.dot}`}></span>
+  {status}
+</span>

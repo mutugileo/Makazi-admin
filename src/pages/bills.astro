@@ -1,0 +1,295 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+import ReadingsModal from '../components/dashboard/ReadingsModal.astro';
+import StatusBadge from '../components/ui/StatusBadge.astro';
+import { getPortfolio, formatDate, formatKes, monthLabel } from '../data/portfolio';
+import { Download, Gauge } from '@lucide/astro';
+
+// This company's data only (the signed-in user's).
+const { billMonths, billRows, portfolioSummary, propertyViews, currentMonth } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+
+const billedMonths = [...new Set(billRows.map((r) => r.month))].sort();
+const latestBilledMonth = billedMonths[billedMonths.length - 1];
+const defaultMonth = billedMonths.includes(currentMonth)
+  ? currentMonth
+  : (latestBilledMonth ?? currentMonth);
+
+const kindLabel = { 'move-in': 'Move-in', final: 'Final', monthly: '' } as const;
+
+// Flat rows for CSV export and the totals bar. Column names follow the
+// owner's spreadsheet, plus Deposit and Balance b/f.
+const exportRows = billRows.map(({ view, bill }) => ({
+  month: bill.month,
+  property: view.property.id,
+  status: bill.status,
+  csv: {
+    TENANT: view.tenant.name,
+    PROPERTY: view.property.name,
+    UNIT: view.unit.label,
+    'PHONE NUMBER': view.tenant.phone,
+    MONTH: monthLabel(bill.month),
+    'BILL TYPE': bill.kind,
+    'MONTHLY RENT': bill.rent,
+    'RENT DAYS': bill.rentDays ? `${bill.rentDays.days}/${bill.rentDays.of}` : '',
+    'WATER BILL PER UNIT': bill.water?.rate ?? '',
+    'UNITS CONSUMED': bill.water?.units ?? '',
+    'TOTAL WATER BILL': bill.water?.amount ?? 0,
+    'GARBAGE BILL': bill.garbage,
+    DEPOSIT: bill.deposit + bill.depositApplied,
+    'DEPOSIT REFUNDED': bill.depositRefund,
+    'BALANCE B/F': bill.balanceBf,
+    'TOTAL DUE': bill.totalDue,
+    'AMOUNT PAID': bill.amountPaid,
+    'DATE PAID': bill.datePaid ?? '',
+    STATUS: bill.status,
+    'AMOUNT OUTSTANDING': bill.outstanding,
+  },
+}));
+
+const th = 'py-3 px-3 whitespace-nowrap';
+const td = 'py-3 px-3 whitespace-nowrap';
+---
+
+<DashboardLayout title="Makazi — Monthly bills" currentPath="/bills">
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+    <div>
+      <span class="text-xs font-semibold tracking-wider text-[#69847A] uppercase">{portfolioSummary}</span>
+      <h1 class="text-3xl sm:text-4xl font-normal font-editorial text-[#0D382B] tracking-tight mt-1">Monthly bills</h1>
+      <p class="text-xs text-[#69847A] mt-2 max-w-xl">
+        One row per tenant per month: rent, water, garbage and anything carried forward. Due on the 5th, overdue after the 20th. Unpaid amounts move to the next month automatically.
+      </p>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3 self-start md:self-auto">
+      <label class="sr-only" for="bill-month">Month</label>
+      <select id="bill-month" class="px-4 py-2.5 rounded-full bg-white border border-[#E3E6DF] text-xs font-semibold text-[#0D382B] shadow-xs hover:border-[#0D382B] cursor-pointer outline-none">
+        {billMonths.map((m) => (
+          <option value={m} selected={m === defaultMonth}>{monthLabel(m)}</option>
+        ))}
+        <option value="all">All months</option>
+      </select>
+      <button type="button" id="open-readings-btn"
+        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white border border-[#E3E6DF] text-xs font-semibold text-[#0D382B] hover:border-[#0D382B] transition-colors shadow-xs cursor-pointer">
+        <Gauge class="w-4 h-4" /> Record meter readings
+      </button>
+      <button type="button" id="export-csv-btn"
+        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#0D382B] text-white text-xs font-semibold hover:bg-[#08221A] transition-all shadow-xs cursor-pointer">
+        <Download class="w-4 h-4 text-[#C6EE58]" /> Export to Excel (CSV)
+      </button>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <button type="button" data-property-btn="all" class="property-btn px-3.5 py-2 rounded-full border text-xs font-semibold cursor-pointer transition-colors shadow-xs">All properties</button>
+      {propertyViews.map((p) => (
+        <button type="button" data-property-btn={p.property.id} class="property-btn px-3.5 py-2 rounded-full border text-xs font-semibold cursor-pointer transition-colors shadow-xs">
+          {p.property.name} <span class="ml-1 text-[10px] uppercase tracking-wider opacity-70">{p.typeLabel}</span>
+        </button>
+      ))}
+    </div>
+    <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Status">
+      {['All', 'Unpaid', 'Partial', 'Paid', 'Credit'].map((s) => (
+        <button type="button" data-status-btn={s} class="status-btn px-3 py-1.5 rounded-full border text-[11px] font-semibold cursor-pointer transition-colors">{s}</button>
+      ))}
+    </div>
+  </div>
+
+  <!-- Totals for the visible rows -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 tabular-nums">
+    {[
+      ['Total due', 'total-due'],
+      ['Amount paid', 'total-paid'],
+      ['Outstanding', 'total-outstanding'],
+      ['Bills shown', 'total-count'],
+    ].map(([label, id]) => (
+      <div class="bg-white rounded-2xl border border-[#E3E6DF] px-4 py-3 shadow-xs">
+        <span class="block text-[10px] font-semibold uppercase tracking-wider text-[#69847A]">{label}</span>
+        <span id={id} class="block text-base font-semibold text-[#0D382B] mt-0.5">—</span>
+      </div>
+    ))}
+  </div>
+
+  {billRows.length === 0 ? (
+    <div class="bg-white rounded-3xl border border-[#E3E6DF] overflow-hidden shadow-xs">
+      <p class="p-12 text-center text-xs font-medium text-[#69847A]">No bills yet. Bills appear once tenants are onboarded and the ledger starts.</p>
+    </div>
+  ) : (
+  <div class="bg-white rounded-3xl border border-[#E3E6DF] overflow-hidden shadow-xs">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs tabular-nums">
+        <thead class="bg-[#F8F9F6] border-b border-[#E3E6DF] text-[#69847A] uppercase text-[10px] font-semibold tracking-wider">
+          <tr>
+            <th scope="col" class={`${th} pl-6 sticky left-0 bg-[#F8F9F6]`}>Tenant</th>
+            <th scope="col" class={th}>Unit</th>
+            <th scope="col" class={th}>Phone</th>
+            <th scope="col" class={`${th} month-col`}>Month</th>
+            <th scope="col" class={`${th} text-right`}>Rent</th>
+            <th scope="col" class={`${th} text-right`}>Water / unit</th>
+            <th scope="col" class={`${th} text-right`}>Units</th>
+            <th scope="col" class={`${th} text-right`}>Water</th>
+            <th scope="col" class={`${th} text-right`}>Garbage</th>
+            <th scope="col" class={`${th} text-right`}>Deposit</th>
+            <th scope="col" class={`${th} text-right`}>Bal. b/f</th>
+            <th scope="col" class={`${th} text-right`}>Total due</th>
+            <th scope="col" class={`${th} text-right`}>Paid</th>
+            <th scope="col" class={th}>Date paid</th>
+            <th scope="col" class={th}>Status</th>
+            <th scope="col" class={`${th} pr-6 text-right`}>Outstanding</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[#E3E6DF]">
+          {billRows.map(({ view, bill }) => {
+            const depositCell = bill.deposit + bill.depositApplied;
+            return (
+              <tr class="bill-row hover:bg-[#F8F9F6]/60" data-month={bill.month} data-property={view.property.id} data-status={bill.status}>
+                <td class={`${td} pl-6 sticky left-0 bg-white`}>
+                  <span class="font-semibold text-[#0D382B]">{view.tenant.name}</span>
+                  {!view.isActive && <span class="ml-1.5 text-[10px] uppercase tracking-wider text-[#69847A]">former</span>}
+                </td>
+                <td class={`${td} text-[#69847A]`}><span class="font-semibold text-[#0D382B]">{view.unit.label}</span> · {view.property.name}</td>
+                <td class={`${td} text-[#69847A]`}>{view.tenant.phone}</td>
+                <td class={`${td} text-[#69847A] month-col`}>
+                  {monthLabel(bill.month)}
+                  {kindLabel[bill.kind] && (
+                    <span class="ml-1 px-1.5 py-0.5 rounded-md bg-[#EFF6FF] text-[#1E40AF] text-[10px] font-semibold">{kindLabel[bill.kind]}</span>
+                  )}
+                </td>
+                <td class={`${td} text-right`}>
+                  {bill.rent ? formatKes(bill.rent) : '—'}
+                  {bill.rentDays && <span class="block text-[10px] text-[#69847A]">{bill.rentDays.days} of {bill.rentDays.of} days</span>}
+                </td>
+                <td class={`${td} text-right text-[#69847A]`}>{bill.water ? bill.water.rate : '—'}</td>
+                <td class={`${td} text-right text-[#69847A]`} title={bill.water ? `Meter ${bill.water.previousReading} → ${bill.water.currentReading}` : undefined}>
+                  {bill.water ? bill.water.units : '—'}
+                </td>
+                <td class={`${td} text-right`}>{bill.water ? formatKes(bill.water.amount) : '—'}</td>
+                <td class={`${td} text-right`}>{bill.garbage ? formatKes(bill.garbage) : '—'}</td>
+                <td class={`${td} text-right ${depositCell < 0 ? 'text-[#1E40AF]' : ''}`}>
+                  {depositCell ? formatKes(depositCell) : '—'}
+                  {bill.depositApplied < 0 && <span class="block text-[10px] text-[#69847A]">applied</span>}
+                  {bill.depositRefund > 0 && <span class="block text-[10px] text-[#2E7D32]">{formatKes(bill.depositRefund)} refunded</span>}
+                </td>
+                <td class={`${td} text-right ${bill.balanceBf > 0 ? 'text-[#C04A26]' : bill.balanceBf < 0 ? 'text-[#1E40AF]' : 'text-[#69847A]'}`}>
+                  {bill.balanceBf ? formatKes(bill.balanceBf) : '—'}
+                </td>
+                <td class={`${td} text-right font-semibold text-[#0D382B]`}>{formatKes(bill.totalDue)}</td>
+                <td class={`${td} text-right`}>{formatKes(bill.amountPaid)}</td>
+                <td class={`${td} text-[#69847A]`}>{bill.datePaid ? formatDate(bill.datePaid) : '—'}</td>
+                <td class={td}><StatusBadge status={bill.status} /></td>
+                <td class={`${td} pr-6 text-right font-semibold ${bill.outstanding > 0 ? 'text-[#C04A26]' : bill.outstanding < 0 ? 'text-[#1E40AF]' : 'text-[#2E7D32]'}`}>
+                  {formatKes(bill.outstanding)}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+    <p id="bills-empty" class="hidden p-12 text-center text-xs font-medium text-[#69847A]">No bills match these filters.</p>
+  </div>
+  )}
+
+  <p class="text-[11px] text-[#69847A] mt-4 leading-relaxed">
+    Water on each bill is last month's use (reading on the 1st minus the previous 1st). Deposits are held, not counted as rent.
+    Final bills apply the deposit against what is owed and refund the rest.
+  </p>
+
+  <script type="application/json" id="bill-export-data" set:html={JSON.stringify(exportRows).replace(/</g, "\\u003c")} />
+  <ReadingsModal />
+</DashboardLayout>
+
+<script>
+  type ExportRow = { month: string; property: string; status: string; csv: Record<string, string | number> };
+  const rows: ExportRow[] = JSON.parse(document.getElementById('bill-export-data')?.textContent ?? '[]');
+  const monthSelect = document.getElementById('bill-month') as HTMLSelectElement;
+  const ON = ['bg-[#0D382B]', 'text-white', 'border-[#0D382B]'];
+  const OFF = ['bg-white', 'text-[#0D382B]', 'border-[#E3E6DF]'];
+  const kes = (n: number) => `${n < 0 ? '−' : ''}KES ${Math.abs(n).toLocaleString('en-KE')}`;
+
+  const params = new URLSearchParams(window.location.search);
+  let property = params.get('property') ?? 'all';
+  let status = 'All';
+  const paramMonth = params.get('month');
+  if (paramMonth && Array.from(monthSelect.options).some((o) => o.value === paramMonth)) {
+    monthSelect.value = paramMonth;
+  }
+
+  const matches = (r: { month: string; property: string; status: string }) =>
+    (monthSelect.value === 'all' || r.month === monthSelect.value) &&
+    (property === 'all' || r.property === property) &&
+    (status === 'All' || r.status === status);
+
+  function render() {
+    let shown = 0;
+    document.querySelectorAll<HTMLElement>('.bill-row').forEach((row) => {
+      const show = matches(row.dataset as { month: string; property: string; status: string });
+      row.classList.toggle('hidden', !show);
+      if (show) shown++;
+    });
+    document.getElementById('bills-empty')?.classList.toggle('hidden', shown > 0);
+
+    const visible = rows.filter(matches);
+    const sum = (key: string) => visible.reduce((acc, r) => acc + Number(r.csv[key] || 0), 0);
+    const set = (id: string, text: string) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    };
+    set('total-due', kes(sum('TOTAL DUE')));
+    set('total-paid', kes(sum('AMOUNT PAID')));
+    set('total-outstanding', kes(visible.reduce((acc, r) => acc + Math.max(0, Number(r.csv['AMOUNT OUTSTANDING'])), 0)));
+    set('total-count', String(visible.length));
+
+    document.querySelectorAll<HTMLElement>('[data-property-btn]').forEach((b) => {
+      const on = b.dataset.propertyBtn === property;
+      b.classList.remove(...(on ? OFF : ON));
+      b.classList.add(...(on ? ON : OFF));
+    });
+    document.querySelectorAll<HTMLElement>('[data-status-btn]').forEach((b) => {
+      const on = b.dataset.statusBtn === status;
+      b.classList.remove(...(on ? OFF : ON));
+      b.classList.add(...(on ? ON : OFF));
+    });
+  }
+
+  function exportCsv() {
+    const visible = rows.filter(matches);
+    if (!visible.length) return;
+    const headers = Object.keys(visible[0].csv);
+    // Quote every cell; neutralise leading formula characters for Excel.
+    const cell = (v: string | number) => {
+      let s = String(v);
+      if (/^[=+\-@]/.test(s) && typeof v === 'string') s = `'${s}`;
+      return `"${s.replace(/"/g, '""')}"`;
+    };
+    const csv = [headers.map(cell).join(','), ...visible.map((r) => headers.map((h) => cell(r.csv[h])).join(','))].join('\r\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `makazi-bills-${monthSelect.value}${property === 'all' ? '' : `-${property}`}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  monthSelect.addEventListener('change', render);
+  document.querySelectorAll<HTMLElement>('[data-property-btn]').forEach((b) =>
+    b.addEventListener('click', () => {
+      property = b.dataset.propertyBtn ?? 'all';
+      render();
+    }),
+  );
+  document.querySelectorAll<HTMLElement>('[data-status-btn]').forEach((b) =>
+    b.addEventListener('click', () => {
+      status = b.dataset.statusBtn ?? 'All';
+      render();
+    }),
+  );
+  document.getElementById('export-csv-btn')?.addEventListener('click', exportCsv);
+  document.getElementById('open-readings-btn')?.addEventListener('click', () => window.makaziUi?.showModal('readings-modal'));
+
+  render();
+</script>

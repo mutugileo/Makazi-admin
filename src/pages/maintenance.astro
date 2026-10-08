@@ -1,0 +1,132 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+import { getPortfolio, type TicketView } from '../data/portfolio';
+import { ChevronDown } from '@lucide/astro';
+
+// This company's data only (the signed-in user's).
+const { portfolioSummary, repairBoard, currentPeriod } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+
+const columns: Array<{ title: string; items: TicketView[]; empty: string; action: string | null }> = [
+  { title: 'Open', items: repairBoard.open, empty: 'No open tickets.', action: 'Assign & start' },
+  { title: 'In progress', items: repairBoard.inProgress, empty: 'No tickets in progress.', action: 'Mark resolved' },
+  { title: 'Resolved', items: repairBoard.resolved, empty: 'Nothing resolved yet.', action: null },
+];
+
+const priorityTone = {
+  high: { box: 'bg-[#FDEEE9] text-[#C04A26] border-[#F6C6B8]', dot: 'bg-[#C04A26]' },
+  medium: { box: 'bg-[#FFF8E1] text-[#B78103] border-[#FFE082]', dot: 'bg-[#B78103]' },
+  low: { box: 'bg-[#F3F4F0] text-[#5A6862] border-[#DCE0D7]', dot: 'bg-[#8FA69C]' },
+} as const;
+---
+
+<DashboardLayout title="Makazi — Maintenance" currentPath="/maintenance">
+  <!-- Header & Actions -->
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+    <div>
+      <span class="text-xs font-semibold tracking-wider text-[#69847A] uppercase">
+        {portfolioSummary}
+      </span>
+      <h1 class="text-3xl sm:text-4xl font-normal font-editorial text-[#0D382B] tracking-tight mt-1">
+        Maintenance
+      </h1>
+    </div>
+
+    <div class="flex items-center gap-3 self-start md:self-auto">
+      <!-- Period Selector -->
+      <div class="relative inline-block">
+        <button 
+          type="button" 
+          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white border border-[#E3E6DF] text-xs font-semibold text-[#0D382B] shadow-xs hover:border-[#0D382B] transition-colors cursor-pointer"
+        >
+          <span>{currentPeriod}</span>
+          <ChevronDown class="w-4 h-4 text-[#69847A]" />
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Board: same tickets and statuses the tenant app shows -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+    {columns.map((column) => (
+      <div class="bg-[#F8F9F6] rounded-3xl border border-[#E3E6DF] p-5 flex flex-col gap-4">
+        <div class="flex items-center justify-between pb-3 border-b border-[#E3E6DF]">
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-[#0D382B]">{column.title}</h2>
+          <span class="text-xs font-bold text-[#0D382B] bg-white px-2.5 py-0.5 rounded-full border border-[#E3E6DF] shadow-xs">
+            {column.items.length}
+          </span>
+        </div>
+        <div class="space-y-4">
+          {column.items.length === 0 ? (
+            <p class="text-xs text-[#69847A] py-6 text-center">{column.empty}</p>
+          ) : (
+            column.items.map((t) => {
+              const tone = priorityTone[t.ticket.priority];
+              return (
+                <div class="bg-white rounded-2xl border border-[#E3E6DF] p-5 flex flex-col justify-between shadow-xs hover:border-[#69847A]/50 transition-colors">
+                  <div>
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="font-mono text-xs text-[#69847A]">{t.ticket.id} · {t.categoryLabel}</span>
+                      <span class={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${tone.box}`}>
+                        <span class={`h-1.5 w-1.5 rounded-full ${tone.dot}`}></span>
+                        {t.priorityLabel}
+                      </span>
+                    </div>
+                    <h3 class="text-sm font-semibold text-[#0D382B] mt-2.5">{t.ticket.title}</h3>
+                    <p class="text-xs text-[#69847A] mt-1">{t.reporter} · {t.when}</p>
+                    {t.ticket.assignedTo && (
+                      <p class="text-[11px] text-[#5A6862] mt-2">
+                        {t.ticket.status === 'resolved' ? 'Fixed by' : 'With'} {t.ticket.assignedTo}
+                        {t.ticket.resolutionNote && <span class="block text-[#69847A]">{t.ticket.resolutionNote}</span>}
+                      </p>
+                    )}
+                    {t.ticket.hasPhoto && <p class="text-[11px] text-[#69847A] mt-1">Photo attached</p>}
+                  </div>
+                  {column.action && (
+                    <div class="mt-4 pt-3 border-t border-[#E3E6DF]">
+                      <button
+                        type="button"
+                        class="repair-action-btn px-4 py-1.5 rounded-full border border-[#E3E6DF] hover:border-[#0D382B] text-xs font-semibold text-[#0D382B] bg-[#F8F9F6] hover:bg-white transition-colors cursor-pointer shadow-xs"
+                        data-ticket={t.ticket.id}
+                        data-action={column.action}
+                      >
+                        {column.action}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    ))}
+  </div>
+</DashboardLayout>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('.repair-action-btn').forEach((btn) =>
+    btn.addEventListener('click', async () => {
+      const ticketId = btn.dataset.ticket;
+      const action = btn.dataset.action ?? '';
+      const nextStatus = action.toLowerCase().includes('resolve') ? 'resolved' : 'in_progress';
+
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/update-ticket', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ticketId, status: nextStatus }),
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) throw new Error(data.error || 'Failed to update ticket');
+
+        window.makaziUi?.showToast('Ticket updated', `Ticket ${ticketId} status updated to ${nextStatus}.`);
+        setTimeout(() => window.location.reload(), 800);
+      } catch (err: unknown) {
+        btn.disabled = false;
+        const msg = err instanceof Error ? err.message : String(err);
+        window.makaziUi?.showToast('Error', msg);
+      }
+    }),
+  );
+</script>

@@ -1,0 +1,182 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+import { getPortfolio, formatKes, monthLabel } from '../data/portfolio';
+import { ChevronDown, Send } from '@lucide/astro';
+
+// This company's data only (the signed-in user's).
+const { arrears, arrearsAgeing, dueDay, formerTenancies, graceDay, lateLabel, portfolioSummary, stats, currentPeriod } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+
+const formerOwing = formerTenancies.filter((t) => t.balance > 0);
+---
+
+<DashboardLayout title="Makazi — Arrears & Reminders" currentPath="/arrears">
+  <!-- Header & Actions -->
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+    <div>
+      <span class="text-xs font-semibold tracking-wider text-[#69847A] uppercase">
+        {portfolioSummary}
+      </span>
+      <h1 class="text-3xl sm:text-4xl font-normal font-editorial text-[#0D382B] tracking-tight mt-1">
+        Arrears & reminders
+      </h1>
+    </div>
+
+    <div class="flex items-center gap-3 self-start md:self-auto">
+      <!-- Period Selector -->
+      <div class="relative inline-block">
+        <button 
+          type="button" 
+          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white border border-[#E3E6DF] text-xs font-semibold text-[#0D382B] shadow-xs hover:border-[#0D382B] transition-colors cursor-pointer"
+        >
+          <span>{currentPeriod}</span>
+          <ChevronDown class="w-4 h-4 text-[#69847A]" />
+        </button>
+      </div>
+
+      <!-- Send Reminders (Primary Action) -->
+      <button 
+        type="button" 
+        id="send-reminders-action-btn"
+        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#0D382B] text-white text-xs font-semibold hover:bg-[#08221A] transition-all shadow-xs cursor-pointer"
+      >
+        <div class="h-4 w-4 rounded-full bg-[#C6EE58] text-[#0A261F] flex items-center justify-center font-bold text-xs">
+          <Send class="w-2.5 h-2.5" />
+        </div>
+        <span>Send reminders</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Top Metrics: Total + Ageing -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8 items-stretch">
+    <!-- Total In Arrears Card -->
+    <div class="lg:col-span-5 bg-white rounded-3xl border border-[#E3E6DF] p-6 sm:p-8 flex flex-col justify-between shadow-xs">
+      <div>
+        <span class="text-xs font-semibold tracking-wider text-[#69847A] uppercase">
+          Total in arrears
+        </span>
+        <h2 class="text-3xl sm:text-4xl font-normal font-editorial tracking-tight text-[#C04A26] mt-2">
+          {formatKes(stats.outstandingAmount)}
+        </h2>
+      </div>
+      <p class="text-xs text-[#69847A] mt-4">
+        <span class="block font-semibold text-[#C04A26]">{formatKes(stats.overdueAmount)} overdue · {stats.tenantsOverdueCount} tenants past the {graceDay}th</span>
+        <span class="block mt-1">{stats.tenantsInGraceCount} more owe this month's bill but are still in the grace period (due the {dueDay}th, overdue after the {graceDay}th). Unpaid amounts carry into each new bill.</span>
+        {stats.formerTenantsOwing > 0 && <span class="block mt-1">Former tenants still owe {formatKes(stats.formerTenantsOwing)} after deposits (listed below).</span>}
+      </p>
+    </div>
+
+    <!-- Ageing Card -->
+    <div class="lg:col-span-7 bg-white rounded-3xl border border-[#E3E6DF] p-6 sm:p-8 flex flex-col justify-between shadow-xs">
+      <span class="text-xs font-semibold tracking-wider text-[#69847A] uppercase mb-1 block">
+        Ageing breakdown
+      </span>
+      <p class="text-[11px] text-[#69847A] mb-4">Payments clear the oldest bills first. A bill is overdue once its grace period ends on the {graceDay}th.</p>
+      <div class="space-y-4">
+        {arrearsAgeing.map((cat) => (
+          <div>
+            <div class="flex items-center justify-between text-xs mb-1.5">
+              <span class="text-[#69847A]">{cat.label}</span>
+              <span class="font-semibold text-[#0D382B]">{formatKes(cat.amount)}</span>
+            </div>
+            <div class="w-full bg-[#E3E6DF] h-2 rounded-full overflow-hidden">
+              <div 
+                class="bg-[#C04A26] h-full rounded-full transition-all duration-500"
+                style={`width: ${cat.percentage}%`}
+              ></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+
+  <!-- Selection Bar -->
+  <div class="flex items-center justify-between gap-4 mb-4">
+    <div class="flex items-center gap-2">
+      <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold text-[#0D382B]">
+        <input 
+          type="checkbox" 
+          id="select-all-arrears"
+          class="rounded-md border-[#E3E6DF] text-[#0D382B] focus:ring-0 cursor-pointer accent-[#0D382B]" 
+        />
+        <span>Select all</span>
+      </label>
+      <span id="arrears-selected-count" class="text-xs text-[#69847A]">
+        (0 selected)
+      </span>
+    </div>
+  </div>
+
+  <!-- Arrears List -->
+  {arrears.length === 0 ? (
+    <div class="p-12 text-center bg-white rounded-3xl border border-[#E3E6DF] text-xs font-medium text-[#69847A] shadow-xs">
+      No accounts in arrears.
+    </div>
+  ) : (
+    <div class="space-y-3">
+      {arrears.map((t) => (
+        <div class="bg-white rounded-2xl border border-[#E3E6DF] p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#69847A]/50 transition-colors shadow-xs">
+          <div class="flex items-center gap-3 min-w-0">
+            <input 
+              type="checkbox" 
+              class="arrear-checkbox rounded-md border-[#E3E6DF] text-[#0D382B] focus:ring-0 cursor-pointer accent-[#0D382B]" 
+              aria-label={`Select ${t.tenant.name}`}
+            />
+            <div class="min-w-0">
+              <h3 class="text-sm font-semibold text-[#0D382B] truncate">
+                {t.tenant.name}
+              </h3>
+              <p class="text-xs text-[#69847A] truncate mt-0.5">
+                {t.unitLabel} · {t.tenant.phone}
+              </p>
+              <p class="text-[11px] text-[#69847A] mt-1 tabular-nums">
+                {t.arrears.map((slice) => `${monthLabel(slice.month).split(' ')[0]} ${formatKes(slice.amount)}`).join(' · ')}
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between sm:justify-end gap-6 sm:text-right">
+            <span class="text-xs font-medium text-[#69847A]">
+              {lateLabel(t)}
+            </span>
+            <span class="text-sm sm:text-base font-bold text-[#C04A26] tabular-nums">
+              {formatKes(t.balance)}
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+
+  {formerOwing.length > 0 && (
+    <div class="mt-10">
+      <h2 class="font-editorial text-2xl text-[#0D382B] mb-1">Former tenants who still owe</h2>
+      <p class="text-xs text-[#69847A] mb-4">Balance left after the deposit was applied on their final bill. Records are kept for 6 months after move-out.</p>
+      <div class="space-y-3">
+        {formerOwing.map((t) => (
+          <a href="/tenants?tab=former" class="bg-white rounded-2xl border border-[#E3E6DF] p-4 sm:p-5 flex items-center justify-between gap-3 hover:border-[#69847A]/50 transition-colors shadow-xs">
+            <div class="min-w-0">
+              <h3 class="text-sm font-semibold text-[#0D382B] truncate">{t.tenant.name}</h3>
+              <p class="text-xs text-[#69847A] truncate mt-0.5">Formerly {t.unitLabel} · {t.tenant.phone}</p>
+            </div>
+            <span class="text-sm sm:text-base font-bold text-[#C04A26] tabular-nums">{formatKes(t.balance)}</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  )}
+</DashboardLayout>
+
+<script>
+  const boxes = document.querySelectorAll<HTMLInputElement>('.arrear-checkbox');
+  const all = document.getElementById('select-all-arrears') as HTMLInputElement | null;
+  const update = () => {
+    const n = [...boxes].filter((b) => b.checked).length;
+    const label = document.getElementById('arrears-selected-count');
+    if (label) label.textContent = `(${n} selected)`;
+    if (all) all.checked = n === boxes.length && n > 0;
+  };
+  boxes.forEach((b) => b.addEventListener('change', update));
+  all?.addEventListener('change', () => setTimeout(update));
+</script>

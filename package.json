@@ -1,0 +1,30 @@
+{
+  "name": "propadmin",
+  "type": "module",
+  "version": "0.0.1",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "admin:create": "node scripts/create-admin.mjs",
+    "e2e:live": "node --env-file=.env scripts/e2e-live.mjs",
+    "start": "node --env-file=.env ./dist/server/entry.mjs"
+  },
+  "dependencies": {
+    "@astrojs/node": "^11.1.6",
+    "@lucide/astro": "^1.51.0",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.117.2",
+    "@tailwindcss/vite": "^4.3.3",
+    "astro": "^7.3.5",
+    "lucide-astro": "^0.556.0",
+    "tailwindcss": "^4.3.3"
+  },
+  "allowScripts": {
+    "esbuild": true
+  }
+}

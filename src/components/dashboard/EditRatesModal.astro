@@ -1,0 +1,180 @@
+---
+import { X, Droplets } from '@lucide/astro';
+import { addMonthsLabel, getPortfolio } from '../../data/portfolio';
+
+// This company's data only (the signed-in user's).
+const { currentMonth } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+
+// New rates apply from the next bill; issued bills keep the rate they used.
+const effectiveFrom = addMonthsLabel(currentMonth, 1);
+const inputClass =
+  'w-full px-4 py-2.5 rounded-xl border border-[#DCE0D7] focus:border-[#0D382B] focus:ring-2 focus:ring-[#0D382B]/10 outline-none text-sm text-[#17231E] bg-white tabular-nums';
+const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#5A6862] mb-1.5';
+---
+
+<div
+  id="edit-rates-modal"
+  class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-200"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="edit-rates-title"
+>
+  <div class="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-[#E7EAE4] overflow-hidden transform scale-95 transition-transform duration-200">
+    <div class="flex items-center justify-between p-6 border-b border-[#F0F2EE]">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-xl bg-[#0D382B] text-[#C6EE58] flex items-center justify-center">
+          <Droplets class="w-5 h-5" />
+        </div>
+        <div>
+          <h3 id="edit-rates-title" class="font-editorial text-2xl font-normal text-[#17231E]">Water & garbage rates</h3>
+          <p class="text-xs text-[#73827C]" data-field="property"></p>
+        </div>
+      </div>
+      <button type="button" data-close class="h-8 w-8 rounded-full bg-[#F4F5F1] text-[#73827C] hover:text-[#17231E] flex items-center justify-center transition-colors cursor-pointer" aria-label="Close">
+        <X class="w-4 h-4" />
+      </button>
+    </div>
+
+    <form id="edit-rates-form" class="p-6 space-y-4" novalidate>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label for="rate-water" class={labelClass}>Water per unit (KES)</label>
+          <input id="rate-water" type="number" min="0" step="1" inputmode="numeric" required class={inputClass} />
+          <p class="text-[11px] text-[#73827C] mt-1">Now <span data-field="water-now" class="tabular-nums"></span></p>
+        </div>
+        <div>
+          <label for="rate-garbage" class={labelClass}>Garbage / month (KES)</label>
+          <input id="rate-garbage" type="number" min="0" step="1" inputmode="numeric" required class={inputClass} />
+          <p class="text-[11px] text-[#73827C] mt-1">Now <span data-field="garbage-now" class="tabular-nums"></span></p>
+        </div>
+      </div>
+
+      <div>
+        <span class={labelClass}>Previously set</span>
+        <ul data-field="history" class="rounded-2xl border border-[#E7EAE4] divide-y divide-[#EEF0EB] text-xs tabular-nums"></ul>
+        <p data-field="history-empty" class="hidden text-xs text-[#73827C]">No bills issued at this property yet.</p>
+      </div>
+
+      <div class="rounded-2xl bg-[#F8F9F7] border border-[#E7EAE4] p-4 text-xs text-[#5A6862] leading-relaxed">
+        Applies to every unit in this property from the <strong class="text-[#17231E]">{effectiveFrom}</strong> bill.
+        Bills already issued keep the rate they were charged at.
+        <span data-field="example" class="block mt-1.5 text-[#17231E] tabular-nums"></span>
+      </div>
+
+      <p id="edit-rates-error" role="alert" class="hidden text-sm text-[#C04A26]"></p>
+
+      <div class="pt-4 flex items-center justify-end gap-3 border-t border-[#F0F2EE]">
+        <button type="button" data-close class="px-5 py-2.5 rounded-xl text-sm font-medium text-[#5A6862] hover:bg-[#F4F5F1] transition-colors cursor-pointer">Cancel</button>
+        <button type="submit" class="px-6 py-2.5 rounded-xl text-sm font-semibold bg-[#0D382B] text-white hover:bg-[#154637] transition-all shadow-md cursor-pointer">Save rates</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  const modal = document.getElementById('edit-rates-modal')!;
+  const form = document.getElementById('edit-rates-form') as HTMLFormElement;
+  const water = document.getElementById('rate-water') as HTMLInputElement;
+  const garbage = document.getElementById('rate-garbage') as HTMLInputElement;
+  const errorEl = document.getElementById('edit-rates-error')!;
+  const kes = (n: number) => `KES ${n.toLocaleString('en-KE')}`;
+  const setText = (field: string, text: string) => {
+    const el = modal.querySelector(`[data-field="${field}"]`);
+    if (el) el.textContent = text;
+  };
+  let propertyName = '';
+
+  type Period = { label: string; waterRate: number; garbageFee: number };
+
+  // Newest first; built with textContent so nothing is parsed as HTML.
+  function renderHistory(periods: Period[]) {
+    const list = modal.querySelector('[data-field="history"]')!;
+    list.replaceChildren();
+    modal.querySelector('[data-field="history-empty"]')!.classList.toggle('hidden', periods.length > 0);
+    list.classList.toggle('hidden', periods.length === 0);
+    [...periods].reverse().forEach((p, i) => {
+      const li = document.createElement('li');
+      li.className = 'flex items-center justify-between gap-3 px-3 py-2';
+      const when = document.createElement('span');
+      when.className = 'text-[#5A6862]';
+      when.textContent = i === 0 ? `${p.label} (current)` : p.label;
+      const rates = document.createElement('span');
+      rates.className = 'font-semibold text-[#0D382B]';
+      rates.textContent = `Water ${kes(p.waterRate)}/unit · Garbage ${kes(p.garbageFee)}`;
+      li.append(when, rates);
+      list.append(li);
+    });
+  }
+
+  function preview() {
+    const rate = Number(water.value);
+    setText('example', Number.isInteger(rate) && rate >= 0 ? `Example: 12 units of water = ${kes(12 * rate)}` : '');
+  }
+
+  let propertyId = '';
+  document.querySelectorAll<HTMLButtonElement>('.edit-rates-btn').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      const d = btn.dataset;
+      propertyId = d.id ?? '';
+      propertyName = d.name ?? '';
+      setText('property', propertyName);
+      setText('water-now', `${kes(Number(d.water))} per unit`);
+      setText('garbage-now', `${kes(Number(d.garbage))} a month`);
+      water.value = d.water ?? '';
+      garbage.value = d.garbage ?? '';
+      renderHistory(JSON.parse(d.history ?? '[]'));
+      errorEl.classList.add('hidden');
+      preview();
+      window.makaziUi?.showModal('edit-rates-modal');
+      setTimeout(() => water.focus(), 50);
+    }),
+  );
+  water.addEventListener('input', preview);
+  modal.querySelectorAll('[data-close]').forEach((el) =>
+    el.addEventListener('click', () => window.makaziUi?.hideModal('edit-rates-modal')),
+  );
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const values = [water.value, garbage.value].map(Number);
+    const bad = [water.value, garbage.value].some((v) => v === '') || values.some((v) => !Number.isInteger(v) || v < 0);
+    errorEl.textContent = bad ? 'Rates must be whole shillings, zero or more.' : '';
+    errorEl.classList.toggle('hidden', !bad);
+    if (bad || !propertyId) return;
+
+    const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving...';
+    }
+
+    try {
+      const res = await fetch('/api/update-rates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          propertyId,
+          waterRate: values[0],
+          garbageFee: values[1],
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Failed to update rates');
+
+      window.makaziUi?.hideModal('edit-rates-modal');
+      window.makaziUi?.showToast(
+        'Rates updated',
+        `${propertyName} water updated to ${kes(values[0])}/unit and garbage to ${kes(values[1])}.`,
+      );
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errorEl.textContent = msg;
+      errorEl.classList.remove('hidden');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save rates';
+      }
+    }
+  });
+</script>

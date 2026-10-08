@@ -1,0 +1,205 @@
+---
+// Printable statement of account for one tenancy: proof of payment a tenant
+// can show an employer. Former tenants' records are kept for
+// the company's recordRetentionMonths after move-out, then archived.
+// Only the signed-in user's company's tenancies can be found here.
+import '../../styles/global.css';
+import { getPortfolio, bedLabel, formatDate, formatKes, monthLabel, type TenancyView } from '../../data/portfolio';
+import { receiptDescription } from '../../lib/billing';
+
+// This company's data only (the signed-in user's).
+const { company, tenancies, asOf } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+
+const found = tenancies.find((t) => t.tenancy.id === Astro.params.id);
+if (!found) return new Response('Statement not found', { status: 404 });
+const view: TenancyView = found;
+const { tenancy, tenant, unit, property, bills } = view;
+const payments = bills.flatMap((bill) => bill.payments.map((payment) => ({ bill, payment })));
+const totalBilled = bills.reduce((acc, b) => acc + b.newCharges, 0);
+const totalPaid = payments.reduce((acc, p) => acc + p.payment.amount, 0);
+const archived = view.recordsKeptUntil !== null && view.recordsKeptUntil < asOf;
+const period = `${formatDate(tenancy.moveIn)} – ${tenancy.moveOut ? formatDate(tenancy.moveOut) : 'present'}`;
+const from = bills[0]?.month;
+const th = 'py-2 px-3 text-left font-semibold whitespace-nowrap';
+const td = 'py-2 px-3 whitespace-nowrap';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Nunito+Sans:opsz,wght@6..12,300..800&display=swap" rel="stylesheet" />
+    <meta name="robots" content="noindex" />
+    <title>Statement · {tenant.name} · {company.name}</title>
+    <style>
+      @media print {
+        .no-print { display: none !important; }
+        body { background: white !important; }
+        .sheet { box-shadow: none !important; border: none !important; margin: 0 !important; padding: 0 !important; }
+        @page { margin: 12mm; }
+        .overflow-x-auto { overflow: visible !important; }
+        table { font-size: 8.5pt; }
+        th, td { padding-left: 4px !important; padding-right: 4px !important; }
+      }
+    </style>
+  </head>
+  <body class="bg-[#F3F4F0] text-[#17231E] antialiased">
+    <div class="no-print max-w-4xl mx-auto px-4 pt-6 flex items-center justify-between gap-3">
+      <a href={tenancy.moveOut ? '/tenants?tab=former' : '/tenants'} class="text-xs font-semibold text-[#0D382B] hover:underline">← Back to tenants</a>
+      <button type="button" onclick="window.print()" class="px-5 py-2.5 rounded-full bg-[#0D382B] text-white text-xs font-semibold hover:bg-[#08221A] cursor-pointer">
+        Print or save as PDF
+      </button>
+    </div>
+
+    <main class="sheet max-w-4xl mx-auto my-6 bg-white rounded-3xl border border-[#E3E6DF] shadow-xs p-6 sm:p-10">
+      {archived ? (
+        <p class="text-sm text-[#5A6862]">
+          Records for this tenancy were due for archiving on {formatDate(view.recordsKeptUntil!)}
+          ({company.name} keeps former tenants' records for 6 months after move-out).
+        </p>
+      ) : (
+        <>
+          <header class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-[#E3E6DF]">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-widest text-[#69847A]">Statement of account</p>
+              <h1 class="font-editorial text-3xl sm:text-4xl text-[#0D382B] mt-1">{tenant.name}</h1>
+              <p class="text-sm text-[#5A6862] mt-1">
+                {unit.label} · {bedLabel(unit.bedrooms)} · {property.name}, {property.address}
+              </p>
+              <p class="text-sm text-[#5A6862]">Tenancy {period}{tenancy.moveOut ? ' (moved out)' : ''}</p>
+            </div>
+            <div class="sm:text-right text-sm">
+              <p class="font-semibold text-[#0D382B]">{company.name}</p>
+              <p class="text-[#5A6862]">KRA PIN {company.kraPin}</p>
+              <p class="text-[#5A6862]">M-Pesa Paybill {company.mpesaPaybill}</p>
+              <p class="text-[#5A6862] mt-2">Issued {formatDate(asOf)}</p>
+            </div>
+          </header>
+
+          <section class="grid grid-cols-2 sm:grid-cols-4 gap-4 py-6 border-b border-[#E3E6DF] tabular-nums">
+            <div>
+              <p class="text-[10px] font-semibold uppercase tracking-wider text-[#69847A]">Period</p>
+              <p class="text-sm font-semibold text-[#0D382B] mt-0.5">{from ? `${monthLabel(from)} – ${monthLabel(bills[bills.length - 1].month)}` : '—'}</p>
+            </div>
+            <div>
+              <p class="text-[10px] font-semibold uppercase tracking-wider text-[#69847A]">Total billed</p>
+              <p class="text-sm font-semibold text-[#0D382B] mt-0.5">{formatKes(totalBilled)}</p>
+            </div>
+            <div>
+              <p class="text-[10px] font-semibold uppercase tracking-wider text-[#69847A]">Total paid</p>
+              <p class="text-sm font-semibold text-[#0D382B] mt-0.5">{formatKes(totalPaid)}</p>
+            </div>
+            <div>
+              <p class="text-[10px] font-semibold uppercase tracking-wider text-[#69847A]">{view.balance < 0 ? 'Credit' : 'Balance'}</p>
+              <p class={`text-sm font-semibold mt-0.5 ${view.balance > 0 ? 'text-[#C04A26]' : 'text-[#2E7D32]'}`}>{formatKes(Math.abs(view.balance))}</p>
+            </div>
+          </section>
+
+          {tenancy.openingBalance !== 0 && from && (
+            <p class="text-xs text-[#69847A] pt-4">
+              Opening balance brought forward into {monthLabel(from)}: {formatKes(tenancy.openingBalance)}.
+            </p>
+          )}
+
+          <h2 class="font-editorial text-xl text-[#0D382B] mt-6 mb-2">Monthly bills</h2>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs tabular-nums">
+              <thead class="text-[#69847A] uppercase text-[10px] tracking-wider border-b border-[#E3E6DF]">
+                <tr>
+                  <th class={th}>Month</th>
+                  <th class={`${th} text-right`}>Rent</th>
+                  <th class={`${th} text-right`}>Water</th>
+                  <th class={`${th} text-right`}>Garbage</th>
+                  <th class={`${th} text-right`}>Deposit</th>
+                  <th class={`${th} text-right`}>Bal. b/f</th>
+                  <th class={`${th} text-right`}>Total due</th>
+                  <th class={`${th} text-right`}>Paid</th>
+                  <th class={`${th} text-right`}>Outstanding</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-[#EEF0EB]">
+                {bills.map((b) => (
+                  <tr>
+                    <td class={td}>
+                      {monthLabel(b.month)}
+                      {b.kind !== 'monthly' && <span class="ml-1 text-[10px] text-[#69847A]">({b.kind === 'move-in' ? 'move-in' : 'final'})</span>}
+                    </td>
+                    <td class={`${td} text-right`}>
+                      {b.rent ? formatKes(b.rent) : '—'}
+                      {b.rentDays && <span class="block text-[10px] text-[#69847A]">{b.rentDays.days} of {b.rentDays.of} days</span>}
+                    </td>
+                    <td class={`${td} text-right`}>
+                      {b.water ? formatKes(b.water.amount) : '—'}
+                      {b.water && <span class="block text-[10px] text-[#69847A]">{b.water.units} units</span>}
+                    </td>
+                    <td class={`${td} text-right`}>{b.garbage ? formatKes(b.garbage) : '—'}</td>
+                    <td class={`${td} text-right`}>
+                      {b.deposit + b.depositApplied ? formatKes(b.deposit + b.depositApplied) : '—'}
+                      {b.depositRefund > 0 && <span class="block text-[10px] text-[#69847A]">{formatKes(b.depositRefund)} refunded</span>}
+                    </td>
+                    <td class={`${td} text-right`}>{b.balanceBf ? formatKes(b.balanceBf) : '—'}</td>
+                    <td class={`${td} text-right font-semibold`}>{formatKes(b.totalDue)}</td>
+                    <td class={`${td} text-right`}>{formatKes(b.amountPaid)}</td>
+                    <td class={`${td} text-right font-semibold`}>{formatKes(b.outstanding)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <h2 class="font-editorial text-xl text-[#0D382B] mt-8 mb-2">Payments received</h2>
+          {payments.length === 0 ? (
+            <p class="text-xs text-[#69847A]">No payments in this period.</p>
+          ) : (
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs tabular-nums">
+                <thead class="text-[#69847A] uppercase text-[10px] tracking-wider border-b border-[#E3E6DF]">
+                  <tr>
+                    <th class={th}>Date</th>
+                    <th class={th}>Receipt</th>
+                    <th class={th}>Method · Reference</th>
+                    <th class={th}>For</th>
+                    <th class={`${th} text-right`}>Amount</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-[#EEF0EB]">
+                  {payments.map(({ bill, payment }) => (
+                    <tr>
+                      <td class={td}>{formatDate(payment.date)}</td>
+                      <td class={`${td} font-mono`}>{payment.receiptNumber}</td>
+                      <td class={td}>{payment.method} · <span class="font-mono">{payment.reference}</span></td>
+                      <td class={td}>{receiptDescription(bill, payment)}</td>
+                      <td class={`${td} text-right font-semibold`}>{formatKes(payment.amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr class="border-t-2 border-[#0D382B]">
+                    <td class={`${td} font-semibold`} colspan="4">Total paid</td>
+                    <td class={`${td} text-right font-bold`}>{formatKes(totalPaid)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+
+          {tenancy.depositRefund && (
+            <p class="text-xs text-[#5A6862] mt-6">
+              Deposit balance refunded {formatDate(tenancy.depositRefund.date)} by {tenancy.depositRefund.method}, reference {tenancy.depositRefund.reference}.
+            </p>
+          )}
+
+          <p class="text-[11px] text-[#69847A] mt-8 pt-4 border-t border-[#E3E6DF]">
+            Generated from {company.name} records on {formatDate(asOf)}. Figures are in Kenya shillings.
+            {view.recordsKeptUntil && ` Records for this tenancy are kept until ${formatDate(view.recordsKeptUntil)}.`}
+          </p>
+        </>
+      )}
+    </main>
+  </body>
+</html>

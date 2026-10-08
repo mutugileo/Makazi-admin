@@ -1,0 +1,2142 @@
+{
+  "asOf": "2026-10-06",
+  "companies": [
+    {
+      "id": "harborridge",
+      "slug": "harborridge",
+      "name": "HarborRidge Limited",
+      "kraPin": "P051234567X",
+      "mpesaPaybill": "522533",
+      "bankName": "NCBA Bank, Westlands",
+      "bankAccount": "1004558231",
+      "settings": {
+        "ledgerStartMonth": "2026-05",
+        "dueDay": 5,
+        "graceDay": 20,
+        "depositSchedule": {
+          "1": 25000,
+          "2": 30000
+        },
+        "recordRetentionMonths": 6
+      },
+      "sequences": {
+        "receipt": 379,
+        "repairTicket": 1047
+      },
+      "subscription": {
+        "plan": "growth",
+        "status": "active",
+        "unitLimit": 100,
+        "staffLimit": 10,
+        "trialEndsAt": null
+      }
+    },
+    {
+      "id": "savanna",
+      "slug": "savanna",
+      "name": "Savanna Homes Ltd",
+      "kraPin": "P052765431Q",
+      "mpesaPaybill": "400200",
+      "bankName": "Equity Bank, Nakuru",
+      "bankAccount": "0170299934455",
+      "settings": {
+        "ledgerStartMonth": "2026-07",
+        "dueDay": 1,
+        "graceDay": 10,
+        "depositSchedule": {
+          "1": 15000,
+          "2": 20000
+        },
+        "recordRetentionMonths": 12
+      },
+      "sequences": {
+        "receipt": 115,
+        "repairTicket": 2002
+      },
+      "subscription": {
+        "plan": "starter",
+        "status": "trial",
+        "unitLimit": 20,
+        "staffLimit": 3,
+        "trialEndsAt": "2026-10-31"
+      }
+    },
+    {
+      "id": "acacia",
+      "slug": "acacia",
+      "name": "Acacia Rentals",
+      "kraPin": "P053318822K",
+      "mpesaPaybill": "247900",
+      "bankName": "KCB Bank, Thika",
+      "bankAccount": "1290033451",
+      "settings": {
+        "ledgerStartMonth": "2026-10",
+        "dueDay": 5,
+        "graceDay": 15,
+        "depositSchedule": {
+          "1": 10000,
+          "2": 15000
+        },
+        "recordRetentionMonths": 6
+      },
+      "sequences": {
+        "receipt": 0,
+        "repairTicket": 0
+      },
+      "subscription": {
+        "plan": "starter",
+        "status": "trial",
+        "unitLimit": 20,
+        "staffLimit": 3,
+        "trialEndsAt": "2026-11-06"
+      }
+    }
+  ],
+  "properties": [
+    {
+      "id": "kilimani-heights",
+      "companyId": "harborridge",
+      "managerId": "s-njoki",
+      "name": "Kilimani Heights",
+      "type": "apartments",
+      "address": "Argwings Kodhek Rd, Kilimani",
+      "accountPrefix": "KH",
+      "waterRate": 150,
+      "garbageFee": 250,
+      "rateHistory": [
+        {
+          "from": "2026-05",
+          "waterRate": 150,
+          "garbageFee": 250
+        }
+      ]
+    },
+    {
+      "id": "riverside-court",
+      "companyId": "harborridge",
+      "managerId": "s-njoki",
+      "name": "Riverside Court",
+      "type": "apartments",
+      "address": "Riverside Dr, Westlands",
+      "accountPrefix": "RC",
+      "waterRate": 150,
+      "garbageFee": 250,
+      "rateHistory": [
+        {
+          "from": "2026-05",
+          "waterRate": 150,
+          "garbageFee": 250
+        }
+      ]
+    },
+    {
+      "id": "mvuli-gardens",
+      "companyId": "harborridge",
+      "managerId": "s-njoki",
+      "name": "Mvuli Gardens",
+      "type": "houses",
+      "address": "Mvuli Rd, Westlands",
+      "accountPrefix": "MG",
+      "waterRate": 150,
+      "garbageFee": 250,
+      "rateHistory": [
+        {
+          "from": "2026-05",
+          "waterRate": 150,
+          "garbageFee": 250
+        }
+      ]
+    },
+    {
+      "id": "ngong-road",
+      "companyId": "harborridge",
+      "managerId": "s-njoki",
+      "name": "Ngong Road Residences",
+      "type": "apartments",
+      "address": "Ngong Rd, Adams Arcade",
+      "accountPrefix": "NR",
+      "waterRate": 150,
+      "garbageFee": 250,
+      "rateHistory": [
+        {
+          "from": "2026-05",
+          "waterRate": 130,
+          "garbageFee": 250
+        },
+        {
+          "from": "2026-09",
+          "waterRate": 150,
+          "garbageFee": 250
+        }
+      ]
+    },
+    {
+      "id": "milimani-court",
+      "companyId": "savanna",
+      "managerId": "s-wanjiru",
+      "name": "Milimani Court",
+      "type": "apartments",
+      "address": "Milimani, Nakuru",
+      "accountPrefix": "MC",
+      "waterRate": 120,
+      "garbageFee": 200,
+      "rateHistory": [
+        {
+          "from": "2026-07",
+          "waterRate": 120,
+          "garbageFee": 200
+        }
+      ]
+    },
+    {
+      "id": "lanet-cottages",
+      "companyId": "savanna",
+      "managerId": "s-wanjiru",
+      "name": "Lanet Cottages",
+      "type": "houses",
+      "address": "Lanet, Nakuru",
+      "accountPrefix": "LC",
+      "waterRate": 120,
+      "garbageFee": 300,
+      "rateHistory": [
+        {
+          "from": "2026-07",
+          "waterRate": 120,
+          "garbageFee": 300
+        }
+      ]
+    }
+  ],
+  "units": [
+    {
+      "id": "kh-a03",
+      "propertyId": "kilimani-heights",
+      "label": "A03",
+      "bedrooms": 1
+    },
+    {
+      "id": "kh-a12",
+      "propertyId": "kilimani-heights",
+      "label": "A12",
+      "bedrooms": 1
+    },
+    {
+      "id": "kh-b04",
+      "propertyId": "kilimani-heights",
+      "label": "B04",
+      "bedrooms": 2
+    },
+    {
+      "id": "kh-c09",
+      "propertyId": "kilimani-heights",
+      "label": "C09",
+      "bedrooms": 2
+    },
+    {
+      "id": "kh-d02",
+      "propertyId": "kilimani-heights",
+      "label": "D02",
+      "bedrooms": 1
+    },
+    {
+      "id": "rc-1c",
+      "propertyId": "riverside-court",
+      "label": "1C",
+      "bedrooms": 1
+    },
+    {
+      "id": "rc-2a",
+      "propertyId": "riverside-court",
+      "label": "2A",
+      "bedrooms": 2
+    },
+    {
+      "id": "rc-3b",
+      "propertyId": "riverside-court",
+      "label": "3B",
+      "bedrooms": 2
+    },
+    {
+      "id": "rc-5a",
+      "propertyId": "riverside-court",
+      "label": "5A",
+      "bedrooms": 2
+    },
+    {
+      "id": "mg-2",
+      "propertyId": "mvuli-gardens",
+      "label": "MG-2",
+      "bedrooms": 2
+    },
+    {
+      "id": "mg-4",
+      "propertyId": "mvuli-gardens",
+      "label": "MG-4",
+      "bedrooms": 2
+    },
+    {
+      "id": "mg-6",
+      "propertyId": "mvuli-gardens",
+      "label": "MG-6",
+      "bedrooms": 2
+    },
+    {
+      "id": "nr-114",
+      "propertyId": "ngong-road",
+      "label": "114",
+      "bedrooms": 1
+    },
+    {
+      "id": "nr-207",
+      "propertyId": "ngong-road",
+      "label": "207",
+      "bedrooms": 1
+    },
+    {
+      "id": "nr-312",
+      "propertyId": "ngong-road",
+      "label": "312",
+      "bedrooms": 1
+    },
+    {
+      "id": "nr-405",
+      "propertyId": "ngong-road",
+      "label": "405",
+      "bedrooms": 1
+    },
+    {
+      "id": "mc-1",
+      "propertyId": "milimani-court",
+      "label": "1",
+      "bedrooms": 1
+    },
+    {
+      "id": "mc-2",
+      "propertyId": "milimani-court",
+      "label": "2",
+      "bedrooms": 1
+    },
+    {
+      "id": "mc-3",
+      "propertyId": "milimani-court",
+      "label": "3",
+      "bedrooms": 2
+    },
+    {
+      "id": "mc-4",
+      "propertyId": "milimani-court",
+      "label": "4",
+      "bedrooms": 2
+    },
+    {
+      "id": "lc-a",
+      "propertyId": "lanet-cottages",
+      "label": "A",
+      "bedrooms": 2
+    },
+    {
+      "id": "lc-b",
+      "propertyId": "lanet-cottages",
+      "label": "B",
+      "bedrooms": 2
+    }
+  ],
+  "tenants": [
+    {
+      "id": "t-wanjiku",
+      "companyId": "harborridge",
+      "name": "Wanjiku Kamau",
+      "phone": "0712 448 203",
+      "email": "wanjiku.kamau@example.com"
+    },
+    {
+      "id": "t-brian",
+      "companyId": "harborridge",
+      "name": "Brian Otieno",
+      "phone": "0722 913 054",
+      "email": "brian.otieno@example.com"
+    },
+    {
+      "id": "t-samuel",
+      "companyId": "harborridge",
+      "name": "Samuel Mutua",
+      "phone": "0727 640 205",
+      "email": "samuel.mutua@example.com"
+    },
+    {
+      "id": "t-peter",
+      "companyId": "harborridge",
+      "name": "Peter Odhiambo",
+      "phone": "0798 266 015",
+      "email": "peter.odhiambo@example.com"
+    },
+    {
+      "id": "t-esther",
+      "companyId": "harborridge",
+      "name": "Esther Mutheu",
+      "phone": "0711 302 774",
+      "email": "esther.mutheu@example.com"
+    },
+    {
+      "id": "t-ian",
+      "companyId": "harborridge",
+      "name": "Ian Ndegwa",
+      "phone": "0701 554 210",
+      "email": "ian.ndegwa@example.com"
+    },
+    {
+      "id": "t-joseph",
+      "companyId": "harborridge",
+      "name": "Joseph Kariuki",
+      "phone": "0720 671 093",
+      "email": "joseph.kariuki@example.com"
+    },
+    {
+      "id": "t-amina",
+      "companyId": "harborridge",
+      "name": "Amina Hassan",
+      "phone": "0757 118 640",
+      "email": "amina.hassan@example.com"
+    },
+    {
+      "id": "t-david",
+      "companyId": "harborridge",
+      "name": "David Mwangi",
+      "phone": "0733 605 118",
+      "email": "david.mwangi@example.com"
+    },
+    {
+      "id": "t-grace",
+      "companyId": "harborridge",
+      "name": "Grace Njeri",
+      "phone": "0710 225 981",
+      "email": "grace.njeri@example.com"
+    },
+    {
+      "id": "t-mercy",
+      "companyId": "harborridge",
+      "name": "Mercy Chebet",
+      "phone": "0729 840 377",
+      "email": "mercy.chebet@example.com"
+    },
+    {
+      "id": "t-kevin",
+      "companyId": "harborridge",
+      "name": "Kevin Kiprop",
+      "phone": "0790 118 462",
+      "email": "kevin.kiprop@example.com"
+    },
+    {
+      "id": "t-faith",
+      "companyId": "harborridge",
+      "name": "Faith Achieng",
+      "phone": "0708 352 917",
+      "email": "faith.achieng@example.com"
+    },
+    {
+      "id": "t-lucy",
+      "companyId": "harborridge",
+      "name": "Lucy Wambui",
+      "phone": "0745 902 336",
+      "email": "lucy.wambui@example.com"
+    },
+    {
+      "id": "t-joy",
+      "companyId": "harborridge",
+      "name": "Joy Wairimu",
+      "phone": "0768 430 552",
+      "email": "joy.wairimu@example.com"
+    },
+    {
+      "id": "t-barasa",
+      "companyId": "savanna",
+      "name": "Otieno Barasa",
+      "phone": "0714 220 871",
+      "email": "otieno.barasa@example.com"
+    },
+    {
+      "id": "t-naliaka",
+      "companyId": "savanna",
+      "name": "Naliaka Wekesa",
+      "phone": "0723 555 019",
+      "email": "naliaka.wekesa@example.com"
+    },
+    {
+      "id": "t-kipchumba",
+      "companyId": "savanna",
+      "name": "Kipchumba Rotich",
+      "phone": "0790 664 302",
+      "email": "kipchumba.rotich@example.com"
+    },
+    {
+      "id": "t-akinyi",
+      "companyId": "savanna",
+      "name": "Akinyi Odera",
+      "phone": "0741 908 116",
+      "email": "akinyi.odera@example.com"
+    },
+    {
+      "id": "t-muthoni",
+      "companyId": "savanna",
+      "name": "Muthoni Gitau",
+      "phone": "0702 373 845",
+      "email": "muthoni.gitau@example.com"
+    }
+  ],
+  "tenancies": [
+    {
+      "openingBalance": 0,
+      "openingReading": null,
+      "moveOut": null,
+      "renewal": null,
+      "moveOutNote": null,
+      "depositRefund": null,
+      "id": "L-2207",
+      "tenantId": "t-wanjiku",
+      "unitId": "kh-a12",
+      "rent": 25000,
+      "deposit": 25000,
+      "moveIn": "2026-04-01",
+      "leaseStart": "2026-04-01",
+      "leaseEnd": "2027-03-31"
+    },
+    {
+      "openingBalance": 0,
+      "openingReading": null,
+      "moveOut": null,
+      "renewal": null,
+      "moveOutNote": null,
+      "depositRefund": null,
+      "id": "L-2192",
+      "tenantId": "t-brian",
+      "unitId": "kh-b04",
+      "rent": 30000,
+      "deposit": 30000,
+      "moveIn": "2026-01-01",
+      "leaseStart": "2026-01-01",
+      "leaseEnd": "2026-12-31"
+    },
+    {
+      "openingBalance": 0,
+      "openingReading": null,
+      "moveOut": null,
+      "renewal": null,
+      "moveOutNote": null,
+      "depositRefund": null,
+      "id": "L-2121",
+      "tenantId": "t-samuel",
+      "unitId": "kh-c09",
+      "rent": 30000,
+      "deposit": 30000,
+      "moveIn": "2025-02-01",
+      "leaseStart": "2026-02-01",
+      "leaseEnd": "2027-01-31"
+    },
+    {
+      "openingBalance": 0,
+      "openingReading": null,
+      "moveOut": null,
+      "renewal": null,
+      "moveOutNote": null,
+      "depositRefund": null,
+      "id": "L-2138",
+      "tenantId": "t-peter",
+      "unitId": "kh-a03",
+      "rent": 25000,
+      "deposit": 25000,
+      "moveIn": "2025-06-01",
+      "leaseStart": "2025-06-01",
+      "leaseEnd": "2027-05-31"
+    },
+    {
+      "openingBalance": 4000,
+      "openingReading": null,
+      "moveOut": "2026-07-31",
+      "renewal": null,
+      "moveOutNote": "Left owing a balance after the deposit was applied. Promised to clear by M-Pesa.",
+      "depositRefund": null,
+      "id": "L-2044",
+      "tenantId": "t-esther",
+      "unitId": "kh-d02",
+      "rent": 24000,
+      "deposit": 25000,
+      "moveIn": "2024-08-01",
+      "leaseStart": "2025-08-01",
+      "leaseEnd": "2026-07-31"
+    },
+    {
+      "openingBalance": 0,
+      "openingReading": null,
+      "moveOut": null,
+      "renewal": null,
+      "moveOutNote": null,
+      "depositRefund": null,
+      "id": "L-2150",
+      "tenantId": "t-ian",
+      "unitId": "rc-1c",
+      "rent": 24000,
+      "deposit": 25000,
+      "moveIn": "2025-09-01",
+      "leaseStart": "2025-09-01",
+      "leaseEnd": "2027-08-31"
+    },
+    {
+      "openingBalance": 0,
+      "openingReading": null,
+      "moveOut": null,
+      "renewal": null,
+      "moveOutNote": null,
+      "depositRefund": null,
+      "id": "L-2179",
+      "tenantId": "t-amina",
+      "unitId": "rc-3b",
+      "rent": 30000,
+      "deposit": 30000,
+      "moveIn": "2025-12-01",
+      "leaseStart": "2025-12-01",
+      "leaseEnd": "2026-11-30"
+    },
+    {
+      "openingBalance": 0,
+      "openingReading": null,
+      "moveOut": null,
+      "renewal": {
+        "leaseId": "L-2231",
+        "rent": 31500,
+        "start": "2026-11-01",
+        "end": "2027-10-31",
+        "status": "Awaiting signature"
+      },
+      "moveOutNote": null,
+      "depositRefund": null,
+      "id": "L-2160",
+      "tenantId": "t-david",
+      "unitId": "rc-5a",
+      "rent": 30000,
+      "deposit": 30000,
+      "moveIn": "2025-11-01",
+      "leaseStart": "2025-11-01",
+      "leaseEnd": "2026-10-31"
+    },
+    {
+      "openingBalance": 0,
+      "openingReading": null,
+      "moveOut": "2026-08-31",
+      "renewal": null,
+      "moveOutNote": "Unit handed back in good condition. Deposit balance refunded by M-Pesa.",
+      "depositRefund": {
+        "date": "2026-09-08",
+        "method": "M-Pesa",
+        "reference": "SH7Q2KD81M"
+      },
+      "id": "L-2071",
+      "tenantId": "t-joseph",
+      "unitId": "rc-2a",
+      "rent": 30000,
+      "deposit": 30000,
+      "moveIn": "2025-03-01",
+      "leaseStart": "2025-03-01",
+      "leaseEnd": "2026-08-31"
+    },
+    {
+      "openingBalance": 0,
+      "openingReading": null,
+      "moveOut": null,
+      "renewal": null,
+      "moveOutNote": null,
+      "depositRefund": null,
+      "id": "L-2154",
+      "tenantId": "t-grace",
+      "unitId": "mg-2",
+      "rent": 32000,
+      "deposit": 30000,
+      "moveIn": "2025-07-01",
+      "leaseStart": "2025-07-01",
+      "leaseEnd": "2027-06-30"
+    },
+    {
+      "openingBalance": 0,
+      "openingReading": null,
+      "moveOut": null,
+      "renewal": null,
+      "moveOutNote": null,
+      "depositRefund": null,
+      "id": "L-2198",
+      "tenantId": "t-mercy",
+      "unitId": "mg-6",
+      "rent": 32000,
+      "deposit": 30000,
+      "moveIn": "2026-02-01",
+      "leaseStart": "2026-02-01",
+      "leaseEnd": "2027-01-31"
+    },
+    {
+      "openingBalance": 0,
+      "openingReading": null,
+      "moveOut": null,
+      "renewal": null,
+      "moveOutNote": null,
+      "depositRefund": null,
+      "id": "L-2185",
+      "tenantId": "t-kevin",
+      "unitId": "nr-114",
+      "rent": 20000,
+      "deposit": 25000,
+      "moveIn": "2025-11-01",
+      "leaseStart": "2025-11-01",
+      "leaseEnd": "2026-10-31"
+    },
+    {
+      "openingBalance": 0,
+      "openingReading": null,
+      "moveOut": null,
+      "renewal": null,
+      "moveOutNote": null,
+      "depositRefund": null,
+      "id": "L-2166",
+      "tenantId": "t-faith",
+      "unitId": "nr-207",
+      "rent": 20000,
+      "deposit": 25000,
+      "moveIn": "2025-10-01",
+      "leaseStart": "2025-10-01",
+      "leaseEnd": "2026-12-31"
+    },
+    {
+      "openingBalance": 0,
+      "openingReading": null,
+      "moveOut": null,
+      "renewal": null,
+      "moveOutNote": null,
+      "depositRefund": null,
+      "id": "L-2172",
+      "tenantId": "t-lucy",
+      "unitId": "nr-312",
+      "rent": 20000,
+      "deposit": 25000,
+      "moveIn": "2025-11-01",
+      "leaseStart": "2025-11-01",
+      "leaseEnd": "2026-12-31"
+    },
+    {
+      "openingBalance": 0,
+      "openingReading": 665,
+      "moveOut": null,
+      "renewal": null,
+      "moveOutNote": null,
+      "depositRefund": null,
+      "id": "L-2240",
+      "tenantId": "t-joy",
+      "unitId": "nr-405",
+      "rent": 20000,
+      "deposit": 25000,
+      "moveIn": "2026-09-16",
+      "leaseStart": "2026-09-16",
+      "leaseEnd": "2027-09-15"
+    },
+    {
+      "openingBalance": 0,
+      "openingReading": null,
+      "moveOut": null,
+      "renewal": null,
+      "moveOutNote": null,
+      "depositRefund": null,
+      "id": "SV-101",
+      "tenantId": "t-barasa",
+      "unitId": "mc-1",
+      "rent": 12000,
+      "deposit": 15000,
+      "moveIn": "2025-05-01",
+      "leaseStart": "2026-05-01",
+      "leaseEnd": "2027-04-30"
+    },
+    {
+      "openingBalance": 0,
+      "openingReading": null,
+      "moveOut": null,
+      "renewal": null,
+      "moveOutNote": null,
+      "depositRefund": null,
+      "id": "SV-102",
+      "tenantId": "t-naliaka",
+      "unitId": "mc-3",
+      "rent": 18000,
+      "deposit": 20000,
+      "moveIn": "2026-01-01",
+      "leaseStart": "2026-01-01",
+      "leaseEnd": "2026-12-31"
+    },
+    {
+      "openingBalance": 0,
+      "openingReading": null,
+      "moveOut": null,
+      "renewal": null,
+      "moveOutNote": null,
+      "depositRefund": null,
+      "id": "SV-103",
+      "tenantId": "t-kipchumba",
+      "unitId": "lc-a",
+      "rent": 22000,
+      "deposit": 20000,
+      "moveIn": "2025-09-01",
+      "leaseStart": "2025-09-01",
+      "leaseEnd": "2026-11-30"
+    },
+    {
+      "openingBalance": 0,
+      "openingReading": 271,
+      "moveOut": null,
+      "renewal": null,
+      "moveOutNote": null,
+      "depositRefund": null,
+      "id": "SV-104",
+      "tenantId": "t-akinyi",
+      "unitId": "mc-2",
+      "rent": 12000,
+      "deposit": 15000,
+      "moveIn": "2026-08-12",
+      "leaseStart": "2026-08-12",
+      "leaseEnd": "2027-08-11"
+    },
+    {
+      "openingBalance": 0,
+      "openingReading": null,
+      "moveOut": "2026-08-31",
+      "renewal": null,
+      "moveOutNote": "Moved to Nairobi for work. Deposit balance refunded.",
+      "depositRefund": {
+        "date": "2026-09-05",
+        "method": "M-Pesa",
+        "reference": "SH9KT2ZQ4D"
+      },
+      "id": "SV-105",
+      "tenantId": "t-muthoni",
+      "unitId": "lc-b",
+      "rent": 22000,
+      "deposit": 20000,
+      "moveIn": "2025-03-01",
+      "leaseStart": "2025-03-01",
+      "leaseEnd": "2026-08-31"
+    }
+  ],
+  "meterReadings": {
+    "kh-a03": {
+      "2026-04": 831,
+      "2026-05": 839,
+      "2026-06": 853,
+      "2026-07": 861,
+      "2026-08": 877,
+      "2026-09": 896,
+      "2026-10": 915
+    },
+    "kh-a12": {
+      "2026-04": 616,
+      "2026-05": 629,
+      "2026-06": 637,
+      "2026-07": 647,
+      "2026-08": 662,
+      "2026-09": 680,
+      "2026-10": 690
+    },
+    "kh-b04": {
+      "2026-04": 929,
+      "2026-05": 948,
+      "2026-06": 956,
+      "2026-07": 966,
+      "2026-08": 974,
+      "2026-09": 989,
+      "2026-10": 1001
+    },
+    "kh-c09": {
+      "2026-04": 874,
+      "2026-05": 885,
+      "2026-06": 897,
+      "2026-07": 915,
+      "2026-08": 932,
+      "2026-09": 939,
+      "2026-10": 957
+    },
+    "kh-d02": {
+      "2026-04": 815,
+      "2026-05": 832,
+      "2026-06": 846,
+      "2026-07": 860,
+      "2026-08": 872,
+      "2026-09": 872,
+      "2026-10": 872
+    },
+    "rc-1c": {
+      "2026-04": 464,
+      "2026-05": 472,
+      "2026-06": 482,
+      "2026-07": 492,
+      "2026-08": 504,
+      "2026-09": 523,
+      "2026-10": 537
+    },
+    "rc-2a": {
+      "2026-04": 270,
+      "2026-05": 289,
+      "2026-06": 300,
+      "2026-07": 308,
+      "2026-08": 317,
+      "2026-09": 327,
+      "2026-10": 327
+    },
+    "rc-3b": {
+      "2026-04": 775,
+      "2026-05": 791,
+      "2026-06": 799,
+      "2026-07": 808,
+      "2026-08": 819,
+      "2026-09": 828,
+      "2026-10": 840
+    },
+    "rc-5a": {
+      "2026-04": 276,
+      "2026-05": 287,
+      "2026-06": 305,
+      "2026-07": 313,
+      "2026-08": 324,
+      "2026-09": 332,
+      "2026-10": 347
+    },
+    "mg-2": {
+      "2026-04": 556,
+      "2026-05": 585,
+      "2026-06": 612,
+      "2026-07": 637,
+      "2026-08": 654,
+      "2026-09": 680,
+      "2026-10": 702
+    },
+    "mg-4": {
+      "2026-04": 928,
+      "2026-05": 928,
+      "2026-06": 928,
+      "2026-07": 928,
+      "2026-08": 928,
+      "2026-09": 928,
+      "2026-10": 928
+    },
+    "mg-6": {
+      "2026-04": 140,
+      "2026-05": 169,
+      "2026-06": 189,
+      "2026-07": 211,
+      "2026-08": 232,
+      "2026-09": 260,
+      "2026-10": 286
+    },
+    "nr-114": {
+      "2026-04": 649,
+      "2026-05": 660,
+      "2026-06": 679,
+      "2026-07": 696,
+      "2026-08": 708,
+      "2026-09": 719,
+      "2026-10": 728
+    },
+    "nr-207": {
+      "2026-04": 357,
+      "2026-05": 367,
+      "2026-06": 380,
+      "2026-07": 390,
+      "2026-08": 408,
+      "2026-09": 420,
+      "2026-10": 437
+    },
+    "nr-312": {
+      "2026-04": 608,
+      "2026-05": 622,
+      "2026-06": 631,
+      "2026-07": 642,
+      "2026-08": 658,
+      "2026-09": 668,
+      "2026-10": 676
+    },
+    "nr-405": {
+      "2026-04": 665,
+      "2026-05": 665,
+      "2026-06": 665,
+      "2026-07": 665,
+      "2026-08": 665,
+      "2026-09": 665,
+      "2026-10": 681
+    },
+    "mc-1": {
+      "2026-06": 948,
+      "2026-07": 960,
+      "2026-08": 967,
+      "2026-09": 981,
+      "2026-10": 991
+    },
+    "mc-2": {
+      "2026-06": 271,
+      "2026-07": 271,
+      "2026-08": 271,
+      "2026-09": 288,
+      "2026-10": 295
+    },
+    "mc-3": {
+      "2026-06": 228,
+      "2026-07": 237,
+      "2026-08": 247,
+      "2026-09": 266,
+      "2026-10": 279
+    },
+    "mc-4": {
+      "2026-06": 323,
+      "2026-07": 323,
+      "2026-08": 323,
+      "2026-09": 323,
+      "2026-10": 323
+    },
+    "lc-a": {
+      "2026-06": 916,
+      "2026-07": 936,
+      "2026-08": 965,
+      "2026-09": 987,
+      "2026-10": 1013
+    },
+    "lc-b": {
+      "2026-06": 528,
+      "2026-07": 551,
+      "2026-08": 567,
+      "2026-09": 592,
+      "2026-10": 592
+    }
+  },
+  "payments": [
+    {
+      "receiptNumber": "RCT-2605-0301",
+      "tenancyId": "L-2071",
+      "amount": 33100,
+      "date": "2026-05-01",
+      "time": "09:44",
+      "method": "M-Pesa",
+      "reference": "SX46QZG313"
+    },
+    {
+      "receiptNumber": "RCT-2605-0302",
+      "tenancyId": "L-2207",
+      "amount": 27200,
+      "date": "2026-05-01",
+      "time": "10:25",
+      "method": "M-Pesa",
+      "reference": "SBMRN5FU8D"
+    },
+    {
+      "receiptNumber": "RCT-2605-0303",
+      "tenancyId": "L-2179",
+      "amount": 32650,
+      "date": "2026-05-01",
+      "time": "14:15",
+      "method": "M-Pesa",
+      "reference": "SASD78TTRT"
+    },
+    {
+      "receiptNumber": "RCT-2605-0304",
+      "tenancyId": "L-2172",
+      "amount": 22070,
+      "date": "2026-05-02",
+      "time": "09:03",
+      "method": "M-Pesa",
+      "reference": "SJX301KG53"
+    },
+    {
+      "receiptNumber": "RCT-2605-0305",
+      "tenancyId": "L-2150",
+      "amount": 25450,
+      "date": "2026-05-02",
+      "time": "11:57",
+      "method": "M-Pesa",
+      "reference": "SVF0QYD8PL"
+    },
+    {
+      "receiptNumber": "RCT-2605-0306",
+      "tenancyId": "L-2160",
+      "amount": 31900,
+      "date": "2026-05-02",
+      "time": "16:05",
+      "method": "M-Pesa",
+      "reference": "SQWESR3DFP"
+    },
+    {
+      "receiptNumber": "RCT-2605-0307",
+      "tenancyId": "L-2121",
+      "amount": 31900,
+      "date": "2026-05-02",
+      "time": "17:10",
+      "method": "M-Pesa",
+      "reference": "SCVUECS921"
+    },
+    {
+      "receiptNumber": "RCT-2605-0308",
+      "tenancyId": "L-2138",
+      "amount": 26450,
+      "date": "2026-05-03",
+      "time": "09:28",
+      "method": "M-Pesa",
+      "reference": "SDCAQVYQRS"
+    },
+    {
+      "receiptNumber": "RCT-2605-0309",
+      "tenancyId": "L-2154",
+      "amount": 36600,
+      "date": "2026-05-03",
+      "time": "09:41",
+      "method": "Bank",
+      "reference": "FT2605037950"
+    },
+    {
+      "receiptNumber": "RCT-2605-0310",
+      "tenancyId": "L-2166",
+      "amount": 10800,
+      "date": "2026-05-03",
+      "time": "14:40",
+      "method": "M-Pesa",
+      "reference": "SPANZPT2RJ"
+    },
+    {
+      "receiptNumber": "RCT-2605-0311",
+      "tenancyId": "L-2198",
+      "amount": 36600,
+      "date": "2026-05-04",
+      "time": "11:35",
+      "method": "Bank",
+      "reference": "FT2605047883"
+    },
+    {
+      "receiptNumber": "RCT-2605-0312",
+      "tenancyId": "L-2192",
+      "amount": 33100,
+      "date": "2026-05-04",
+      "time": "13:37",
+      "method": "M-Pesa",
+      "reference": "SL0R2LHQLG"
+    },
+    {
+      "receiptNumber": "RCT-2605-0313",
+      "tenancyId": "L-2185",
+      "amount": 21680,
+      "date": "2026-05-05",
+      "time": "12:52",
+      "method": "M-Pesa",
+      "reference": "SU16MURAU3"
+    },
+    {
+      "receiptNumber": "RCT-2605-0314",
+      "tenancyId": "L-2044",
+      "amount": 24000,
+      "date": "2026-05-06",
+      "time": "11:42",
+      "method": "M-Pesa",
+      "reference": "SU2V9F93CJ"
+    },
+    {
+      "receiptNumber": "RCT-2605-0315",
+      "tenancyId": "L-2166",
+      "amount": 10750,
+      "date": "2026-05-18",
+      "time": "14:01",
+      "method": "M-Pesa",
+      "reference": "SVU9QLSBVA"
+    },
+    {
+      "receiptNumber": "RCT-2606-0316",
+      "tenancyId": "L-2071",
+      "amount": 31900,
+      "date": "2026-06-01",
+      "time": "12:02",
+      "method": "M-Pesa",
+      "reference": "SNMPDSCFUP"
+    },
+    {
+      "receiptNumber": "RCT-2606-0317",
+      "tenancyId": "L-2207",
+      "amount": 26450,
+      "date": "2026-06-01",
+      "time": "16:40",
+      "method": "M-Pesa",
+      "reference": "SN7PZT4LF5"
+    },
+    {
+      "receiptNumber": "RCT-2606-0318",
+      "tenancyId": "L-2179",
+      "amount": 31450,
+      "date": "2026-06-01",
+      "time": "18:16",
+      "method": "M-Pesa",
+      "reference": "ST1PHUR3KY"
+    },
+    {
+      "receiptNumber": "RCT-2606-0319",
+      "tenancyId": "L-2121",
+      "amount": 32050,
+      "date": "2026-06-02",
+      "time": "11:37",
+      "method": "M-Pesa",
+      "reference": "SZZ0JG7RCS"
+    },
+    {
+      "receiptNumber": "RCT-2606-0320",
+      "tenancyId": "L-2160",
+      "amount": 32950,
+      "date": "2026-06-02",
+      "time": "13:14",
+      "method": "M-Pesa",
+      "reference": "SK5HHPMY5L"
+    },
+    {
+      "receiptNumber": "RCT-2606-0321",
+      "tenancyId": "L-2172",
+      "amount": 21420,
+      "date": "2026-06-02",
+      "time": "14:09",
+      "method": "M-Pesa",
+      "reference": "SJPVWRA0W9"
+    },
+    {
+      "receiptNumber": "RCT-2606-0322",
+      "tenancyId": "L-2150",
+      "amount": 25750,
+      "date": "2026-06-02",
+      "time": "14:44",
+      "method": "M-Pesa",
+      "reference": "SE2HNB6TTZ"
+    },
+    {
+      "receiptNumber": "RCT-2606-0323",
+      "tenancyId": "L-2154",
+      "amount": 36300,
+      "date": "2026-06-03",
+      "time": "11:20",
+      "method": "Bank",
+      "reference": "FT2606035647"
+    },
+    {
+      "receiptNumber": "RCT-2606-0324",
+      "tenancyId": "L-2166",
+      "amount": 11000,
+      "date": "2026-06-03",
+      "time": "13:45",
+      "method": "M-Pesa",
+      "reference": "SKVQPBJT8V"
+    },
+    {
+      "receiptNumber": "RCT-2606-0325",
+      "tenancyId": "L-2138",
+      "amount": 27350,
+      "date": "2026-06-03",
+      "time": "19:38",
+      "method": "M-Pesa",
+      "reference": "SFSXFVQGVA"
+    },
+    {
+      "receiptNumber": "RCT-2606-0326",
+      "tenancyId": "L-2198",
+      "amount": 35250,
+      "date": "2026-06-04",
+      "time": "09:15",
+      "method": "Bank",
+      "reference": "FT2606046477"
+    },
+    {
+      "receiptNumber": "RCT-2606-0327",
+      "tenancyId": "L-2192",
+      "amount": 31450,
+      "date": "2026-06-04",
+      "time": "11:42",
+      "method": "M-Pesa",
+      "reference": "SF8L1E2ZJT"
+    },
+    {
+      "receiptNumber": "RCT-2606-0328",
+      "tenancyId": "L-2185",
+      "amount": 22720,
+      "date": "2026-06-05",
+      "time": "10:10",
+      "method": "M-Pesa",
+      "reference": "SN2RQ4E2VB"
+    },
+    {
+      "receiptNumber": "RCT-2606-0329",
+      "tenancyId": "L-2166",
+      "amount": 10940,
+      "date": "2026-06-18",
+      "time": "07:40",
+      "method": "M-Pesa",
+      "reference": "SH5ZX9J8TS"
+    },
+    {
+      "receiptNumber": "RCT-2607-0330",
+      "tenancyId": "L-2207",
+      "amount": 26750,
+      "date": "2026-07-01",
+      "time": "10:40",
+      "method": "M-Pesa",
+      "reference": "SQ5G7EVLTK"
+    },
+    {
+      "receiptNumber": "RCT-2607-0331",
+      "tenancyId": "L-2071",
+      "amount": 31450,
+      "date": "2026-07-01",
+      "time": "10:43",
+      "method": "M-Pesa",
+      "reference": "SSWN17PM66"
+    },
+    {
+      "receiptNumber": "RCT-2607-0101",
+      "tenancyId": "SV-101",
+      "amount": 13640,
+      "date": "2026-07-01",
+      "time": "13:49",
+      "method": "M-Pesa",
+      "reference": "SFERG2PJ60"
+    },
+    {
+      "receiptNumber": "RCT-2607-0332",
+      "tenancyId": "L-2179",
+      "amount": 31600,
+      "date": "2026-07-01",
+      "time": "13:58",
+      "method": "M-Pesa",
+      "reference": "SL1KJ4CXP0"
+    },
+    {
+      "receiptNumber": "RCT-2607-0102",
+      "tenancyId": "SV-105",
+      "amount": 25060,
+      "date": "2026-07-01",
+      "time": "15:48",
+      "method": "M-Pesa",
+      "reference": "SVBHTPB4ZP"
+    },
+    {
+      "receiptNumber": "RCT-2607-0103",
+      "tenancyId": "SV-102",
+      "amount": 19280,
+      "date": "2026-07-01",
+      "time": "17:36",
+      "method": "M-Pesa",
+      "reference": "SBCQ50N65U"
+    },
+    {
+      "receiptNumber": "RCT-2607-0333",
+      "tenancyId": "L-2172",
+      "amount": 21680,
+      "date": "2026-07-02",
+      "time": "07:09",
+      "method": "M-Pesa",
+      "reference": "SQZC5KM4Q0"
+    },
+    {
+      "receiptNumber": "RCT-2607-0334",
+      "tenancyId": "L-2121",
+      "amount": 32950,
+      "date": "2026-07-02",
+      "time": "11:28",
+      "method": "M-Pesa",
+      "reference": "SYVVA84SJS"
+    },
+    {
+      "receiptNumber": "RCT-2607-0335",
+      "tenancyId": "L-2150",
+      "amount": 25750,
+      "date": "2026-07-02",
+      "time": "14:27",
+      "method": "M-Pesa",
+      "reference": "SL2U2SYRP0"
+    },
+    {
+      "receiptNumber": "RCT-2607-0336",
+      "tenancyId": "L-2160",
+      "amount": 31450,
+      "date": "2026-07-02",
+      "time": "16:16",
+      "method": "M-Pesa",
+      "reference": "SC15RBEZN2"
+    },
+    {
+      "receiptNumber": "RCT-2607-0337",
+      "tenancyId": "L-2166",
+      "amount": 10800,
+      "date": "2026-07-03",
+      "time": "18:33",
+      "method": "M-Pesa",
+      "reference": "SF1PV7NNM7"
+    },
+    {
+      "receiptNumber": "RCT-2607-0338",
+      "tenancyId": "L-2154",
+      "amount": 36000,
+      "date": "2026-07-03",
+      "time": "19:24",
+      "method": "Bank",
+      "reference": "FT2607031502"
+    },
+    {
+      "receiptNumber": "RCT-2607-0339",
+      "tenancyId": "L-2138",
+      "amount": 26450,
+      "date": "2026-07-03",
+      "time": "19:35",
+      "method": "M-Pesa",
+      "reference": "SQ7JXWP1NU"
+    },
+    {
+      "receiptNumber": "RCT-2607-0340",
+      "tenancyId": "L-2192",
+      "amount": 31750,
+      "date": "2026-07-04",
+      "time": "11:38",
+      "method": "M-Pesa",
+      "reference": "SMLTD9G69S"
+    },
+    {
+      "receiptNumber": "RCT-2607-0104",
+      "tenancyId": "SV-103",
+      "amount": 24700,
+      "date": "2026-07-04",
+      "time": "12:29",
+      "method": "Bank",
+      "reference": "FT2607043834"
+    },
+    {
+      "receiptNumber": "RCT-2607-0341",
+      "tenancyId": "L-2198",
+      "amount": 35550,
+      "date": "2026-07-04",
+      "time": "15:16",
+      "method": "Bank",
+      "reference": "FT2607042509"
+    },
+    {
+      "receiptNumber": "RCT-2607-0342",
+      "tenancyId": "L-2185",
+      "amount": 22460,
+      "date": "2026-07-05",
+      "time": "18:49",
+      "method": "M-Pesa",
+      "reference": "SKNG2L0UME"
+    },
+    {
+      "receiptNumber": "RCT-2607-0343",
+      "tenancyId": "L-2044",
+      "amount": 33000,
+      "date": "2026-07-12",
+      "time": "08:14",
+      "method": "M-Pesa",
+      "reference": "ST0CPBKAQS"
+    },
+    {
+      "receiptNumber": "RCT-2607-0344",
+      "tenancyId": "L-2166",
+      "amount": 10750,
+      "date": "2026-07-18",
+      "time": "12:58",
+      "method": "M-Pesa",
+      "reference": "SRKNJWDK14"
+    },
+    {
+      "receiptNumber": "RCT-2608-0345",
+      "tenancyId": "L-2179",
+      "amount": 31900,
+      "date": "2026-08-01",
+      "time": "07:59",
+      "method": "M-Pesa",
+      "reference": "SE8ZUT6F4L"
+    },
+    {
+      "receiptNumber": "RCT-2608-0105",
+      "tenancyId": "SV-105",
+      "amount": 24220,
+      "date": "2026-08-01",
+      "time": "16:25",
+      "method": "M-Pesa",
+      "reference": "SN74GL4AYZ"
+    },
+    {
+      "receiptNumber": "RCT-2608-0346",
+      "tenancyId": "L-2071",
+      "amount": 31600,
+      "date": "2026-08-01",
+      "time": "19:01",
+      "method": "M-Pesa",
+      "reference": "SPGKUPD6P5"
+    },
+    {
+      "receiptNumber": "RCT-2608-0106",
+      "tenancyId": "SV-102",
+      "amount": 19400,
+      "date": "2026-08-01",
+      "time": "19:09",
+      "method": "M-Pesa",
+      "reference": "SXPFKK8LJB"
+    },
+    {
+      "receiptNumber": "RCT-2608-0107",
+      "tenancyId": "SV-101",
+      "amount": 13040,
+      "date": "2026-08-01",
+      "time": "19:49",
+      "method": "M-Pesa",
+      "reference": "SBVZFRHU8R"
+    },
+    {
+      "receiptNumber": "RCT-2608-0347",
+      "tenancyId": "L-2207",
+      "amount": 27500,
+      "date": "2026-08-01",
+      "time": "19:57",
+      "method": "M-Pesa",
+      "reference": "SFWMCHBJDE"
+    },
+    {
+      "receiptNumber": "RCT-2608-0348",
+      "tenancyId": "L-2121",
+      "amount": 32800,
+      "date": "2026-08-02",
+      "time": "07:41",
+      "method": "M-Pesa",
+      "reference": "SNP9U111CW"
+    },
+    {
+      "receiptNumber": "RCT-2608-0349",
+      "tenancyId": "L-2150",
+      "amount": 26050,
+      "date": "2026-08-02",
+      "time": "09:33",
+      "method": "M-Pesa",
+      "reference": "SBZWFHXZTX"
+    },
+    {
+      "receiptNumber": "RCT-2608-0350",
+      "tenancyId": "L-2172",
+      "amount": 22330,
+      "date": "2026-08-02",
+      "time": "19:59",
+      "method": "M-Pesa",
+      "reference": "SJUT7QKUXZ"
+    },
+    {
+      "receiptNumber": "RCT-2608-0351",
+      "tenancyId": "L-2166",
+      "amount": 11300,
+      "date": "2026-08-03",
+      "time": "09:58",
+      "method": "M-Pesa",
+      "reference": "SXJRMTLGAV"
+    },
+    {
+      "receiptNumber": "RCT-2608-0352",
+      "tenancyId": "L-2154",
+      "amount": 34800,
+      "date": "2026-08-03",
+      "time": "12:39",
+      "method": "Bank",
+      "reference": "FT2608036314"
+    },
+    {
+      "receiptNumber": "RCT-2608-0353",
+      "tenancyId": "L-2138",
+      "amount": 27650,
+      "date": "2026-08-03",
+      "time": "15:00",
+      "method": "M-Pesa",
+      "reference": "STFWGYWPL0"
+    },
+    {
+      "receiptNumber": "RCT-2608-0354",
+      "tenancyId": "L-2192",
+      "amount": 31450,
+      "date": "2026-08-04",
+      "time": "12:05",
+      "method": "M-Pesa",
+      "reference": "SNA1Y246GS"
+    },
+    {
+      "receiptNumber": "RCT-2608-0355",
+      "tenancyId": "L-2160",
+      "amount": 31900,
+      "date": "2026-08-04",
+      "time": "17:02",
+      "method": "Bank",
+      "reference": "FT2608048230"
+    },
+    {
+      "receiptNumber": "RCT-2608-0108",
+      "tenancyId": "SV-103",
+      "amount": 25780,
+      "date": "2026-08-04",
+      "time": "17:56",
+      "method": "Bank",
+      "reference": "FT2608043809"
+    },
+    {
+      "receiptNumber": "RCT-2608-0356",
+      "tenancyId": "L-2198",
+      "amount": 35400,
+      "date": "2026-08-04",
+      "time": "20:05",
+      "method": "Bank",
+      "reference": "FT2608042752"
+    },
+    {
+      "receiptNumber": "RCT-2608-0357",
+      "tenancyId": "L-2185",
+      "amount": 10000,
+      "date": "2026-08-09",
+      "time": "10:52",
+      "method": "M-Pesa",
+      "reference": "SGCJB3SQMC"
+    },
+    {
+      "receiptNumber": "RCT-2608-0109",
+      "tenancyId": "SV-104",
+      "amount": 22942,
+      "date": "2026-08-12",
+      "time": "14:42",
+      "method": "M-Pesa",
+      "reference": "ST00YEYHPK"
+    },
+    {
+      "receiptNumber": "RCT-2608-0358",
+      "tenancyId": "L-2166",
+      "amount": 11290,
+      "date": "2026-08-18",
+      "time": "11:50",
+      "method": "M-Pesa",
+      "reference": "SGRH4BSLU4"
+    },
+    {
+      "receiptNumber": "RCT-2609-0110",
+      "tenancyId": "SV-104",
+      "amount": 14240,
+      "date": "2026-09-01",
+      "time": "15:06",
+      "method": "M-Pesa",
+      "reference": "SD16SJNPZ2"
+    },
+    {
+      "receiptNumber": "RCT-2609-0359",
+      "tenancyId": "L-2207",
+      "amount": 27950,
+      "date": "2026-09-01",
+      "time": "17:59",
+      "method": "M-Pesa",
+      "reference": "SS9UKC1MVT"
+    },
+    {
+      "receiptNumber": "RCT-2609-0360",
+      "tenancyId": "L-2179",
+      "amount": 31600,
+      "date": "2026-09-01",
+      "time": "19:22",
+      "method": "M-Pesa",
+      "reference": "SEQ1XCGU4C"
+    },
+    {
+      "receiptNumber": "RCT-2609-0111",
+      "tenancyId": "SV-101",
+      "amount": 13880,
+      "date": "2026-09-01",
+      "time": "19:29",
+      "method": "M-Pesa",
+      "reference": "SSSNUDKTF4"
+    },
+    {
+      "receiptNumber": "RCT-2609-0112",
+      "tenancyId": "SV-102",
+      "amount": 20480,
+      "date": "2026-09-01",
+      "time": "20:29",
+      "method": "M-Pesa",
+      "reference": "SJS5FR1974"
+    },
+    {
+      "receiptNumber": "RCT-2609-0361",
+      "tenancyId": "L-2150",
+      "amount": 27100,
+      "date": "2026-09-02",
+      "time": "15:48",
+      "method": "M-Pesa",
+      "reference": "SCKLL1NGE2"
+    },
+    {
+      "receiptNumber": "RCT-2609-0362",
+      "tenancyId": "L-2121",
+      "amount": 31300,
+      "date": "2026-09-02",
+      "time": "17:51",
+      "method": "M-Pesa",
+      "reference": "SAWWJVZHNS"
+    },
+    {
+      "receiptNumber": "RCT-2609-0363",
+      "tenancyId": "L-2172",
+      "amount": 21750,
+      "date": "2026-09-02",
+      "time": "20:33",
+      "method": "M-Pesa",
+      "reference": "SFS370SWDH"
+    },
+    {
+      "receiptNumber": "RCT-2609-0364",
+      "tenancyId": "L-2138",
+      "amount": 28100,
+      "date": "2026-09-03",
+      "time": "09:12",
+      "method": "M-Pesa",
+      "reference": "SNGC4L1SXS"
+    },
+    {
+      "receiptNumber": "RCT-2609-0365",
+      "tenancyId": "L-2160",
+      "amount": 30000,
+      "date": "2026-09-03",
+      "time": "15:10",
+      "method": "M-Pesa",
+      "reference": "SAGB3A477F"
+    },
+    {
+      "receiptNumber": "RCT-2609-0366",
+      "tenancyId": "L-2166",
+      "amount": 11000,
+      "date": "2026-09-03",
+      "time": "16:09",
+      "method": "M-Pesa",
+      "reference": "ST0YFGP6WW"
+    },
+    {
+      "receiptNumber": "RCT-2609-0367",
+      "tenancyId": "L-2154",
+      "amount": 36150,
+      "date": "2026-09-03",
+      "time": "17:56",
+      "method": "Bank",
+      "reference": "FT2609037356"
+    },
+    {
+      "receiptNumber": "RCT-2609-0368",
+      "tenancyId": "L-2240",
+      "amount": 35250,
+      "date": "2026-09-16",
+      "time": "08:20",
+      "method": "M-Pesa",
+      "reference": "SXR9BZMHQX"
+    },
+    {
+      "receiptNumber": "RCT-2609-0369",
+      "tenancyId": "L-2166",
+      "amount": 11050,
+      "date": "2026-09-18",
+      "time": "07:39",
+      "method": "M-Pesa",
+      "reference": "SL4W26D4R6"
+    },
+    {
+      "receiptNumber": "RCT-2609-0370",
+      "tenancyId": "L-2198",
+      "amount": 38000,
+      "date": "2026-09-29",
+      "time": "08:08",
+      "method": "Bank",
+      "reference": "FT2609299759"
+    },
+    {
+      "receiptNumber": "RCT-2610-0371",
+      "tenancyId": "L-2207",
+      "amount": 26750,
+      "date": "2026-10-01",
+      "time": "08:46",
+      "method": "M-Pesa",
+      "reference": "SVWEDWJGSF"
+    },
+    {
+      "receiptNumber": "RCT-2610-0113",
+      "tenancyId": "SV-104",
+      "amount": 13040,
+      "date": "2026-10-01",
+      "time": "13:13",
+      "method": "M-Pesa",
+      "reference": "SBJ9W2UKPX"
+    },
+    {
+      "receiptNumber": "RCT-2610-0372",
+      "tenancyId": "L-2179",
+      "amount": 32050,
+      "date": "2026-10-01",
+      "time": "13:29",
+      "method": "M-Pesa",
+      "reference": "SRSUPMBAYR"
+    },
+    {
+      "receiptNumber": "RCT-2610-0114",
+      "tenancyId": "SV-101",
+      "amount": 13400,
+      "date": "2026-10-01",
+      "time": "17:53",
+      "method": "M-Pesa",
+      "reference": "SKUJE07YT2"
+    },
+    {
+      "receiptNumber": "RCT-2610-0373",
+      "tenancyId": "L-2160",
+      "amount": 15000,
+      "date": "2026-10-02",
+      "time": "10:21",
+      "method": "M-Pesa",
+      "reference": "SWULAPG9YP"
+    },
+    {
+      "receiptNumber": "RCT-2610-0374",
+      "tenancyId": "L-2121",
+      "amount": 32950,
+      "date": "2026-10-02",
+      "time": "11:57",
+      "method": "M-Pesa",
+      "reference": "SMFFUPY1K2"
+    },
+    {
+      "receiptNumber": "RCT-2610-0375",
+      "tenancyId": "L-2240",
+      "amount": 22650,
+      "date": "2026-10-02",
+      "time": "18:12",
+      "method": "M-Pesa",
+      "reference": "SSYPXV9RT2"
+    },
+    {
+      "receiptNumber": "RCT-2610-0376",
+      "tenancyId": "L-2150",
+      "amount": 26350,
+      "date": "2026-10-02",
+      "time": "18:54",
+      "method": "M-Pesa",
+      "reference": "SLNWHTLCMQ"
+    },
+    {
+      "receiptNumber": "RCT-2610-0115",
+      "tenancyId": "SV-102",
+      "amount": 8000,
+      "date": "2026-10-03",
+      "time": "13:30",
+      "method": "M-Pesa",
+      "reference": "SM6Q6JL1YG"
+    },
+    {
+      "receiptNumber": "RCT-2610-0377",
+      "tenancyId": "L-2154",
+      "amount": 35550,
+      "date": "2026-10-03",
+      "time": "18:17",
+      "method": "Bank",
+      "reference": "FT2610033501"
+    },
+    {
+      "receiptNumber": "RCT-2610-0378",
+      "tenancyId": "L-2166",
+      "amount": 10000,
+      "date": "2026-10-03",
+      "time": "20:21",
+      "method": "M-Pesa",
+      "reference": "SS6SMG5Q20"
+    },
+    {
+      "receiptNumber": "RCT-2610-0379",
+      "tenancyId": "L-2198",
+      "amount": 34600,
+      "date": "2026-10-04",
+      "time": "13:00",
+      "method": "Bank",
+      "reference": "FT2610048116"
+    }
+  ],
+  "staff": [
+    {
+      "id": "s-owner",
+      "companyId": "harborridge",
+      "name": "HarborRidge Admin",
+      "role": "owner",
+      "phone": null,
+      "propertyIds": []
+    },
+    {
+      "id": "s-njoki",
+      "companyId": "harborridge",
+      "name": "Njoki Kariuki",
+      "role": "manager",
+      "phone": "0711 000 222",
+      "propertyIds": []
+    },
+    {
+      "id": "s-otieno",
+      "companyId": "harborridge",
+      "name": "Otieno Ouma",
+      "role": "caretaker",
+      "phone": "0722 000 333",
+      "propertyIds": [
+        "kilimani-heights",
+        "riverside-court"
+      ]
+    },
+    {
+      "id": "s-achieng",
+      "companyId": "harborridge",
+      "name": "Achieng Atieno",
+      "role": "caretaker",
+      "phone": "0733 000 444",
+      "propertyIds": [
+        "mvuli-gardens",
+        "ngong-road"
+      ]
+    },
+    {
+      "id": "s-sv-owner",
+      "companyId": "savanna",
+      "name": "Savanna Admin",
+      "role": "owner",
+      "phone": null,
+      "propertyIds": []
+    },
+    {
+      "id": "s-wanjiru",
+      "companyId": "savanna",
+      "name": "Wanjiru Maina",
+      "role": "manager",
+      "phone": "0711 600 101",
+      "propertyIds": []
+    },
+    {
+      "id": "s-ndirangu",
+      "companyId": "savanna",
+      "name": "Kamau Ndirangu",
+      "role": "caretaker",
+      "phone": "0722 600 202",
+      "propertyIds": []
+    },
+    {
+      "id": "s-acacia-owner",
+      "companyId": "acacia",
+      "name": "Acacia Admin",
+      "role": "owner",
+      "phone": null,
+      "propertyIds": []
+    }
+  ],
+  "repairTickets": [
+    {
+      "companyId": "harborridge",
+      "unitId": "nr-312",
+      "id": "MT-1047",
+      "tenancyId": "L-2172",
+      "category": "plumbing",
+      "priority": "high",
+      "status": "open",
+      "title": "Kitchen sink leaking under cabinet",
+      "description": "Leaking quite badly under the sink. A bucket is catching it for now.",
+      "hasPhoto": true,
+      "createdAt": "2026-10-06T07:40:00+03:00",
+      "resolvedAt": null,
+      "assignedTo": null,
+      "resolutionNote": null
+    },
+    {
+      "companyId": "harborridge",
+      "unitId": "nr-207",
+      "id": "MT-1046",
+      "tenancyId": "L-2166",
+      "category": "electrical",
+      "priority": "low",
+      "status": "open",
+      "title": "Corridor light out on 2nd floor",
+      "description": "The corridor light outside 207 has been off for two nights.",
+      "hasPhoto": false,
+      "createdAt": "2026-10-05T19:12:00+03:00",
+      "resolvedAt": null,
+      "assignedTo": null,
+      "resolutionNote": null
+    },
+    {
+      "companyId": "harborridge",
+      "unitId": "rc-1c",
+      "id": "MT-1044",
+      "tenancyId": "L-2150",
+      "category": "plumbing",
+      "priority": "medium",
+      "status": "in_progress",
+      "title": "Water heater not heating",
+      "description": "Shower water stays cold even after an hour.",
+      "hasPhoto": false,
+      "createdAt": "2026-09-28T08:05:00+03:00",
+      "resolvedAt": null,
+      "assignedTo": "Otieno Fundi Services",
+      "resolutionNote": null
+    },
+    {
+      "companyId": "harborridge",
+      "unitId": "kh-a12",
+      "id": "MT-1041",
+      "tenancyId": "L-2207",
+      "category": "carpentry",
+      "priority": "low",
+      "status": "in_progress",
+      "title": "Balcony door lock stiff",
+      "description": "The balcony door lock is hard to turn.",
+      "hasPhoto": false,
+      "createdAt": "2026-09-26T17:30:00+03:00",
+      "resolvedAt": null,
+      "assignedTo": "Otieno Ouma (caretaker)",
+      "resolutionNote": null
+    },
+    {
+      "companyId": "harborridge",
+      "unitId": "rc-5a",
+      "id": "MT-1039",
+      "tenancyId": "L-2160",
+      "category": "electrical",
+      "priority": "high",
+      "status": "resolved",
+      "title": "Socket in bedroom sparks",
+      "description": "The socket by the bed sparks when anything is plugged in.",
+      "hasPhoto": true,
+      "createdAt": "2026-09-22T21:10:00+03:00",
+      "resolvedAt": "2026-09-24T11:00:00+03:00",
+      "assignedTo": "Otieno Fundi Services",
+      "resolutionNote": "Socket and faceplate replaced."
+    },
+    {
+      "companyId": "harborridge",
+      "unitId": "mg-2",
+      "id": "MT-1038",
+      "tenancyId": "L-2154",
+      "category": "security",
+      "priority": "medium",
+      "status": "resolved",
+      "title": "Gate remote not working",
+      "description": "The gate remote stopped opening the main gate.",
+      "hasPhoto": false,
+      "createdAt": "2026-09-20T07:15:00+03:00",
+      "resolvedAt": "2026-09-22T10:30:00+03:00",
+      "assignedTo": "Achieng Atieno (caretaker)",
+      "resolutionNote": "Remote reprogrammed and battery replaced."
+    },
+    {
+      "companyId": "savanna",
+      "unitId": "mc-3",
+      "id": "MT-2002",
+      "tenancyId": "SV-102",
+      "category": "plumbing",
+      "priority": "medium",
+      "status": "open",
+      "title": "Bathroom tap dripping",
+      "description": "The bathroom tap drips all night.",
+      "hasPhoto": false,
+      "createdAt": "2026-10-04T20:15:00+03:00",
+      "resolvedAt": null,
+      "assignedTo": null,
+      "resolutionNote": null
+    },
+    {
+      "companyId": "savanna",
+      "unitId": "mc-1",
+      "id": "MT-2001",
+      "tenancyId": "SV-101",
+      "category": "electrical",
+      "priority": "low",
+      "status": "resolved",
+      "title": "Kitchen bulb holder loose",
+      "description": "The bulb holder in the kitchen is hanging loose.",
+      "hasPhoto": false,
+      "createdAt": "2026-09-12T09:00:00+03:00",
+      "resolvedAt": "2026-09-13T16:00:00+03:00",
+      "assignedTo": "Kamau Ndirangu (caretaker)",
+      "resolutionNote": "Holder refitted."
+    }
+  ],
+  "messages": [
+    {
+      "companyId": "harborridge",
+      "id": "msg-101",
+      "tenancyId": "L-2172",
+      "sender": "tenant",
+      "staffId": null,
+      "body": "Hi, the kitchen sink is leaking quite badly. I have put a bucket under it.",
+      "sentAt": "2026-10-06T07:41:00+03:00",
+      "readByStaffAt": "2026-10-06T07:50:00+03:00"
+    },
+    {
+      "companyId": "harborridge",
+      "id": "msg-102",
+      "tenancyId": "L-2172",
+      "sender": "staff",
+      "staffId": "s-njoki",
+      "body": "Thanks Lucy. I have logged it as MT-1047. A plumber will come by before noon.",
+      "sentAt": "2026-10-06T07:55:00+03:00",
+      "readByStaffAt": null
+    },
+    {
+      "companyId": "harborridge",
+      "id": "msg-103",
+      "tenancyId": "L-2172",
+      "sender": "tenant",
+      "staffId": null,
+      "body": "Okay, I will be home. Thank you.",
+      "sentAt": "2026-10-06T08:02:00+03:00",
+      "readByStaffAt": null
+    },
+    {
+      "companyId": "harborridge",
+      "id": "msg-201",
+      "tenancyId": "L-2160",
+      "sender": "tenant",
+      "staffId": null,
+      "body": "I sent the renewal back with a question about the 5% increase. Can we discuss?",
+      "sentAt": "2026-10-05T18:20:00+03:00",
+      "readByStaffAt": "2026-10-06T09:05:00+03:00"
+    },
+    {
+      "companyId": "harborridge",
+      "id": "msg-202",
+      "tenancyId": "L-2160",
+      "sender": "staff",
+      "staffId": "s-njoki",
+      "body": "Hi David, the increase matches the market review for Riverside Court. Happy to keep the deposit as is so nothing extra is due.",
+      "sentAt": "2026-10-06T09:12:00+03:00",
+      "readByStaffAt": null
+    },
+    {
+      "companyId": "harborridge",
+      "id": "msg-301",
+      "tenancyId": "L-2185",
+      "sender": "tenant",
+      "staffId": null,
+      "body": "I will clear half by Friday and the rest by the 20th.",
+      "sentAt": "2026-10-05T20:45:00+03:00",
+      "readByStaffAt": null
+    },
+    {
+      "companyId": "savanna",
+      "id": "msg-901",
+      "tenancyId": "SV-102",
+      "sender": "tenant",
+      "staffId": null,
+      "body": "Hello, the bathroom tap is dripping all night. Can someone look at it?",
+      "sentAt": "2026-10-04T20:16:00+03:00",
+      "readByStaffAt": "2026-10-05T08:00:00+03:00"
+    },
+    {
+      "companyId": "savanna",
+      "id": "msg-902",
+      "tenancyId": "SV-102",
+      "sender": "staff",
+      "staffId": "s-wanjiru",
+      "body": "Hi Naliaka, Kamau will pass by tomorrow morning to fix it.",
+      "sentAt": "2026-10-05T08:10:00+03:00",
+      "readByStaffAt": null
+    }
+  ]
+}

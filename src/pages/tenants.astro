@@ -1,0 +1,296 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+import MoveOutModal from '../components/dashboard/MoveOutModal.astro';
+import ResetPasswordModal from '../components/dashboard/ResetPasswordModal.astro';
+import StatusBadge from '../components/ui/StatusBadge.astro';
+import { getPortfolio, bedLabel, formatDate, formatKes } from '../data/portfolio';
+import { Plus, ChevronDown, FileText, KeyRound } from '@lucide/astro';
+
+// This company's data only (the signed-in user's).
+const { activeTenancies, formerTenancies, lastReading, portfolioSummary, propertyViews, stats, asOf, currentPeriod } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+
+const searchText = (parts: string[]) => parts.join(' ').toLowerCase();
+---
+
+<DashboardLayout title="Makazi — Tenants" currentPath="/tenants">
+  <!-- Header & Actions -->
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+    <div>
+      <span class="text-xs font-semibold tracking-wider text-[#69847A] uppercase">
+        {portfolioSummary}
+      </span>
+      <h1 class="text-3xl sm:text-4xl font-normal font-editorial text-[#0D382B] tracking-tight mt-1">
+        Tenants
+      </h1>
+    </div>
+
+    <div class="flex items-center gap-3 self-start md:self-auto">
+      <div class="relative inline-block">
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white border border-[#E3E6DF] text-xs font-semibold text-[#0D382B] shadow-xs hover:border-[#0D382B] transition-colors cursor-pointer"
+        >
+          <span>{currentPeriod}</span>
+          <ChevronDown class="w-4 h-4 text-[#69847A]" />
+        </button>
+      </div>
+
+      <button
+        type="button"
+        id="onboard-tenant-btn"
+        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#0D382B] text-white text-xs font-semibold hover:bg-[#08221A] transition-all shadow-xs cursor-pointer"
+      >
+        <div class="h-4 w-4 rounded-full bg-[#C6EE58] text-[#0A261F] flex items-center justify-center font-bold text-xs">
+          <Plus class="w-3 h-3 stroke-[3]" />
+        </div>
+        <span>Onboard tenant</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabs + deposit total -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+    <div class="inline-flex p-1 rounded-full bg-white border border-[#E3E6DF] shadow-xs self-start" role="tablist">
+      <button type="button" role="tab" data-tab-btn="active" aria-selected="true"
+        class="tab-btn px-4 py-2 rounded-full text-xs font-semibold cursor-pointer transition-colors">
+        Active <span class="tab-count ml-1 tabular-nums">{activeTenancies.length}</span>
+      </button>
+      <button type="button" role="tab" data-tab-btn="former" aria-selected="false"
+        class="tab-btn px-4 py-2 rounded-full text-xs font-semibold cursor-pointer transition-colors">
+        Former <span class="tab-count ml-1 tabular-nums">{formerTenancies.length}</span>
+      </button>
+    </div>
+    <span class="text-xs text-[#69847A]">
+      Deposits held <span class="font-semibold text-[#0D382B] tabular-nums">{formatKes(stats.depositsHeld)}</span>
+      <span class="mx-1">·</span> not counted as rent collected
+    </span>
+  </div>
+
+  <!-- Property filter + search -->
+  <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-6">
+    <div class="flex flex-wrap items-center gap-2">
+      <button type="button" data-property-btn="all"
+        class="property-btn px-3.5 py-2 rounded-full border text-xs font-semibold cursor-pointer transition-colors shadow-xs">
+        All properties
+      </button>
+      {propertyViews.map((p) => (
+        <button type="button" data-property-btn={p.property.id}
+          class="property-btn px-3.5 py-2 rounded-full border text-xs font-semibold cursor-pointer transition-colors shadow-xs">
+          {p.property.name}
+          <span class="ml-1 text-[10px] uppercase tracking-wider opacity-70">{p.typeLabel}</span>
+        </button>
+      ))}
+    </div>
+    <input
+      type="search"
+      id="tenant-search"
+      class="w-full lg:w-64 px-4 py-2.5 rounded-full border border-[#E3E6DF] bg-white text-xs text-[#0D382B] placeholder:text-[#69847A] focus:border-[#0D382B] focus:ring-1 focus:ring-[#0D382B] outline-none shadow-xs"
+      placeholder="Search name, unit or phone"
+      aria-label="Search tenants"
+    />
+  </div>
+
+  <!-- Active tenants -->
+  <section data-tab-panel="active" class="bg-white rounded-3xl border border-[#E3E6DF] overflow-hidden shadow-xs">
+    {activeTenancies.length === 0 && (
+      <p class="p-12 text-center text-xs font-medium text-[#69847A]">No active tenants yet. Onboard the first tenant to get started.</p>
+    )}
+    <div class="overflow-x-auto" class:list={[activeTenancies.length === 0 ? 'hidden' : '']}>
+      <table class="w-full text-left text-xs tabular-nums [&_td]:whitespace-nowrap">
+        <thead class="bg-[#F8F9F6] border-b border-[#E3E6DF] text-[#69847A] uppercase text-[10px] font-semibold tracking-wider">
+          <tr>
+            <th scope="col" class="py-3.5 px-6">Tenant</th>
+            <th scope="col" class="py-3.5 px-4">Property · Unit</th>
+            <th scope="col" class="py-3.5 px-4">Rent</th>
+            <th scope="col" class="py-3.5 px-4">Deposit held</th>
+            <th scope="col" class="py-3.5 px-4">Balance</th>
+            <th scope="col" class="py-3.5 px-4">{currentPeriod.split(' ')[0]} bill</th>
+            <th scope="col" class="py-3.5 px-6 text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[#E3E6DF]">
+          {activeTenancies.map((t) => (
+            <tr class="tenant-row hover:bg-[#F8F9F6]/60 transition-colors"
+              data-property={t.property.id}
+              data-search={searchText([t.tenant.name, t.unit.label, t.property.name, t.tenant.phone])}>
+              <td class="py-4 px-6">
+                <div class="flex items-center gap-3">
+                  <span class="h-8 w-8 rounded-full bg-[#EBF0EC] border border-[#D5DFD8] flex items-center justify-center font-bold text-xs text-[#0D382B] flex-shrink-0">
+                    {t.tenant.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                  </span>
+                  <div class="min-w-0">
+                    <span class="block font-semibold text-[#0D382B]">{t.tenant.name}</span>
+                    <span class="block text-[11px] text-[#69847A]">{t.tenant.phone}</span>
+                  </div>
+                </div>
+              </td>
+              <td class="py-4 px-4 text-[#69847A]">
+                <span class="font-semibold text-[#0D382B]">{t.unit.label}</span> · {t.property.name}
+                <span class="block text-[10px] uppercase tracking-wider">{bedLabel(t.unit.bedrooms)} {t.property.type === 'houses' ? 'house' : 'apartment'} · moved in {formatDate(t.tenancy.moveIn)}</span>
+              </td>
+              <td class="py-4 px-4 font-semibold text-[#0D382B]">{formatKes(t.tenancy.rent)}</td>
+              <td class="py-4 px-4 text-[#69847A]">{formatKes(t.depositHeld)}</td>
+              <td class={`py-4 px-4 font-semibold ${t.balance > 0 ? 'text-[#C04A26]' : t.balance < 0 ? 'text-[#1E40AF]' : 'text-[#69847A]'}`}>
+                {t.balance < 0 ? `${formatKes(-t.balance)} credit` : formatKes(t.balance)}
+              </td>
+              <td class="py-4 px-4"><StatusBadge status={t.status} /></td>
+              <td class="py-4 px-6 text-right">
+                <a href={`/statement/${t.tenancy.id}`} class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold text-[#0D382B] hover:bg-[#F1F3ED] transition-colors" title="Statement of payments">
+                  <FileText class="w-3.5 h-3.5" /> Statement
+                </a>
+                <button type="button" class="reset-password-btn inline-flex items-center gap-1 px-3 py-1.5 mr-2 rounded-full text-xs font-semibold text-[#0D382B] hover:bg-[#F1F3ED] transition-colors cursor-pointer"
+                  data-name={t.tenant.name} data-phone={t.tenant.phone} title="Issue a one-time password">
+                  <KeyRound class="w-3.5 h-3.5" /> Reset password
+                </button>
+                <button
+                  type="button"
+                  class="move-out-btn px-4 py-1.5 rounded-full border border-[#E3E6DF] hover:border-[#C04A26] hover:text-[#C04A26] text-xs font-semibold text-[#0D382B] bg-[#F8F9F6] hover:bg-white transition-colors cursor-pointer shadow-xs whitespace-nowrap"
+                  data-tenancy={t.tenancy.id}
+                  data-name={t.tenant.name}
+                  data-unit={t.unitLabel}
+                  data-balance={t.balance}
+                  data-deposit={t.depositHeld}
+                  data-water-rate={t.property.waterRate}
+                  data-last-reading={lastReading(t.unit.id).value}
+                >
+                  Move out
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p class="empty-state hidden p-12 text-center text-xs font-medium text-[#69847A]">No tenants match this filter.</p>
+  </section>
+
+  <!-- Former tenants: records kept 6 months after move-out (proof of payment) -->
+  <section data-tab-panel="former" class="hidden bg-white rounded-3xl border border-[#E3E6DF] overflow-hidden shadow-xs">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs tabular-nums [&_td]:whitespace-nowrap">
+        <thead class="bg-[#F8F9F6] border-b border-[#E3E6DF] text-[#69847A] uppercase text-[10px] font-semibold tracking-wider">
+          <tr>
+            <th scope="col" class="py-3.5 px-6">Former tenant</th>
+            <th scope="col" class="py-3.5 px-4">Unit</th>
+            <th scope="col" class="py-3.5 px-4">Stayed</th>
+            <th scope="col" class="py-3.5 px-4">Deposit</th>
+            <th scope="col" class="py-3.5 px-4">Final balance</th>
+            <th scope="col" class="py-3.5 px-4">Records kept until</th>
+            <th scope="col" class="py-3.5 px-6">Note</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[#E3E6DF]">
+          {formerTenancies.map((t) => {
+            const finalBill = t.bills[t.bills.length - 1];
+            const refund = finalBill?.depositRefund ?? 0;
+            const applied = t.tenancy.deposit - refund;
+            return (
+              <tr class="tenant-row hover:bg-[#F8F9F6]/60 transition-colors align-top"
+                data-property={t.property.id}
+                data-search={searchText([t.tenant.name, t.unit.label, t.property.name, t.tenant.phone])}>
+                <td class="py-4 px-6">
+                  <span class="block font-semibold text-[#0D382B]">{t.tenant.name}</span>
+                  <span class="block text-[11px] text-[#69847A]">{t.tenant.phone}</span>
+                </td>
+                <td class="py-4 px-4 text-[#69847A]">
+                  <span class="font-semibold text-[#0D382B]">{t.unit.label}</span> · {t.property.name}
+                </td>
+                <td class="py-4 px-4 text-[#69847A] whitespace-nowrap">
+                  {formatDate(t.tenancy.moveIn)} –<br />{formatDate(t.tenancy.moveOut!)}
+                </td>
+                <td class="py-4 px-4 text-[#69847A]">
+                  <span class="block">{formatKes(applied)} applied</span>
+                  {refund > 0 && (
+                    <span class="block text-[#2E7D32]">
+                      {formatKes(refund)} refunded{t.tenancy.depositRefund && ` ${formatDate(t.tenancy.depositRefund.date)}`}
+                    </span>
+                  )}
+                </td>
+                <td class="py-4 px-4">
+                  {t.balance > 0 ? (
+                    <span class="font-semibold text-[#C04A26]">Owes {formatKes(t.balance)}</span>
+                  ) : (
+                    <span class="font-semibold text-[#2E7D32]">Settled</span>
+                  )}
+                </td>
+                <td class="py-4 px-4">
+                  <span class="block font-semibold text-[#0D382B]">{formatDate(t.recordsKeptUntil!)}</span>
+                  <span class="block text-[11px] text-[#69847A]">
+                    {t.recordsKeptUntil! < asOf ? 'Due for archiving' : '6 months after move-out'}
+                  </span>
+                  <a href={`/statement/${t.tenancy.id}`} class="inline-flex items-center gap-1 mt-1.5 text-[11px] font-semibold text-[#0D382B] hover:underline">
+                    <FileText class="w-3 h-3" /> Payment statement
+                  </a>
+                </td>
+                <td class="py-4 px-6 min-w-56 whitespace-normal! text-[#69847A] leading-relaxed">
+                  {t.tenancy.moveOutNote ?? '—'}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+    <p class="empty-state hidden p-12 text-center text-xs font-medium text-[#69847A]">No former tenants match this filter.</p>
+  </section>
+
+  <MoveOutModal />
+  <ResetPasswordModal />
+</DashboardLayout>
+
+<script>
+  const ACTIVE = ['bg-[#0D382B]', 'text-white', 'border-[#0D382B]'];
+  const IDLE = ['bg-white', 'text-[#0D382B]', 'border-[#E3E6DF]'];
+
+  const params = new URLSearchParams(window.location.search);
+  let tab = params.get('tab') === 'former' ? 'former' : 'active';
+  let property = params.get('property') ?? 'all';
+  let query = '';
+
+  function setPressed(el: Element, on: boolean, active = ACTIVE, idle = IDLE) {
+    el.classList.remove(...(on ? idle : active));
+    el.classList.add(...(on ? active : idle));
+  }
+
+  function render() {
+    document.querySelectorAll<HTMLElement>('[data-tab-btn]').forEach((btn) => {
+      const on = btn.dataset.tabBtn === tab;
+      btn.setAttribute('aria-selected', String(on));
+      setPressed(btn, on, ['bg-[#0D382B]', 'text-white'], ['text-[#69847A]']);
+    });
+    document.querySelectorAll<HTMLElement>('[data-property-btn]').forEach((btn) => {
+      setPressed(btn, btn.dataset.propertyBtn === property);
+    });
+    document.querySelectorAll<HTMLElement>('[data-tab-panel]').forEach((panel) => {
+      panel.classList.toggle('hidden', panel.dataset.tabPanel !== tab);
+      let visible = 0;
+      panel.querySelectorAll<HTMLElement>('.tenant-row').forEach((row) => {
+        const show =
+          (property === 'all' || row.dataset.property === property) &&
+          (!query || (row.dataset.search ?? '').includes(query));
+        row.classList.toggle('hidden', !show);
+        if (show) visible++;
+      });
+      panel.querySelector('.empty-state')?.classList.toggle('hidden', visible > 0);
+    });
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-tab-btn]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      tab = btn.dataset.tabBtn ?? 'active';
+      render();
+    }),
+  );
+  document.querySelectorAll<HTMLElement>('[data-property-btn]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      property = btn.dataset.propertyBtn ?? 'all';
+      render();
+    }),
+  );
+  document.getElementById('tenant-search')?.addEventListener('input', (e) => {
+    query = (e.target as HTMLInputElement).value.trim().toLowerCase();
+    render();
+  });
+
+  render();
+</script>

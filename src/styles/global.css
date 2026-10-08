@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+
+@theme {
+  --font-serif: 'Newsreader', Georgia, serif;
+  --font-sans: 'Nunito Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  
+  --color-forest-950: #061913;
+  --color-forest-900: #0A261F;
+  --color-forest-850: #0C2E25;
+  --color-forest-800: #0D382B;
+  --color-forest-700: #134637;
+  --color-forest-600: #1C5A47;
+  --color-lime-accent: #C6EE58;
+  --color-lime-hover: #B7E344;
+  --color-terracotta: #C04A26;
+  --color-terracotta-light: #FFF1EC;
+  --color-sand-50: #F7F8F5;
+  --color-sand-100: #F3F4F0;
+  --color-sand-200: #E7EAE4;
+  --color-sand-300: #DCE0D7;
+
+  /* Text */
+  --color-ink: #17231E;
+  --color-ink-secondary: #5A6862;
+  --color-ink-muted: #73827C;
+  --color-ink-subtle: #A8B3AE;
+
+  /* On the dark forest cards (overview hero, app balance card) */
+  --color-on-dark-muted: #93BDB0;
+  --color-on-dark-track: #18493B;
+
+  /* Bill and repair statuses */
+  --color-status-paid-bg: #F1F8E9;
+  --color-status-paid: #2E7D32;
+  --color-status-paid-border: #C8E6C9;
+  --color-status-partial-bg: #FFF8E1;
+  --color-status-partial: #B78103;
+  --color-status-partial-border: #FFE082;
+  --color-status-unpaid-bg: #FDEEE9;
+  --color-status-unpaid: #C04A26;
+  --color-status-unpaid-border: #F6C6B8;
+  --color-status-credit-bg: #EFF6FF;
+  --color-status-credit: #1E40AF;
+  --color-status-credit-border: #BFDBFE;
+}
+
+/* The Flutter app's AppColors mirrors these values; test/unit/design_tokens_test.dart
+   fails if they drift apart. */
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-sand-100);
+  color: #17231E;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-editorial {
+  font-family: var(--font-serif);
+}
+
+/* Custom scrollbars for dashboard */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+/* Bar growth on the overview. Keyframes only set the start, so each bar
+   animates to its own inline width/height. Gated by .bars-ready (added in
+   DashboardLayout only when JS runs and reduced motion is off). */
+@keyframes bar-grow-x {
+  from { width: 0; }
+}
+@keyframes bar-grow-y {
+  from { height: 0; }
+}
+.bars-ready [data-animate-bars]:not(.in-view) .bar-x {
+  width: 0 !important;
+}
+.bars-ready [data-animate-bars]:not(.in-view) .bar-y {
+  height: 0 !important;
+}
+.bars-ready [data-animate-bars].in-view .bar-x {
+  animation: bar-grow-x 1100ms cubic-bezier(0.22, 1, 0.36, 1) var(--bar-delay, 0ms) both;
+}
+.bars-ready [data-animate-bars].in-view .bar-y {
+  animation: bar-grow-y 900ms cubic-bezier(0.22, 1, 0.36, 1) var(--bar-delay, 0ms) both;
+}

@@ -1,0 +1,59 @@
+---
+import { Search, Bell, ExternalLink, Menu } from '@lucide/astro';
+---
+
+<header class="sticky top-0 z-20 bg-[#F4F5F1]/80 backdrop-blur-md border-b border-[#E7EAE4]/80 px-4 sm:px-8 py-4 flex items-center justify-between gap-3 sm:gap-4">
+  <!-- Mobile Menu Toggle & Search Bar -->
+  <div class="flex items-center gap-3 flex-1 min-w-0 max-w-xl">
+    <button 
+      id="mobile-sidebar-toggle"
+      type="button"
+      class="lg:hidden p-2 rounded-xl bg-white border border-[#E7EAE4] text-[#17231E] hover:bg-[#EAECE6] transition-colors"
+      aria-label="Open sidebar menu"
+    >
+      <Menu class="w-5 h-5" />
+    </button>
+
+    <!-- Search Input Triggering Command Palette -->
+    <div 
+      id="search-trigger-btn"
+      class="w-full min-w-0 flex items-center justify-between bg-white border border-[#E4E7E0] hover:border-[#CBD1C5] rounded-full px-4 py-2.5 shadow-sm text-sm text-[#73827C] cursor-pointer transition-all group"
+    >
+      <div class="flex items-center gap-3 min-w-0">
+        <Search class="w-4 h-4 flex-shrink-0 text-[#8A9690] group-hover:text-[#17231E] transition-colors" />
+        <span class="text-xs sm:text-sm text-[#73827C] select-none truncate">
+          Search tenants, units, receipts
+        </span>
+      </div>
+      <kbd class="hidden sm:inline-flex items-center gap-0.5 px-2 py-0.5 text-[11px] font-semibold text-[#73827C] bg-[#F4F5F1] rounded-md border border-[#E1E4DC]">
+        ⌘K
+      </kbd>
+    </div>
+  </div>
+
+  <!-- Right Actions -->
+  <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+    <!-- Tenant App Link -->
+    <button 
+      type="button"
+      id="tenant-app-btn"
+      aria-label="Tenant app"
+      class="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-2 rounded-full bg-white border border-[#E4E7E0] hover:border-[#17231E] text-xs sm:text-sm font-medium text-[#17231E] shadow-sm transition-all hover:shadow cursor-pointer"
+    >
+      <span class="hidden sm:inline">Tenant app</span>
+      <ExternalLink class="w-3.5 h-3.5 text-[#5A6862]" />
+    </button>
+
+    <!-- Notifications Bell -->
+    <button 
+      type="button" 
+      id="notifications-bell-btn"
+      aria-label="View notifications"
+      class="relative p-2.5 rounded-full bg-white border border-[#E4E7E0] hover:bg-[#F8F9F7] text-[#17231E] shadow-sm transition-all cursor-pointer"
+    >
+      <Bell class="w-4 h-4 text-[#2C3B34]" />
+      <!-- Notification Dot -->
+      <span class="absolute top-2 right-2 h-2 w-2 rounded-full bg-[#E5532E] ring-2 ring-white"></span>
+    </button>
+  </div>
+</header>

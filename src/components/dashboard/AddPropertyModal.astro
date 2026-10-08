@@ -1,0 +1,361 @@
+---
+import { X, Building2, Plus, Trash2 } from '@lucide/astro';
+import { bedLabel, getPortfolio } from '../../data/portfolio';
+
+// This company's data only (the signed-in user's).
+const { company, plan, propertyViews, seed } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+
+// Managers first, so the usual choice is preselected; the owner can manage too.
+const managers = seed.staff
+  .filter((s) => s.role === 'manager' || s.role === 'owner')
+  .sort((a, b) => (a.role === b.role ? a.name.localeCompare(b.name) : a.role === 'manager' ? -1 : 1));
+const bedroomOptions = Object.keys(company.settings.depositSchedule).map(Number).sort((a, b) => a - b);
+// Defaults from the company's existing properties, else Makazi's usual rates.
+const first = propertyViews[0]?.property;
+const defaults = { waterRate: first?.waterRate ?? 150, garbageFee: first?.garbageFee ?? 250 };
+
+// Sent to the browser for validation; names and prefixes only.
+const existing = {
+  names: propertyViews.map((p) => p.property.name.toLowerCase()),
+  prefixes: propertyViews.map((p) => p.property.accountPrefix.toUpperCase()),
+  unitsUsed: plan.unitsUsed,
+  unitLimit: plan.unitLimit,
+  planName: plan.plan,
+};
+
+const inputClass =
+  'w-full px-4 py-2.5 rounded-xl border border-[#DCE0D7] focus:border-[#0D382B] focus:ring-2 focus:ring-[#0D382B]/10 outline-none text-sm text-[#17231E] bg-white';
+const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#5A6862] mb-1.5';
+---
+
+<div
+  id="add-property-modal"
+  class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-200"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="add-property-title"
+>
+  <div class="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-[#E7EAE4] overflow-hidden transform scale-95 transition-transform duration-200">
+    <div class="flex items-center justify-between p-6 border-b border-[#F0F2EE]">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-xl bg-[#0D382B] text-[#C6EE58] flex items-center justify-center">
+          <Building2 class="w-5 h-5" />
+        </div>
+        <div>
+          <h3 id="add-property-title" class="font-editorial text-2xl font-normal text-[#17231E]">Add property</h3>
+          <p class="text-xs text-[#73827C]">An apartment block or a group of houses, with its units.</p>
+        </div>
+      </div>
+      <button type="button" data-close class="h-8 w-8 rounded-full bg-[#F4F5F1] text-[#73827C] hover:text-[#17231E] flex items-center justify-center transition-colors cursor-pointer" aria-label="Close">
+        <X class="w-4 h-4" />
+      </button>
+    </div>
+
+    <form id="add-property-form" class="p-6 space-y-5 max-h-[75vh] overflow-y-auto" novalidate>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label for="property-name" class={labelClass}>Property name</label>
+          <input id="property-name" required maxlength="80" placeholder="e.g. Kileleshwa Gardens" class={inputClass} />
+        </div>
+        <div>
+          <span class={labelClass}>Type</span>
+          <div class="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Property type">
+            {[['apartments', 'Apartments'], ['houses', 'Houses']].map(([value, label], i) => (
+              <label class="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-[#DCE0D7] cursor-pointer text-sm text-[#17231E] has-[:checked]:border-[#0D382B] has-[:checked]:bg-[#0D382B]/5">
+                <input type="radio" name="property-type" value={value} checked={i === 0} class="accent-[#0D382B]" /> {label}
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <label for="property-address" class={labelClass}>Address</label>
+        <input id="property-address" required maxlength="120" placeholder="Road, area, town" class={inputClass} />
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label for="property-prefix" class={labelClass}>Account prefix</label>
+          <input id="property-prefix" required maxlength="4" placeholder="e.g. KG" autocapitalize="characters" class={`${inputClass} uppercase font-mono`} />
+          <p class="text-[11px] text-[#73827C] mt-1">Paybill account: <span id="prefix-example" class="font-mono">KG-1</span></p>
+        </div>
+        <div>
+          <label for="property-water" class={labelClass}>Water per unit (KES)</label>
+          <input id="property-water" type="number" required min="0" step="1" inputmode="numeric" value={defaults.waterRate} class={`${inputClass} tabular-nums`} />
+        </div>
+        <div>
+          <label for="property-garbage" class={labelClass}>Garbage / month (KES)</label>
+          <input id="property-garbage" type="number" required min="0" step="1" inputmode="numeric" value={defaults.garbageFee} class={`${inputClass} tabular-nums`} />
+        </div>
+      </div>
+
+      <div>
+        <label for="property-manager" class={labelClass}>Property manager</label>
+        <select id="property-manager" required class={inputClass}>
+          {managers.map((m) => (
+            <option value={m.id}>{m.name} ({m.role === 'owner' ? 'Owner' : 'Manager'})</option>
+          ))}
+        </select>
+        <p class="text-[11px] text-[#73827C] mt-1">Tenants of this property message this person in the app.</p>
+      </div>
+
+      <div>
+        <label for="property-image" class={labelClass}>Property photo URL <span class="normal-case font-normal">(displayed in app & admin)</span></label>
+        <div class="flex gap-3 items-center">
+          <input
+            id="property-image"
+            type="url"
+            placeholder="https://images.unsplash.com/..."
+            class={inputClass}
+          />
+          <div id="image-preview" class="h-10 w-10 rounded-xl bg-[#F4F5F1] border border-[#DCE0D7] flex items-center justify-center overflow-hidden flex-shrink-0">
+            <span class="text-[9px] text-[#73827C]">No image</span>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-1.5 mt-2">
+          <span class="text-[11px] text-[#73827C]">Quick presets:</span>
+          <button type="button" class="preset-img-btn text-[11px] px-2.5 py-0.5 rounded-full bg-[#F4F5F1] text-[#0D382B] hover:bg-[#E7EAE4] transition-colors cursor-pointer" data-url="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=600&q=80">Apartments</button>
+          <button type="button" class="preset-img-btn text-[11px] px-2.5 py-0.5 rounded-full bg-[#F4F5F1] text-[#0D382B] hover:bg-[#E7EAE4] transition-colors cursor-pointer" data-url="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80">Luxury Heights</button>
+          <button type="button" class="preset-img-btn text-[11px] px-2.5 py-0.5 rounded-full bg-[#F4F5F1] text-[#0D382B] hover:bg-[#E7EAE4] transition-colors cursor-pointer" data-url="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80">Modern Villas</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <span class={labelClass}>Units <span id="unit-count" class="normal-case font-normal">(1)</span></span>
+          <div class="flex items-center gap-2">
+            <button type="button" id="add-many-units" class="text-xs font-semibold text-[#0D382B] hover:underline cursor-pointer">+ 5 more</button>
+            <button type="button" id="add-unit" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-[#E3E6DF] hover:border-[#0D382B] text-xs font-semibold text-[#0D382B] cursor-pointer">
+              <Plus class="w-3.5 h-3.5" /> Add unit
+            </button>
+          </div>
+        </div>
+        <div id="unit-rows" class="space-y-2"></div>
+        <template id="unit-row-template">
+          <div class="unit-row grid grid-cols-[1fr_auto_auto] gap-2 items-center">
+            <input class={`unit-label ${inputClass}`} maxlength="10" placeholder="Unit label, e.g. A1" aria-label="Unit label" />
+            <select class={`unit-beds ${inputClass} w-28`} aria-label="Bedrooms">
+              {bedroomOptions.map((b) => <option value={b}>{bedLabel(b)}</option>)}
+            </select>
+            <button type="button" class="unit-remove h-10 w-10 rounded-xl text-[#73827C] hover:text-[#C04A26] hover:bg-[#FFF1EC] flex items-center justify-center cursor-pointer" aria-label="Remove unit">
+              <Trash2 class="w-4 h-4" />
+            </button>
+          </div>
+        </template>
+        <p class="text-[11px] text-[#73827C] mt-2">Bedrooms set the deposit ({bedroomOptions.map((b) => bedLabel(b)).join(', ')}, from Settings). New units start as Vacant.</p>
+      </div>
+
+      <p id="plan-note" class="hidden text-xs rounded-xl p-3 bg-[#FFF8E1] text-[#7A5B02] border border-[#FFE082]"></p>
+      <p id="add-property-error" role="alert" class="hidden text-sm text-[#C04A26]"></p>
+
+      <div class="pt-4 flex items-center justify-end gap-3 border-t border-[#F0F2EE]">
+        <button type="button" data-close class="px-5 py-2.5 rounded-xl text-sm font-medium text-[#5A6862] hover:bg-[#F4F5F1] transition-colors cursor-pointer">Cancel</button>
+        <button type="submit" class="px-6 py-2.5 rounded-xl text-sm font-semibold bg-[#0D382B] text-white hover:bg-[#154637] transition-all shadow-md cursor-pointer">Save property</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script type="application/json" id="add-property-context" set:html={JSON.stringify(existing).replace(/</g, '\\u003c')} />
+
+<script>
+  type Context = { names: string[]; prefixes: string[]; unitsUsed: number; unitLimit: number; planName: string };
+  const ctx: Context = JSON.parse(document.getElementById('add-property-context')?.textContent ?? '{}');
+  const modal = document.getElementById('add-property-modal')!;
+  const form = document.getElementById('add-property-form') as HTMLFormElement;
+  const rows = document.getElementById('unit-rows')!;
+  const template = document.getElementById('unit-row-template') as HTMLTemplateElement;
+  const nameInput = document.getElementById('property-name') as HTMLInputElement;
+  const prefixInput = document.getElementById('property-prefix') as HTMLInputElement;
+  const errorEl = document.getElementById('add-property-error')!;
+  let prefixTouched = false;
+
+  const labels = () => [...rows.querySelectorAll<HTMLInputElement>('.unit-label')];
+
+  // Next label after the last one: A9 -> A10, 12 -> 13, otherwise a count.
+  function nextLabel(): string {
+    const last = labels().at(-1)?.value.trim() ?? '';
+    const m = last.match(/^(.*?)(\d+)$/);
+    if (m) return `${m[1]}${Number(m[2]) + 1}`;
+    return String(labels().length + 1);
+  }
+
+  function updateCounts() {
+    const count = labels().length;
+    document.getElementById('unit-count')!.textContent = `(${count})`;
+    const after = ctx.unitsUsed + count;
+    const note = document.getElementById('plan-note')!;
+    const over = after > ctx.unitLimit;
+    note.classList.toggle('hidden', !over);
+    if (over) {
+      note.textContent = `This takes you to ${after} units, over the ${ctx.unitLimit} on your ${ctx.planName} plan. Plans aren't enforced yet; Codzure will be in touch about an upgrade.`;
+    }
+    rows.querySelectorAll<HTMLButtonElement>('.unit-remove').forEach((b) => (b.disabled = count === 1));
+  }
+
+  function addRow(label = nextLabel()) {
+    const row = template.content.firstElementChild!.cloneNode(true) as HTMLElement;
+    (row.querySelector('.unit-label') as HTMLInputElement).value = label;
+    row.querySelector('.unit-remove')!.addEventListener('click', () => {
+      if (labels().length > 1) row.remove();
+      updateCounts();
+    });
+    rows.appendChild(row);
+    updateCounts();
+  }
+
+  function suggestPrefix() {
+    if (prefixTouched) return;
+    const initials = nameInput.value
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((w) => w[0])
+      .join('')
+      .toUpperCase()
+      .replace(/[^A-Z]/g, '')
+      .slice(0, 3);
+    prefixInput.value = initials;
+    updatePrefixExample();
+  }
+
+  function updatePrefixExample() {
+    const prefix = prefixInput.value.toUpperCase() || 'KG';
+    document.getElementById('prefix-example')!.textContent = `${prefix}-${labels()[0]?.value.trim() || '1'}`;
+  }
+
+  function reset() {
+    form.reset();
+    rows.innerHTML = '';
+    prefixTouched = false;
+    errorEl.classList.add('hidden');
+    addRow('1');
+    updatePrefixExample();
+  }
+
+  function problem(): string | null {
+    const name = nameInput.value.trim();
+    if (!name) return 'Enter the property name.';
+    if (ctx.names.includes(name.toLowerCase())) return `You already have a property called ${name}.`;
+    if (!(document.getElementById('property-address') as HTMLInputElement).value.trim()) return 'Enter the address.';
+    const prefix = prefixInput.value.trim().toUpperCase();
+    if (!/^[A-Z]{2,4}$/.test(prefix)) return 'The account prefix is 2 to 4 letters, e.g. KG.';
+    if (ctx.prefixes.includes(prefix)) return `Prefix ${prefix} is already used by another of your properties.`;
+    for (const id of ['property-water', 'property-garbage']) {
+      const v = Number((document.getElementById(id) as HTMLInputElement).value);
+      if (!Number.isInteger(v) || v < 0) return 'Rates must be whole shillings, zero or more.';
+    }
+    const unitLabels = labels().map((i) => i.value.trim());
+    if (unitLabels.some((l) => !l)) return 'Give every unit a label.';
+    const seen = new Set<string>();
+    for (const l of unitLabels) {
+      if (seen.has(l.toLowerCase())) return `Unit ${l} is listed twice.`;
+      seen.add(l.toLowerCase());
+    }
+    return null;
+  }
+
+  // Open from the page's "Add property" button.
+  document.getElementById('add-property-btn')?.addEventListener('click', () => {
+    reset();
+    window.makaziUi?.showModal('add-property-modal');
+    setTimeout(() => nameInput.focus(), 50);
+  });
+  modal.querySelectorAll('[data-close]').forEach((el) =>
+    el.addEventListener('click', () => window.makaziUi?.hideModal('add-property-modal')),
+  );
+  document.getElementById('add-unit')!.addEventListener('click', () => addRow());
+  document.getElementById('add-many-units')!.addEventListener('click', () => {
+    for (let i = 0; i < 5; i++) addRow();
+  });
+  nameInput.addEventListener('input', suggestPrefix);
+  prefixInput.addEventListener('input', () => {
+    prefixTouched = prefixInput.value !== '';
+    prefixInput.value = prefixInput.value.toUpperCase().replace(/[^A-Z]/g, '');
+    updatePrefixExample();
+  });
+  rows.addEventListener('input', updatePrefixExample);
+
+  // Image preview & presets
+  const imageInput = document.getElementById('property-image') as HTMLInputElement | null;
+  const imagePreview = document.getElementById('image-preview') as HTMLElement | null;
+  const updateImagePreview = (url: string) => {
+    if (!imagePreview) return;
+    if (url) {
+      imagePreview.innerHTML = `<img src="${url}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<span class=\\'text-[9px] text-[#C04A26]\\'>Invalid</span>'" />`;
+    } else {
+      imagePreview.innerHTML = '<span class="text-[9px] text-[#73827C]">No image</span>';
+    }
+  };
+  imageInput?.addEventListener('input', () => updateImagePreview(imageInput.value.trim()));
+  document.querySelectorAll<HTMLButtonElement>('.preset-img-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (imageInput) {
+        imageInput.value = btn.dataset.url || '';
+        updateImagePreview(imageInput.value);
+      }
+    });
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const issue = problem();
+    errorEl.textContent = issue ?? '';
+    errorEl.classList.toggle('hidden', !issue);
+    if (issue) return;
+
+    const name = nameInput.value.trim();
+    const address = (document.getElementById('property-address') as HTMLInputElement).value.trim();
+    const type = (document.getElementById('property-type') as HTMLSelectElement).value;
+    const accountPrefix = prefixInput.value.trim().toUpperCase();
+    const waterRate = Number((document.getElementById('property-water') as HTMLInputElement).value) || 0;
+    const garbageFee = Number((document.getElementById('property-garbage') as HTMLInputElement).value) || 0;
+    const imageUrl = (document.getElementById('property-image') as HTMLInputElement | null)?.value.trim() || null;
+
+    const units = [...rows.querySelectorAll('.unit-row')].map((r) => ({
+      label: (r.querySelector('.unit-label') as HTMLInputElement).value.trim(),
+      bedrooms: Number((r.querySelector('.unit-bedrooms') as HTMLSelectElement).value) || 1,
+    }));
+
+    const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving...';
+    }
+
+    try {
+      const res = await fetch('/api/create-property', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          type,
+          address,
+          accountPrefix,
+          waterRate,
+          garbageFee,
+          units,
+          imageUrl,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Failed to add property');
+
+      window.makaziUi?.hideModal('add-property-modal');
+      window.makaziUi?.showToast(
+        'Property created',
+        `${name} and its ${units.length} unit(s) are now live in the system.`,
+      );
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errorEl.textContent = msg;
+      errorEl.classList.remove('hidden');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save property & units';
+      }
+    }
+  });
+</script>
