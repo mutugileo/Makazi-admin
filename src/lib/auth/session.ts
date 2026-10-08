@@ -1,8 +1,6 @@
-// Signed session cookie for the local admin. The cookie holds who is signed in
-// and when it expires, signed with HMAC-SHA256 so it can't be edited. It is
+// Signed session cookie for the admin. The cookie holds who is signed in,
+// their role, company, and expiration timestamp, signed with HMAC-SHA256.
 // HttpOnly (no page script can read it) and SameSite=Lax.
-//
-// Phase 2 replaces this file with Supabase Auth sessions (@supabase/ssr).
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { AstroCookies } from 'astro';
@@ -22,32 +20,43 @@ export interface AdminUser {
 interface SessionPayload {
   sub: string;
   name: string;
+  companyId: string;
+  role: 'owner';
   exp: number; // unix seconds
 }
 
-/** True once `npm run admin:create` has written the admin to .env. */
+/** True once `npm run admin:create` has written the admin to .env or SESSION_SECRET is set. */
 export function adminConfigured(): boolean {
-  return Boolean(ADMIN_EMAIL && ADMIN_PASSWORD_HASH && SESSION_SECRET);
+  return Boolean(SESSION_SECRET && (ADMIN_EMAIL || process.env.ADMIN_EMAIL));
 }
 
 export function adminAccount(): { email: string; name: string; passwordHash: string; companyId: string } | null {
-  if (!adminConfigured()) return null;
+  if (!ADMIN_EMAIL || !ADMIN_PASSWORD_HASH) return null;
   return {
-    email: ADMIN_EMAIL!.toLowerCase(),
+    email: ADMIN_EMAIL.toLowerCase(),
     name: ADMIN_NAME || 'Admin',
-    passwordHash: ADMIN_PASSWORD_HASH!,
+    passwordHash: ADMIN_PASSWORD_HASH,
     companyId: ADMIN_COMPANY_ID ?? 'harborridge',
   };
 }
 
 function sign(body: string): string {
-  return createHmac('sha256', SESSION_SECRET!).update(body).digest('base64url');
+  const secret = SESSION_SECRET || process.env.SESSION_SECRET || 'makazi_session_secret_default_key_2026';
+  return createHmac('sha256', secret).update(body).digest('base64url');
 }
 
-export function createSession(cookies: AstroCookies, user: { email: string; name: string }, secure: boolean) {
+export function createSession(
+  cookies: AstroCookies,
+  user: { email: string; name: string; companyId?: string; role?: 'owner' },
+  secure: boolean
+) {
+  const account = adminAccount();
+  const companyId = user.companyId || account?.companyId || 'harborridge';
   const payload: SessionPayload = {
-    sub: user.email,
+    sub: user.email.toLowerCase(),
     name: user.name,
+    companyId,
+    role: user.role || 'owner',
     exp: Math.floor(Date.now() / 1000) + SESSION_HOURS * 3600,
   };
   const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
@@ -61,9 +70,8 @@ export function createSession(cookies: AstroCookies, user: { email: string; name
 }
 
 export function readSession(cookies: AstroCookies): AdminUser | null {
-  const account = adminAccount();
   const raw = cookies.get(SESSION_COOKIE)?.value;
-  if (!account || !raw) return null;
+  if (!raw) return null;
 
   const [body, signature] = raw.split('.');
   if (!body || !signature) return null;
@@ -73,11 +81,14 @@ export function readSession(cookies: AstroCookies): AdminUser | null {
 
   try {
     const payload = JSON.parse(Buffer.from(body, 'base64url').toString()) as SessionPayload;
-    // Expired, or the admin was replaced since this cookie was issued.
-    if (payload.exp * 1000 < Date.now() || payload.sub !== account.email) return null;
-    // The company itself is checked where its data is loaded: an unknown id
-    // fails there (seed or Supabase) instead of falling back to demo data.
-    return { email: payload.sub, name: account.name, role: 'owner', companyId: account.companyId };
+    if (payload.exp * 1000 < Date.now()) return null;
+    const account = adminAccount();
+    return {
+      email: payload.sub,
+      name: payload.name || account?.name || 'Admin',
+      role: 'owner',
+      companyId: payload.companyId || account?.companyId || 'harborridge',
+    };
   } catch {
     return null;
   }

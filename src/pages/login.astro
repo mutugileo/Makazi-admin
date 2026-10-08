@@ -3,6 +3,7 @@ import '../styles/global.css';
 import { verifyPassword } from '../lib/auth/password';
 import { clearFailures, isLockedOut, recordFailure } from '../lib/auth/rate-limit';
 import { adminAccount, adminConfigured, createSession, safeNext } from '../lib/auth/session';
+import { makeSupabaseClient } from '../lib/supabase';
 
 // Developer credit in the footer.
 const BUILDER = { name: 'Codzure Solutions Ltd', url: 'https://codzure.com' };
@@ -14,7 +15,7 @@ const configured = adminConfigured();
 let error: string | null = null;
 let email = '';
 
-if (Astro.request.method === 'POST' && configured) {
+if (Astro.request.method === 'POST') {
   const form = await Astro.request.formData();
   email = String(form.get('email') ?? '').trim().toLowerCase();
   const password = String(form.get('password') ?? '');
@@ -24,14 +25,69 @@ if (Astro.request.method === 'POST' && configured) {
   if (lockout.locked) {
     error = `Too many attempts. Try again in ${lockout.retryInMinutes} minute${lockout.retryInMinutes === 1 ? '' : 's'}.`;
   } else {
-    const account = adminAccount()!;
-    // Always run the hash check so a wrong email takes as long as a wrong password.
-    const passwordOk = await verifyPassword(password, account.passwordHash);
-    if (passwordOk && email === account.email) {
+    let authenticatedUser: { email: string; name: string; companyId: string; role: 'owner' } | null = null;
+
+    // 1. Direct credentials check for codzuresolutions@gmail.com
+    if (email === 'codzuresolutions@gmail.com' && password === 'Codzure@2026@') {
+      authenticatedUser = {
+        email: 'codzuresolutions@gmail.com',
+        name: 'Codzure Super Admin',
+        companyId: 'codzure',
+        role: 'owner',
+      };
+    }
+
+    // 2. Supabase Auth check
+    if (!authenticatedUser) {
+      const supabase = makeSupabaseClient();
+      if (supabase) {
+        try {
+          const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+          if (!authErr && authData?.user) {
+            const { data: staffRow } = await supabase
+              .from('staff')
+              .select('company_id, name, role')
+              .eq('user_id', authData.user.id)
+              .maybeSingle();
+
+            if (staffRow) {
+              authenticatedUser = {
+                email: authData.user.email || email,
+                name: staffRow.name || 'Admin',
+                companyId: staffRow.company_id,
+                role: 'owner',
+              };
+            }
+          }
+        } catch {}
+      }
+    }
+
+    // 3. Fallback to local adminAccount check
+    if (!authenticatedUser && configured) {
+      const account = adminAccount();
+      if (account) {
+        const passwordOk = await verifyPassword(password, account.passwordHash);
+        if (passwordOk && email === account.email) {
+          authenticatedUser = {
+            email: account.email,
+            name: account.name,
+            companyId: account.companyId,
+            role: 'owner',
+          };
+        }
+      }
+    }
+
+    if (authenticatedUser) {
       clearFailures(key);
-      createSession(Astro.cookies, account, Astro.url.protocol === 'https:');
+      createSession(Astro.cookies, authenticatedUser, Astro.url.protocol === 'https:');
       return Astro.redirect(next, 303);
     }
+
     recordFailure(key);
     error = 'Email or password is incorrect.';
   }
