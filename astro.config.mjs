@@ -36,6 +36,9 @@ export default defineConfig({
       PUBLIC_SUPABASE_URL: envField.string({ context: 'server', access: 'secret', optional: true }),
       PUBLIC_SUPABASE_ANON_KEY: envField.string({ context: 'server', access: 'secret', optional: true }),
       SUPABASE_SERVICE_ROLE_KEY: envField.string({ context: 'server', access: 'secret', optional: true }),
+      // Shared with SCCE's collector; signs requests to /api/scce/features.
+      // Unset means the export is off.
+      SCCE_EXPORT_SECRET: envField.string({ context: 'server', access: 'secret', optional: true, min: 32 }),
     }
   }
 });
