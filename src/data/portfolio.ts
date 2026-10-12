@@ -3,9 +3,14 @@
 // set in .env.  Every money figure on every admin page comes through here so
 // the admin and the tenant app always agree.
 
-import seedJson from '../../shared/billing-seed.json';
 import { supabaseConfigured, makeSupabaseClient } from '../lib/supabase';
 import { fetchSeedFromSupabase } from '../lib/supabase-data';
+import {
+  isDistributedCacheEnabled,
+  getFromDistributedCache,
+  setInDistributedCache,
+  invalidateDistributedKey,
+} from '../lib/cache';
 import type { AstroCookies } from 'astro';
 import {
   addMonths,
@@ -40,13 +45,40 @@ import {
   REPAIR_STATUS_LABELS,
 } from '../lib/billing';
 
-const platformSeed = seedJson as Seed;
+function createEmptySeed(companyId: string): Seed {
+  return {
+    asOf: new Date().toISOString().slice(0, 10),
+    companies: [{
+      id: companyId,
+      slug: companyId,
+      name: companyId,
+      kraPin: '',
+      mpesaPaybill: '',
+      bankName: '',
+      bankAccount: '',
+      settings: {
+        ledgerStartMonth: '2026-10',
+        dueDay: 5,
+        graceDay: 20,
+        depositSchedule: {},
+        recordRetentionMonths: 6,
+      },
+      sequences: { receipt: 0, repairTicket: 0 },
+      subscription: { plan: 'growth', status: 'active', unitLimit: 100, staffLimit: 10, trialEndsAt: null },
+    }],
+    properties: [],
+    units: [],
+    tenants: [],
+    tenancies: [],
+    meterReadings: {},
+    payments: [],
+    staff: [],
+    repairTickets: [],
+    messages: [],
+  };
+}
 
-// Platform-wide: the demo clock. Everything else is per company.
-// "Today" is per request: the demo date in seed mode, the real date in
-// Nairobi with Supabase. Pages read asOf / currentMonth / currentPeriod from
-// getPortfolio(), never from a module constant.
-export const companies: Company[] = platformSeed.companies;
+export const companies: Company[] = [];
 
 export { formatDate, formatKes, monthLabel } from '../lib/billing';
 
@@ -169,7 +201,8 @@ export function scopeSeed(all: Seed, companyId: string): Seed {
 }
 
 function buildPortfolio(companyId: string, seedOverride?: Seed) {
-  const seed = seedOverride ? scopeSeed(seedOverride, companyId) : scopeSeed(platformSeed, companyId);
+  const baseSeed = seedOverride ?? createEmptySeed(companyId);
+  const seed = scopeSeed(baseSeed, companyId);
   const asOf = seed.asOf;
   const currentMonth: Month = monthOf(asOf);
   const currentPeriod = monthLabel(currentMonth);
@@ -486,17 +519,19 @@ function buildPortfolio(companyId: string, seedOverride?: Seed) {
 
   const tickets: TicketView[] = seed.repairTickets
     .map((ticket) => {
-      const view = tenancyById.get(ticket.tenancyId)!;
+      const view = tenancyById.get(ticket.tenancyId);
+      if (!view) return null;
       return {
         ticket,
         view,
-        categoryLabel: REPAIR_CATEGORY_LABELS[ticket.category],
-        priorityLabel: REPAIR_PRIORITY_LABELS[ticket.priority],
-        statusLabel: REPAIR_STATUS_LABELS[ticket.status],
+        categoryLabel: REPAIR_CATEGORY_LABELS[ticket.category] ?? ticket.category,
+        priorityLabel: REPAIR_PRIORITY_LABELS[ticket.priority] ?? ticket.priority,
+        statusLabel: REPAIR_STATUS_LABELS[ticket.status] ?? ticket.status,
         reporter: `${view.tenant.name} · ${view.unitLabel}`,
         when: whenLabel(ticket.resolvedAt ?? ticket.createdAt),
       };
     })
+    .filter((t): t is TicketView => t !== null)
     .sort((a, b) => b.ticket.createdAt.localeCompare(a.ticket.createdAt));
 
   const repairBoard = {
@@ -514,16 +549,19 @@ function buildPortfolio(companyId: string, seedOverride?: Seed) {
 
   const threads: ThreadView[] = [...new Set(seed.messages.map((m) => m.tenancyId))]
     .map((tenancyId) => {
+      const view = tenancyById.get(tenancyId);
+      if (!view) return null;
       const messages = seed.messages
         .filter((m) => m.tenancyId === tenancyId)
         .sort((a, b) => a.sentAt.localeCompare(b.sentAt));
       return {
-        view: tenancyById.get(tenancyId)!,
+        view,
         messages,
         last: messages[messages.length - 1],
         unread: messages.filter((m) => m.sender === 'tenant' && m.readByStaffAt === null).length,
       };
     })
+    .filter((t): t is ThreadView => t !== null)
     .sort((a, b) => b.last.sentAt.localeCompare(a.last.sentAt));
 
   const unreadThreadCount = threads.filter((t) => t.unread > 0).length;
@@ -588,23 +626,23 @@ export type Portfolio = ReturnType<typeof buildPortfolio>;
 let demoWarned = false;
 const seedCache = new Map<string, Portfolio>();
 
-// Live Supabase cache: short TTL and inflight request deduplication for SSR components
-interface LiveCacheEntry {
-  portfolio: Portfolio;
-  expiresAt: number;
-}
-const liveCache = new Map<string, LiveCacheEntry>();
+// Live Supabase inflight request deduplication for SSR components
 const liveInflight = new Map<string, Promise<Portfolio>>();
 // Bumped on every write, so a fetch that started before the write can't put
 // its older result back into the cache.
 const liveGeneration = new Map<string, number>();
 
 export function clearLiveCache(companyId?: string) {
-  const ids = companyId ? [companyId] : [...new Set([...liveCache.keys(), ...liveInflight.keys()])];
+  const ids = companyId ? [companyId] : [...new Set([...liveInflight.keys()])];
   for (const id of ids) {
-    liveCache.delete(id);
     liveInflight.delete(id);
     liveGeneration.set(id, (liveGeneration.get(id) ?? 0) + 1);
+    if (isDistributedCacheEnabled()) {
+      void invalidateDistributedKey(`portfolio:${id}`);
+    }
+  }
+  if (!companyId && isDistributedCacheEnabled()) {
+    void invalidateDistributedKey('portfolio:*');
   }
 }
 
@@ -691,9 +729,9 @@ async function getCurrentPortfolio(
 ): Promise<Portfolio> {
   // Phase 2: Supabase is configured → fetch live data.
   if (supabaseConfigured()) {
-    const cached = liveCache.get(companyId);
-    if (cached && Date.now() < cached.expiresAt) {
-      return cached.portfolio;
+    if (isDistributedCacheEnabled()) {
+      const cached = await getFromDistributedCache<Portfolio>(`portfolio:${companyId}`);
+      if (cached) return cached;
     }
 
     const inflight = liveInflight.get(companyId);
@@ -708,11 +746,8 @@ async function getCurrentPortfolio(
         try {
           const liveSeed = await fetchSeedFromSupabase(supabase, companyId);
           const portfolio = buildPortfolio(companyId, liveSeed);
-          if ((liveGeneration.get(companyId) ?? 0) === generation) {
-            liveCache.set(companyId, {
-              portfolio,
-              expiresAt: Date.now() + 3000, // 3-second TTL for fast responsive page loads
-            });
+          if (isDistributedCacheEnabled() && (liveGeneration.get(companyId) ?? 0) === generation) {
+            void setInDistributedCache(`portfolio:${companyId}`, portfolio, 5);
           }
           return portfolio;
         } finally {
@@ -727,21 +762,7 @@ async function getCurrentPortfolio(
     throw new Error(`Database connection unavailable for company ${companyId}. Demo data fallback is disabled.`);
   }
 
-  // Standalone offline demo development only (no Supabase in .env).
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error(`Database is required in production. No dummy or demo data allowed.`);
-  }
-
-  if (!demoWarned) {
-    demoWarned = true;
-    console.warn('[Makazi] Supabase is not configured: showing DEMO data from shared/billing-seed.json.');
-  }
-  let portfolio = seedCache.get(companyId);
-  if (!portfolio) {
-    portfolio = buildPortfolio(companyId);
-    seedCache.set(companyId, portfolio);
-  }
-  return portfolio;
+  throw new Error(`Database is required. Demo mock seeds have been removed.`);
 }
 
 export { addMonths };

@@ -91,6 +91,12 @@ export interface Property {
   /** Every rate change, oldest first. Bills use the rates in force for their month. */
   rateHistory: PropertyRates[];
   imageUrl?: string | null;
+  /** Property-specific M-Pesa Paybill override. If null/empty, uses company default. */
+  mpesaPaybill?: string | null;
+  /** Property-specific bank name override. If null/empty, uses company default. */
+  bankName?: string | null;
+  /** Property-specific bank account override. If null/empty, uses company default. */
+  bankAccount?: string | null;
 }
 
 /** Rates in force for a bill month; before the first change, the earliest rates. */
@@ -150,6 +156,8 @@ export interface Tenancy {
   openingBalance: number;
   /** Water meter at move-in. Null for tenancies older than the ledger. */
   openingReading: number | null;
+  /** Move-in garbage fee override. If null, falls back to property rate. */
+  moveInGarbage?: number | null;
   renewal: TenancyRenewal | null;
   /** Free-text note recorded at move-out (internal, not a reference). */
   moveOutNote: string | null;
@@ -470,7 +478,10 @@ export function buildLedger(seed: Seed, tenancy: Tenancy): MonthlyBill[] {
       rentDays = rent.days;
       lines.push({ kind: 'deposit', amount: tenancy.deposit });
       lines.push({ kind: 'rent', amount: rent.amount });
-      lines.push({ kind: 'garbage', amount: garbageFee });
+      const moveInGarbage = tenancy.moveInGarbage ?? garbageFee;
+      if (moveInGarbage > 0) {
+        lines.push({ kind: 'garbage', amount: moveInGarbage });
+      }
 
       // If reading was recorded for the move-in month, include water consumption
       const currentReading = reading(seed, unit.id, month);

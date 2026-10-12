@@ -32,9 +32,14 @@ const localSeedPath = resolve(scriptDir, '../shared/billing-seed.json');
 const seedPath = existsSync(localSeedPath)
   ? localSeedPath
   : resolve(scriptDir, '../../shared/billing-seed.json');
-const knownCompanies = JSON.parse(readFileSync(seedPath, 'utf8')).companies.map((c) => c.id);
-if (!knownCompanies.includes(companyId)) {
-  console.error(`Unknown company "${companyId}". Choose one of: ${knownCompanies.join(', ')}`);
+let knownCompanies = ['harborridge', 'codzure'];
+if (existsSync(seedPath)) {
+  try {
+    knownCompanies = JSON.parse(readFileSync(seedPath, 'utf8')).companies.map((c) => c.id);
+  } catch (_) {}
+}
+if (!companyId) {
+  console.error(`Company ID is required.`);
   process.exit(1);
 }
 if (!/^[^@\s]+@[^@\s]+$/.test(email)) {

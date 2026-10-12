@@ -1,9 +1,10 @@
 ---
 import DashboardLayout from '../layouts/DashboardLayout.astro';
 import { bedLabel, getPortfolio, monthLabel } from '../data/portfolio';
+import { ChevronDown } from '@lucide/astro';
 
 // This company's data only (the signed-in user's).
-const { company, portfolioSummary } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+const { company, propertyViews, portfolioSummary } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
 const { settings } = company;
 const canEdit = Astro.locals.user!.role === 'owner';
 const depositRows = Object.entries(settings.depositSchedule).sort(([a], [b]) => Number(a) - Number(b));
@@ -89,6 +90,104 @@ const fixed = 'text-sm font-semibold text-[#0D382B] mt-0.5';
       </section>
 
       <section class={`${card} lg:col-span-2`}>
+        <div class="mb-4">
+          <h2 class="font-editorial text-2xl text-[#0D382B]">Apartment payment details</h2>
+          <p class="text-xs text-[#69847A] mt-1">
+            Configure dedicated Paybill or bank accounts per property. Leave fields blank to inherit company defaults.
+          </p>
+        </div>
+
+        <div class="space-y-3">
+          {propertyViews.map((pv) => {
+            const p = pv.property;
+            const hasCustom = Boolean(p.mpesaPaybill || p.bankAccount || p.bankName);
+            const isOpen = false;
+            return (
+              <div 
+                class="rounded-2xl border border-[#E3E6DF] bg-[#FAFBF9] overflow-hidden transition-all shadow-2xs hover:border-[#69847A]/40" 
+                data-property-payment={p.id}
+              >
+                <button
+                  type="button"
+                  class="w-full p-4 sm:p-4.5 flex items-center justify-between gap-3 text-left hover:bg-[#F2F4EF]/70 transition-colors cursor-pointer select-none"
+                  data-toggle-property={p.id}
+                  aria-expanded={isOpen ? "true" : "false"}
+                >
+                  <div class="min-w-0 flex-1">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <h3 class="text-sm font-semibold text-[#0D382B]">{p.name}</h3>
+                      <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#EBF0EC] text-[#0D382B]">
+                        {pv.typeLabel}
+                      </span>
+                    </div>
+                    <p class="text-[11px] text-[#69847A] mt-0.5">
+                      Account prefix {p.accountPrefix} · {hasCustom ? `Paybill ${p.mpesaPaybill || 'default'} · ${p.bankName || 'Bank default'}` : 'Inheriting company defaults'}
+                    </p>
+                  </div>
+
+                  <div class="flex items-center gap-2.5 flex-shrink-0">
+                    <span class={`text-[11px] font-medium px-2.5 py-1 rounded-full border ${hasCustom ? 'bg-[#EBF7EE] text-[#1E743A] border-[#C3E8CC]' : 'bg-white text-[#5A6862] border-[#E2E5DF]'}`}>
+                      {hasCustom ? 'Custom active' : 'Company defaults'}
+                    </span>
+                    <div class={`w-7 h-7 rounded-full bg-white border border-[#E2E5DF] flex items-center justify-center text-[#5A6862] transition-transform duration-200 data-chevron ${isOpen ? 'rotate-180' : ''}`}>
+                      <ChevronDown class="w-3.5 h-3.5" />
+                    </div>
+                  </div>
+                </button>
+
+                <!-- Collapsible body -->
+                <div class={`${isOpen ? '' : 'hidden '}border-t border-[#E8ECE5] p-4.5 bg-white data-property-body`}>
+                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label for={`p-paybill-${p.id}`} class={label}>M-Pesa Paybill</label>
+                      <input
+                        id={`p-paybill-${p.id}`}
+                        data-prop-id={p.id}
+                        data-prop-field="mpesaPaybill"
+                        class={`${input} bg-[#FAFBF9] tabular-nums`}
+                        value={p.mpesaPaybill ?? ''}
+                        placeholder={company.mpesaPaybill || 'Company default'}
+                        inputmode="numeric"
+                        maxlength="7"
+                      />
+                      <p class={hint}>Leave empty to use {company.mpesaPaybill || 'company default'}.</p>
+                    </div>
+                    <div>
+                      <label for={`p-bank-${p.id}`} class={label}>Bank name & branch</label>
+                      <input
+                        id={`p-bank-${p.id}`}
+                        data-prop-id={p.id}
+                        data-prop-field="bankName"
+                        class={`${input} bg-[#FAFBF9]`}
+                        value={p.bankName ?? ''}
+                        placeholder={company.bankName || 'Company default'}
+                        maxlength="80"
+                      />
+                      <p class={hint}>Leave empty to use {company.bankName || 'company default'}.</p>
+                    </div>
+                    <div>
+                      <label for={`p-account-${p.id}`} class={label}>Bank account</label>
+                      <input
+                        id={`p-account-${p.id}`}
+                        data-prop-id={p.id}
+                        data-prop-field="bankAccount"
+                        class={`${input} bg-[#FAFBF9] tabular-nums`}
+                        value={p.bankAccount ?? ''}
+                        placeholder={company.bankAccount || 'Company default'}
+                        inputmode="numeric"
+                        maxlength="24"
+                      />
+                      <p class={hint}>Leave empty to use {company.bankAccount || 'company default'}.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <section class={`${card} lg:col-span-2`}>
         <h2 class="font-editorial text-2xl text-[#0D382B] mb-4">Billing rules</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
@@ -154,12 +253,58 @@ const fixed = 'text-sm font-semibold text-[#0D382B] mt-0.5';
     };
     form.addEventListener('reset', () => showError(null));
 
+    // Property accordion toggle: strictly single open card at a time
+    const propertyButtons = Array.from(form.querySelectorAll<HTMLButtonElement>('[data-toggle-property]'));
+    propertyButtons.forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const card = btn.closest<HTMLElement>('[data-property-payment]');
+        if (!card) return;
+        const body = card.querySelector<HTMLElement>('.data-property-body');
+        const chevron = btn.querySelector<HTMLElement>('.data-chevron');
+        if (!body) return;
+
+        const wasExpanded = btn.getAttribute('aria-expanded') === 'true';
+
+        // Collapse all other property cards
+        propertyButtons.forEach((otherBtn) => {
+          const otherCard = otherBtn.closest<HTMLElement>('[data-property-payment]');
+          const otherBody = otherCard?.querySelector<HTMLElement>('.data-property-body');
+          const otherChevron = otherBtn.querySelector<HTMLElement>('.data-chevron');
+          otherBtn.setAttribute('aria-expanded', 'false');
+          if (otherBody) otherBody.classList.add('hidden');
+          if (otherChevron) otherChevron.classList.remove('rotate-180');
+        });
+
+        // Expand clicked card if it was closed
+        if (!wasExpanded) {
+          btn.setAttribute('aria-expanded', 'true');
+          body.classList.remove('hidden');
+          if (chevron) chevron.classList.add('rotate-180');
+        }
+      });
+    });
+
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       if (!submit) return;
       const depositSchedule: Record<string, string> = {};
       form.querySelectorAll<HTMLInputElement>('input[data-beds]').forEach((el) => {
         depositSchedule[el.dataset.beds!] = el.value;
+      });
+
+      const propertyPayments: Array<{ propertyId: string; mpesaPaybill: string; bankName: string; bankAccount: string }> = [];
+      form.querySelectorAll<HTMLElement>('[data-property-payment]').forEach((el) => {
+        const propId = el.dataset.propertyPayment!;
+        const paybill = (el.querySelector<HTMLInputElement>('[data-prop-field="mpesaPaybill"]'))?.value ?? '';
+        const bankName = (el.querySelector<HTMLInputElement>('[data-prop-field="bankName"]'))?.value ?? '';
+        const bankAccount = (el.querySelector<HTMLInputElement>('[data-prop-field="bankAccount"]'))?.value ?? '';
+        propertyPayments.push({
+          propertyId: propId,
+          mpesaPaybill: paybill,
+          bankName,
+          bankAccount,
+        });
       });
 
       showError(null);
@@ -180,6 +325,7 @@ const fixed = 'text-sm font-semibold text-[#0D382B] mt-0.5';
             recordRetentionMonths: value('recordRetentionMonths'),
             mpesaSimulation: (form.elements.namedItem('mpesaSimulation') as HTMLInputElement | null)?.checked ?? false,
             depositSchedule,
+            propertyPayments,
           }),
         });
         const data = await res.json().catch(() => ({}));
@@ -194,4 +340,9 @@ const fixed = 'text-sm font-semibold text-[#0D382B] mt-0.5';
   }
 
   document.addEventListener('astro:page-load', initSettingsPage);
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    initSettingsPage();
+  } else {
+    document.addEventListener('DOMContentLoaded', initSettingsPage);
+  }
 </script>

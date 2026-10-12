@@ -35,6 +35,7 @@ interface PropertyRow {
   id: string; company_id: string; manager_id: string; name: string;
   type: Property['type']; address: string; account_prefix: string;
   water_rate: number; garbage_fee: number; rate_history: Property['rateHistory'];
+  mpesa_paybill?: string | null; bank_name?: string | null; bank_account?: string | null;
 }
 
 interface UnitRow {
@@ -49,6 +50,7 @@ interface TenancyRow {
   id: string; tenant_id: string; unit_id: string; rent: number; deposit: number;
   move_in: string; move_out: string | null; lease_start: string; lease_end: string;
   opening_balance: number; opening_reading: number | null;
+  move_in_garbage?: number | null;
   renewal: Tenancy['renewal']; move_out_note: string | null;
   deposit_refund: Tenancy['depositRefund'];
 }
@@ -105,6 +107,9 @@ const mapProperty = (r: PropertyRow, propertyImages?: Record<string, string>): P
   type: r.type, address: r.address, accountPrefix: r.account_prefix,
   waterRate: r.water_rate, garbageFee: r.garbage_fee, rateHistory: r.rate_history ?? [],
   imageUrl: propertyImages?.[r.id] ?? null,
+  mpesaPaybill: r.mpesa_paybill ?? null,
+  bankName: r.bank_name ?? null,
+  bankAccount: r.bank_account ?? null,
 });
 
 const mapUnit = (r: UnitRow): Unit => ({
@@ -120,6 +125,7 @@ const mapTenancy = (r: TenancyRow): Tenancy => ({
   rent: r.rent, deposit: r.deposit,
   moveIn: r.move_in, moveOut: r.move_out, leaseStart: r.lease_start, leaseEnd: r.lease_end,
   openingBalance: r.opening_balance, openingReading: r.opening_reading,
+  moveInGarbage: r.move_in_garbage ?? null,
   renewal: r.renewal, moveOutNote: r.move_out_note, depositRefund: r.deposit_refund,
 });
 

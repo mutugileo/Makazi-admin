@@ -18,7 +18,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
 
   try {
     const body = await request.json();
-    const { name, phone: rawPhone, email, unitId, rent, deposit, moveIn, openingReading, leaseTerm } = body;
+    const { name, phone: rawPhone, email, unitId, rent, deposit, moveIn, openingReading, leaseTerm, moveInGarbage } = body;
 
     if (!name || !rawPhone || !unitId || !rent || !moveIn) return json({ error: 'Missing required fields' }, 400);
     const phone = parseKenyanPhone(rawPhone);
@@ -29,6 +29,8 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     if (typeof moveIn !== 'string' || !ISO_DATE.test(moveIn)) return json({ error: 'Move-in must be a date' }, 400);
     const reading = openingReading === null || openingReading === undefined || openingReading === '' ? null : Number(openingReading);
     if (reading !== null && !(Number.isFinite(reading) && reading >= 0)) return json({ error: 'Meter reading must be 0 or more' }, 400);
+    const garbageKes = moveInGarbage === null || moveInGarbage === undefined || moveInGarbage === '' ? null : Math.round(Number(moveInGarbage));
+    if (garbageKes !== null && !(Number.isFinite(garbageKes) && garbageKes >= 0)) return json({ error: 'Move-in garbage must be 0 or more' }, 400);
 
     const companyId = user.companyId;
 
@@ -76,6 +78,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
         lease_end: leaseEnd.toISOString().slice(0, 10),
         opening_reading: reading ?? 0,
         opening_balance: 0,
+        move_in_garbage: garbageKes,
       })
       .select('id')
       .single();

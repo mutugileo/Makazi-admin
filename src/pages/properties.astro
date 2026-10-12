@@ -116,25 +116,50 @@ const { portfolioSummary, propertyViews, currentPeriod } = await getPortfolio(As
             </div>
           </div>
 
-          <!-- Units -->
-          <ul class="divide-y divide-[#EEF0EB] flex-1">
-            {p.units.map((u) => (
-              <li class="px-5 sm:px-6 py-3 flex items-center justify-between gap-3 text-xs">
-                <div class="min-w-0">
-                  <span class="font-semibold text-[#0D382B]">{u.unit.label}</span>
-                  <span class="text-[10px] uppercase tracking-wider text-[#69847A]"> {bedLabel(u.unit.bedrooms)}</span>
-                  {u.occupant ? (
-                    <span class="text-[#69847A]"> · {u.occupant.tenant.name}</span>
-                  ) : u.lastTenancy ? (
-                    <span class="text-[#69847A]"> · last tenant {u.lastTenancy.tenant.name}, left {formatDate(u.lastTenancy.tenancy.moveOut!)}</span>
-                  ) : null}
-                </div>
-                <StatusBadge status={u.occupant ? 'Occupied' : 'Vacant'} />
-              </li>
-            ))}
-          </ul>
+          <!-- Units Accordion Toggle -->
+          <div class="border-b border-[#E3E6DF] flex-1 flex flex-col">
+            <button
+              type="button"
+              class="w-full px-5 sm:px-6 py-2.5 bg-[#FBFDFB] hover:bg-[#F2F5EF] flex items-center justify-between text-xs font-semibold text-[#0D382B] transition-colors cursor-pointer select-none toggle-units-btn"
+              data-prop-id={p.property.id}
+              aria-expanded="false"
+            >
+              <span class="flex items-center gap-1.5">
+                <span>Units breakdown</span>
+                <span class="px-1.5 py-0.5 rounded-full bg-[#EBF0EC] text-[10px] font-semibold text-[#0D382B]">{p.units.length}</span>
+              </span>
+              <div class="flex items-center gap-1 text-[#69847A] text-[11px] font-medium">
+                <span class="units-toggle-label">Show units</span>
+                <ChevronDown class="w-3.5 h-3.5 transition-transform duration-200 units-chevron" />
+              </div>
+            </button>
 
-          <div class="p-4 flex gap-2 border-t border-[#E3E6DF]">
+            <!-- Units list -->
+            <ul class="divide-y divide-[#EEF0EB] hidden units-list" data-units-for={p.property.id}>
+              {p.units.length === 0 ? (
+                <li class="px-5 sm:px-6 py-3 text-xs text-[#69847A] bg-white">
+                  No units recorded for this property yet.
+                </li>
+              ) : (
+                p.units.map((u) => (
+                  <li class="px-5 sm:px-6 py-3 flex items-center justify-between gap-3 text-xs bg-white">
+                    <div class="min-w-0">
+                      <span class="font-semibold text-[#0D382B]">{u.unit.label}</span>
+                      <span class="text-[10px] uppercase tracking-wider text-[#69847A]"> {bedLabel(u.unit.bedrooms)}</span>
+                      {u.occupant ? (
+                        <span class="text-[#69847A]"> · {u.occupant.tenant.name}</span>
+                      ) : u.lastTenancy ? (
+                        <span class="text-[#69847A]"> · last tenant {u.lastTenancy.tenant.name}, left {formatDate(u.lastTenancy.tenancy.moveOut!)}</span>
+                      ) : null}
+                    </div>
+                    <StatusBadge status={u.occupant ? 'Occupied' : 'Vacant'} />
+                  </li>
+                ))
+              )}
+            </ul>
+          </div>
+
+          <div class="p-4 flex gap-2">
             <a href={`/tenants?property=${p.property.id}`} class="flex-1 text-center py-2.5 px-4 rounded-full border border-[#E3E6DF] hover:border-[#0D382B] text-xs font-semibold text-[#0D382B] bg-[#F8F9F6] hover:bg-white transition-colors shadow-xs">
               Tenants
             </a>
@@ -149,3 +174,53 @@ const { portfolioSummary, propertyViews, currentPeriod } = await getPortfolio(As
   <AddPropertyModal />
   <EditRatesModal />
 </DashboardLayout>
+
+<script>
+  function initPropertiesPage() {
+    const allButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.toggle-units-btn'));
+
+    allButtons.forEach((btn) => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = 'true';
+
+      btn.addEventListener('click', () => {
+        const propId = btn.dataset.propId;
+        const targetList = document.querySelector<HTMLElement>(`[data-units-for="${propId}"]`);
+        const targetLabel = btn.querySelector<HTMLElement>('.units-toggle-label');
+        const targetChevron = btn.querySelector<HTMLElement>('.units-chevron');
+        if (!targetList) return;
+
+        const wasExpanded = btn.getAttribute('aria-expanded') === 'true';
+
+        // Collapse all cards so multiple cards are never open simultaneously
+        const currentButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.toggle-units-btn'));
+        currentButtons.forEach((otherBtn) => {
+          const otherId = otherBtn.dataset.propId;
+          const otherList = document.querySelector<HTMLElement>(`[data-units-for="${otherId}"]`);
+          const otherLabel = otherBtn.querySelector<HTMLElement>('.units-toggle-label');
+          const otherChevron = otherBtn.querySelector<HTMLElement>('.units-chevron');
+
+          otherBtn.setAttribute('aria-expanded', 'false');
+          if (otherList) otherList.classList.add('hidden');
+          if (otherLabel) otherLabel.textContent = 'Show units';
+          if (otherChevron) otherChevron.classList.remove('rotate-180');
+        });
+
+        // If the clicked card was not already open, expand it
+        if (!wasExpanded) {
+          btn.setAttribute('aria-expanded', 'true');
+          targetList.classList.remove('hidden');
+          if (targetLabel) targetLabel.textContent = 'Hide units';
+          if (targetChevron) targetChevron.classList.add('rotate-180');
+        }
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', initPropertiesPage);
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    initPropertiesPage();
+  } else {
+    document.addEventListener('DOMContentLoaded', initPropertiesPage);
+  }
+</script>

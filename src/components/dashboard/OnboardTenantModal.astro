@@ -107,7 +107,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label for="tenant-rent" class={labelClass}>Monthly rent (KES)</label>
-          <input type="number" id="tenant-rent" required min="1" step="1" inputmode="numeric" placeholder="e.g. 45000" class={`${inputClass} tabular-nums`} />
+          <input type="number" id="tenant-rent" required min="1" step="1" inputmode="numeric" placeholder="Agreed monthly rent" class={`${inputClass} tabular-nums`} />
         </div>
         <div>
           <label for="tenant-deposit" class={labelClass}>Deposit (KES)</label>
@@ -127,16 +127,23 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
         </div>
       </div>
 
-      {FEATURES.leases && (
-      <div>
-        <label for="tenant-lease-term" class={labelClass}>Lease term</label>
-        <select id="tenant-lease-term" class={inputClass}>
-          <option value="12">12 months (standard)</option>
-          <option value="6">6 months</option>
-          <option value="24">24 months</option>
-        </select>
+      <div class={`grid grid-cols-1 ${FEATURES.leases ? 'sm:grid-cols-2' : ''} gap-4`}>
+        <div>
+          <label for="tenant-garbage" class={labelClass}>Move-in garbage (KES)</label>
+          <input type="number" id="tenant-garbage" min="0" step="1" inputmode="numeric" class={`${inputClass} tabular-nums`} />
+          <p class="text-[11px] text-[#73827C] mt-1">Set to 0 if garbage collection starts next month</p>
+        </div>
+        {FEATURES.leases && (
+        <div>
+          <label for="tenant-lease-term" class={labelClass}>Lease term</label>
+          <select id="tenant-lease-term" class={inputClass}>
+            <option value="12">12 months (standard)</option>
+            <option value="6">6 months</option>
+            <option value="24">24 months</option>
+          </select>
+        </div>
+        )}
       </div>
-      )}
 
       <!-- Move-in bill preview -->
       <div class="rounded-2xl bg-[#F8F9F7] border border-[#E7EAE4] p-4 text-sm tabular-nums">
@@ -179,19 +186,24 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
   const depositInput = document.getElementById('tenant-deposit') as HTMLInputElement | null;
   const readingInput = document.getElementById('tenant-opening-reading') as HTMLInputElement | null;
   const moveInInput = document.getElementById('tenant-move-in') as HTMLInputElement | null;
+  const garbageInput = document.getElementById('tenant-garbage') as HTMLInputElement | null;
   const kes = (n: number) => `KES ${n.toLocaleString('en-KE')}`;
   let depositTouched = false;
+  let garbageTouched = false;
 
   function selectedUnit() {
     return unitSelect?.selectedOptions[0] ?? null;
   }
 
-  function syncReading() {
+  function syncUnit() {
     const option = selectedUnit();
-    if (!option || !readingInput) return;
-    readingInput.value = option.dataset.reading ?? '';
-    readingInput.min = option.dataset.reading ?? '0';
+    if (!option) return;
+    if (readingInput) {
+      readingInput.value = option.dataset.reading ?? '';
+      readingInput.min = option.dataset.reading ?? '0';
+    }
     if (depositInput && !depositTouched) depositInput.value = option.dataset.deposit ?? '';
+    if (garbageInput && !garbageTouched) garbageInput.value = option.dataset.garbage ?? '0';
   }
 
   // Same rule as proratedRent in lib/billing.ts.
@@ -206,7 +218,10 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
     const rent = Number(rentInput?.value) || 0;
     const deposit = Number(depositInput?.value) || 0;
     const prorated = prorate(rent, moveInInput?.value ?? '');
-    const garbage = Number(selectedUnit()?.dataset.garbage) || 0;
+    const garbageVal = garbageInput?.value?.trim();
+    const garbage = garbageVal !== '' && garbageVal != null
+      ? Math.max(0, Number(garbageVal) || 0)
+      : (Number(selectedUnit()?.dataset.garbage) || 0);
     const set = (id: string, text: string) => {
       const el = document.getElementById(id);
       if (el) el.textContent = text;
@@ -214,18 +229,22 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
     set('preview-deposit', rent || deposit ? kes(deposit) : '—');
     set('preview-rent', rent ? kes(prorated.amount) : '—');
     set('preview-rent-days', rent && prorated.days < prorated.of ? `(${prorated.days} of ${prorated.of} days)` : '');
-    set('preview-garbage', unitSelect ? kes(garbage) : '—');
+    set('preview-garbage', unitSelect ? (garbage > 0 ? kes(garbage) : 'KES 0') : '—');
     set('preview-total', rent ? kes(deposit + prorated.amount + garbage) : '—');
   }
 
   unitSelect?.addEventListener('change', () => {
-    syncReading();
+    syncUnit();
     updatePreview();
   });
   rentInput?.addEventListener('input', updatePreview);
   moveInInput?.addEventListener('input', updatePreview);
   depositInput?.addEventListener('input', () => {
     depositTouched = depositInput.value !== '';
+    updatePreview();
+  });
+  garbageInput?.addEventListener('input', () => {
+    garbageTouched = garbageInput.value !== '';
     updatePreview();
   });
 
@@ -240,6 +259,10 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
     const deposit = Number(depositInput?.value) || 0;
     const moveIn = moveInInput?.value ?? '';
     const openingReading = Number(readingInput?.value) || 0;
+    const garbageVal = garbageInput?.value?.trim();
+    const moveInGarbage = garbageVal !== '' && garbageVal != null
+      ? Math.max(0, Math.round(Number(garbageVal) || 0))
+      : 0;
     const leaseTerm = (document.getElementById('tenant-lease-term') as HTMLSelectElement | null)?.value ?? '12';
 
     const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
@@ -258,6 +281,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
           deposit,
           moveIn,
           openingReading,
+          moveInGarbage,
           leaseTerm,
         }),
       });
@@ -295,6 +319,6 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
     }
   });
 
-  syncReading();
+  syncUnit();
   updatePreview();
 </script>

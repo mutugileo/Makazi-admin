@@ -99,6 +99,52 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       .eq('id', user.companyId);
     if (error) throw error;
 
+    if (Array.isArray(body.propertyPayments)) {
+      for (const item of body.propertyPayments) {
+        const propId = typeof item?.propertyId === 'string' ? item.propertyId.trim() : '';
+        if (!propId) continue;
+
+        let propPaybill: string | null = null;
+        const rawPaybill = text(item.mpesaPaybill).replace(/\s/g, '');
+        if (rawPaybill) {
+          if (!/^\d{5,7}$/.test(rawPaybill)) {
+            return json({ error: 'Property M-Pesa Paybill must be 5 to 7 digits.' }, 400);
+          }
+          propPaybill = rawPaybill;
+        }
+
+        let propBankName: string | null = null;
+        const rawBankName = text(item.bankName);
+        if (rawBankName) {
+          if (rawBankName.length < 2 || rawBankName.length > 80) {
+            return json({ error: 'Property bank name must be between 2 and 80 characters.' }, 400);
+          }
+          propBankName = rawBankName;
+        }
+
+        let propBankAccount: string | null = null;
+        const rawBankAccount = text(item.bankAccount).replace(/[\s-]/g, '');
+        if (rawBankAccount) {
+          if (!/^\d{6,20}$/.test(rawBankAccount)) {
+            return json({ error: 'Property bank account must be 6 to 20 digits.' }, 400);
+          }
+          propBankAccount = rawBankAccount;
+        }
+
+        const { error: propErr } = await supabase
+          .from('properties')
+          .update({
+            mpesa_paybill: propPaybill,
+            bank_name: propBankName,
+            bank_account: propBankAccount,
+          })
+          .eq('id', propId)
+          .eq('company_id', user.companyId);
+
+        if (propErr) throw propErr;
+      }
+    }
+
     clearLiveCache(user.companyId);
     // Every tenant's app refetches and shows the new details.
     await notifyCompany(supabase, user.companyId, 'data_updated', { action: 'settings_updated' });
