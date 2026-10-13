@@ -28,37 +28,39 @@ if (Astro.request.method === 'POST') {
   } else {
     let authenticatedUser: { email: string; name: string; companyId: string; role: 'owner' } | null = null;
 
-    // 1. Supabase Auth check: the signed-in user must have a staff row.
-    if (!authenticatedUser) {
-      const supabase = makeSupabaseClient();
-      if (supabase) {
-        try {
-          const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
-          if (!authErr && authData?.user) {
-            const { data: staffRow } = await supabase
-              .from('staff')
-              .select('company_id, name, role')
-              .eq('user_id', authData.user.id)
-              .maybeSingle();
+    // 1. Supabase Auth check: the signed-in user must exist and have a staff row.
+    const supabase = makeSupabaseClient();
+    if (supabase) {
+      try {
+        const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (!authErr && authData?.user) {
+          const { data: staffRow } = await supabase
+            .from('staff')
+            .select('company_id, name, role')
+            .eq('user_id', authData.user.id)
+            .maybeSingle();
 
-            if (staffRow) {
-              authenticatedUser = {
-                email: authData.user.email || email,
-                name: staffRow.name || 'Admin',
-                companyId: staffRow.company_id,
-                role: 'owner',
-              };
-            }
+          if (staffRow) {
+            authenticatedUser = {
+              email: authData.user.email || email,
+              name: staffRow.name || 'Admin',
+              companyId: staffRow.company_id,
+              role: 'owner',
+            };
+          } else {
+            error = 'This account does not have staff permissions.';
           }
-        } catch {}
+        }
+      } catch (err) {
+        console.error('Supabase auth check failed:', err);
       }
     }
 
-    // 2. Fallback to local adminAccount check (ADMIN_* env, set by admin:create)
-    if (!authenticatedUser && configured) {
+    // 2. Offline seed fallback (only when running without a Supabase backend)
+    if (!authenticatedUser && !supabase && configured) {
       const account = adminAccount();
       if (account) {
         const passwordOk = await verifyPassword(password, account.passwordHash);

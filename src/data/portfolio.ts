@@ -255,6 +255,9 @@ function buildPortfolio(companyId: string, seedOverride?: Seed) {
   const activeTenancies = tenancies.filter((t) => t.isActive);
   const formerTenancies = tenancies.filter((t) => !t.isActive);
 
+  const allBilledMonths = tenancies.flatMap((t) => t.bills.map((b) => b.month));
+  const maxBilledMonth = [currentMonth, ...allBilledMonths].sort().pop()!;
+
   // ---------------------------------------------------------------------------
   // Properties & units
 
@@ -343,11 +346,11 @@ function buildPortfolio(companyId: string, seedOverride?: Seed) {
     // Same deposit exclusion as collectedFor, applied per payment in order.
     let total = 0;
     for (const bill of currentBills) {
-      let depositLeft = bill.deposit;
+      let operatingLeft = expectedFor(bill);
       for (const p of bill.payments) {
-        const toDeposit = Math.min(depositLeft, p.amount);
-        depositLeft -= toDeposit;
-        if (p.method === method) total += p.amount - toDeposit;
+        const toOperating = Math.min(operatingLeft, p.amount);
+        operatingLeft -= toOperating;
+        if (p.method === method) total += toOperating;
       }
     }
     return total;
@@ -379,8 +382,9 @@ function buildPortfolio(companyId: string, seedOverride?: Seed) {
   };
 
   // Last 6 months, but never before the company joined Makazi.
-  const historyStart = [addMonths(currentMonth, -5), settings.ledgerStartMonth].sort().pop()!;
-  const sixMonthsHistory = monthsBetween(historyStart, currentMonth).map((month) => {
+  const historyEnd = maxBilledMonth;
+  const historyStart = [addMonths(historyEnd, -5), settings.ledgerStartMonth].sort().pop()!;
+  const sixMonthsHistory = monthsBetween(historyStart, historyEnd).map((month) => {
     const bills = billsIn(tenancies, month);
     const expected = bills.reduce((acc, b) => acc + expectedFor(b), 0);
     const collected = bills.reduce((acc, b) => acc + collectedFor(b), 0);
@@ -481,9 +485,6 @@ function buildPortfolio(companyId: string, seedOverride?: Seed) {
   // ---------------------------------------------------------------------------
   // Bills sheet (the owner's spreadsheet)
 
-
-  const allBilledMonths = tenancies.flatMap((t) => t.bills.map((b) => b.month));
-  const maxBilledMonth = [currentMonth, ...allBilledMonths].sort().pop()!;
   const billMonths: Month[] = monthsBetween(settings.ledgerStartMonth, maxBilledMonth).reverse();
 
   const billRows: BillRow[] = tenancies
@@ -676,8 +677,9 @@ export function viewMonthFrom(url: URL): Month | null {
 /** Months the overview can show, newest first: this one back to the ledger start (2 years at most). */
 export function selectableMonths(portfolio: Portfolio): Month[] {
   const start = portfolio.company.settings.ledgerStartMonth;
+  const latest = [portfolio.currentMonth, ...portfolio.billMonths].sort().pop()!;
   const months: Month[] = [];
-  for (let m = portfolio.currentMonth; m >= start && months.length < 24; m = addMonths(m, -1)) months.push(m);
+  for (let m = latest; m >= start && months.length < 24; m = addMonths(m, -1)) months.push(m);
   return months;
 }
 

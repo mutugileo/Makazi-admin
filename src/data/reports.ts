@@ -38,24 +38,26 @@ const percent = (part: number, whole: number) => (whole > 0 ? Math.round((part /
 
 /** Collected in a bill by method, leaving out what paid the deposit (as collectedFor). */
 function collectedByMethod(bill: MonthlyBill) {
-  let depositLeft = bill.deposit;
+  let operatingLeft = expectedFor(bill);
   let mpesa = 0;
   let bank = 0;
   for (const p of bill.payments) {
-    const toDeposit = Math.min(depositLeft, p.amount);
-    depositLeft -= toDeposit;
-    if (p.method === 'M-Pesa') mpesa += p.amount - toDeposit;
-    else bank += p.amount - toDeposit;
+    const toOperating = Math.min(operatingLeft, p.amount);
+    operatingLeft -= toOperating;
+    if (p.method === 'M-Pesa') mpesa += toOperating;
+    else bank += toOperating;
   }
   return { mpesa, bank };
 }
 
 export function buildReports(p: Portfolio, range: ReportRange) {
   const start = p.company.settings.ledgerStartMonth;
+  const allBilledMonths = p.tenancies.flatMap((t) => t.bills.map((b) => b.month));
+  const latestMonth = [p.currentMonth, ...allBilledMonths].sort().pop()!;
   const first =
-    range === 'all' ? start : [addMonths(p.currentMonth, -(Number(range) - 1)), start].sort().pop()!;
+    range === 'all' ? start : [addMonths(latestMonth, -(Number(range) - 1)), start].sort().pop()!;
   const months: Month[] = [];
-  for (let m = first; m <= p.currentMonth; m = addMonths(m, 1)) months.push(m);
+  for (let m = first; m <= latestMonth; m = addMonths(m, 1)) months.push(m);
 
   const allBills = p.tenancies.flatMap((t) => t.bills);
   const totalUnits = p.stats.totalUnits;
@@ -92,7 +94,7 @@ export function buildReports(p: Portfolio, range: ReportRange) {
     };
   });
 
-  const inRange = (isoOrDate: string) => isoOrDate.slice(0, 7) >= first && isoOrDate.slice(0, 7) <= p.currentMonth;
+  const inRange = (isoOrDate: string) => isoOrDate.slice(0, 7) >= first && isoOrDate.slice(0, 7) <= latestMonth;
 
   const byProperty = p.propertyViews
     .map((pv) => {

@@ -25,12 +25,14 @@ interface SessionPayload {
   exp: number; // unix seconds
 }
 
-/** True once `npm run admin:create` has written the admin to .env or SESSION_SECRET is set. */
+import { supabaseConfigured } from '../supabase';
+
+/** True once Supabase is configured or `npm run admin:create` has written the admin to .env or SESSION_SECRET is set. */
 export function adminConfigured(): boolean {
-  return Boolean(SESSION_SECRET && (ADMIN_EMAIL || process.env.ADMIN_EMAIL));
+  return supabaseConfigured() || Boolean(SESSION_SECRET && (ADMIN_EMAIL || process.env.ADMIN_EMAIL));
 }
 
-/** The env-configured admin. Every admin belongs to exactly one company, so no company is ever assumed. */
+/** The env-configured admin (offline development only). */
 export function adminAccount(): { email: string; name: string; passwordHash: string; companyId: string } | null {
   if (!ADMIN_EMAIL || !ADMIN_PASSWORD_HASH || !ADMIN_COMPANY_ID) return null;
   return {
@@ -53,8 +55,7 @@ export function createSession(
   user: { email: string; name: string; companyId?: string; role?: 'owner' },
   secure: boolean
 ) {
-  const account = adminAccount();
-  const companyId = user.companyId || account?.companyId;
+  const companyId = user.companyId || adminAccount()?.companyId;
   if (!companyId) throw new Error('Cannot start an admin session without a company');
   const payload: SessionPayload = {
     sub: user.email.toLowerCase(),
@@ -88,11 +89,10 @@ export function readSession(cookies: AstroCookies): AdminUser | null {
     if (payload.exp * 1000 < Date.now()) return null;
     // A session without a company is not a session: every page is scoped by it.
     if (!payload.companyId) return null;
-    const account = adminAccount();
     return {
       email: payload.sub,
-      name: payload.name || account?.name || 'Admin',
-      role: 'owner',
+      name: payload.name || 'Admin',
+      role: payload.role || 'owner',
       companyId: payload.companyId,
     };
   } catch {

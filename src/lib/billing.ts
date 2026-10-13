@@ -478,7 +478,7 @@ export function buildLedger(seed: Seed, tenancy: Tenancy): MonthlyBill[] {
       rentDays = rent.days;
       lines.push({ kind: 'deposit', amount: tenancy.deposit });
       lines.push({ kind: 'rent', amount: rent.amount });
-      const moveInGarbage = tenancy.moveInGarbage ?? garbageFee;
+      const moveInGarbage = tenancy.moveInGarbage ?? 0;
       if (moveInGarbage > 0) {
         lines.push({ kind: 'garbage', amount: moveInGarbage });
       }
@@ -563,8 +563,7 @@ export function expectedFor(bill: MonthlyBill): number {
 
 /** Payments received in the month, excluding the part that paid a deposit. */
 export function collectedFor(bill: MonthlyBill): number {
-  const depositPortion = Math.min(bill.deposit, bill.amountPaid);
-  return bill.amountPaid - depositPortion;
+  return Math.min(bill.amountPaid, expectedFor(bill));
 }
 
 export type ArrearsStage = 'upcoming' | 'grace' | 'overdue';

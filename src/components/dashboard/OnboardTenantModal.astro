@@ -203,7 +203,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
       readingInput.min = option.dataset.reading ?? '0';
     }
     if (depositInput && !depositTouched) depositInput.value = option.dataset.deposit ?? '';
-    if (garbageInput && !garbageTouched) garbageInput.value = option.dataset.garbage ?? '0';
+    if (garbageInput && !garbageTouched) garbageInput.value = '';
   }
 
   // Same rule as proratedRent in lib/billing.ts.
@@ -221,7 +221,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
     const garbageVal = garbageInput?.value?.trim();
     const garbage = garbageVal !== '' && garbageVal != null
       ? Math.max(0, Number(garbageVal) || 0)
-      : (Number(selectedUnit()?.dataset.garbage) || 0);
+      : 0;
     const set = (id: string, text: string) => {
       const el = document.getElementById(id);
       if (el) el.textContent = text;
