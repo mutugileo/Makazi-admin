@@ -18,6 +18,7 @@ const current = await getPortfolio(companyId, Astro.cookies);
 const viewing = await getPortfolio(companyId, Astro.cookies, viewMonthFrom(Astro.url));
 const months = selectableMonths(current);
 const showGetStarted = !viewing.isPastMonth && !current.gettingStarted.hasBills;
+const vacantUnits = Math.max(0, current.stats.totalUnits - current.stats.occupiedUnits);
 
 const firstName = (Astro.locals.user?.name ?? 'there').split(' ')[0];
 // Same greeting as the tenant app ("Habari, David").
@@ -75,7 +76,7 @@ const greeting = 'Habari';
 
   {showGetStarted && <GetStartedCard />}
 
-  {current.vacancies.total > 0 && (
+  {vacantUnits > 0 && (
     <div class="mb-6 p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-[#0C3227] via-[#0E3D2F] to-[#124B3A] text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-[#235848] shadow-sm">
       <div class="flex items-center gap-3.5">
         <div class="h-10 w-10 rounded-2xl bg-[#C6EE58] text-[#0A261F] flex items-center justify-center font-bold text-lg flex-shrink-0 shadow-md">
@@ -84,7 +85,7 @@ const greeting = 'Habari';
         <div>
           <div class="flex items-center gap-2">
             <span class="text-sm font-semibold tracking-tight text-white">
-              {current.vacancies.total} Vacant {current.vacancies.total === 1 ? 'Unit' : 'Units'} across portfolio
+              {vacantUnits} Vacant {vacantUnits === 1 ? 'Unit' : 'Units'} across portfolio
             </span>
             <span class="px-2 py-0.5 rounded-full bg-[#C6EE58]/20 text-[#C6EE58] text-[10px] font-bold uppercase tracking-wider border border-[#C6EE58]/30">
               Ask Nyumbani Marketplace
