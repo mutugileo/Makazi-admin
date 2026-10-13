@@ -9,7 +9,7 @@ import LeasesActionCard from '../components/dashboard/LeasesActionCard.astro';
 import { FEATURES } from '../config/features';
 import GetStartedCard from '../components/dashboard/GetStartedCard.astro';
 import { getPortfolio, monthLabel, selectableMonths, viewMonthFrom } from '../data/portfolio';
-import { ChevronDown, Plus } from '@lucide/astro';
+import { ChevronDown, Plus, Building2, ExternalLink } from '@lucide/astro';
 
 // This company's data only (the signed-in user's).
 const companyId = Astro.locals.user!.companyId;
@@ -74,6 +74,38 @@ const greeting = 'Habari';
   )}
 
   {showGetStarted && <GetStartedCard />}
+
+  {current.vacancies.total > 0 && (
+    <div class="mb-6 p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-[#0C3227] via-[#0E3D2F] to-[#124B3A] text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-[#235848] shadow-sm">
+      <div class="flex items-center gap-3.5">
+        <div class="h-10 w-10 rounded-2xl bg-[#C6EE58] text-[#0A261F] flex items-center justify-center font-bold text-lg flex-shrink-0 shadow-md">
+          <Building2 class="w-5 h-5 text-[#0A261F]" />
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-semibold tracking-tight text-white">
+              {current.vacancies.total} Vacant {current.vacancies.total === 1 ? 'Unit' : 'Units'} across portfolio
+            </span>
+            <span class="px-2 py-0.5 rounded-full bg-[#C6EE58]/20 text-[#C6EE58] text-[10px] font-bold uppercase tracking-wider border border-[#C6EE58]/30">
+              Ask Nyumbani Marketplace
+            </span>
+          </div>
+          <p class="text-xs text-[#A1B8AD] mt-0.5">
+            Fill your empty units with verified tenants on Ask Nyumbani. Reaching 50,000+ active home seekers.
+          </p>
+        </div>
+      </div>
+      <a
+        href="https://play.google.com/store/apps/details?id=com.codzure.ask_nyumbani&pcampaignid=web_share"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#C6EE58] text-[#0A261F] hover:bg-[#D4F772] transition-colors shadow-sm flex-shrink-0"
+      >
+        <span>List on Google Play</span>
+        <ExternalLink class="w-3.5 h-3.5" />
+      </a>
+    </div>
+  )}
 
   <!-- Primary Metrics: full-width hero card, then the 3 KPIs in a row -->
   <div class="flex flex-col gap-6 mb-7">

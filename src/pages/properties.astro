@@ -6,7 +6,7 @@ import EditRatesModal from '../components/dashboard/EditRatesModal.astro';
 import { getPortfolio, bedLabel, formatDate, formatKes, monthLabel } from '../data/portfolio';
 
 const shortMonth = (m: string) => monthLabel(m).replace(/^(\w{3})\w*/, '$1');
-import { Plus, ChevronDown, Image } from '@lucide/astro';
+import { Plus, ChevronDown, Image, ExternalLink } from '@lucide/astro';
 
 // This company's data only (the signed-in user's).
 const { portfolioSummary, propertyViews, currentPeriod } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
@@ -152,7 +152,21 @@ const { portfolioSummary, propertyViews, currentPeriod } = await getPortfolio(As
                         <span class="text-[#69847A]"> · last tenant {u.lastTenancy.tenant.name}, left {formatDate(u.lastTenancy.tenancy.moveOut!)}</span>
                       ) : null}
                     </div>
-                    <StatusBadge status={u.occupant ? 'Occupied' : 'Vacant'} />
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                      <StatusBadge status={u.occupant ? 'Occupied' : 'Vacant'} />
+                      {!u.occupant && (
+                        <a
+                          href="https://play.google.com/store/apps/details?id=com.codzure.ask_nyumbani&pcampaignid=web_share"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#E6F5ED] text-[#0A6B48] hover:bg-[#D5EFE2] border border-[#BCE4D0] transition-colors"
+                          title="List vacant unit on Ask Nyumbani marketplace"
+                        >
+                          <ExternalLink class="w-3 h-3" />
+                          <span>List on Ask Nyumbani</span>
+                        </a>
+                      )}
+                    </div>
                   </li>
                 ))
               )}
