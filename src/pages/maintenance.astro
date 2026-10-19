@@ -211,8 +211,8 @@ const priorityTone = {
     aria-modal="true"
     aria-labelledby="assign-repair-title"
   >
-    <div class="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-[#E7EAE4] overflow-hidden transform scale-95 transition-transform duration-200">
-      <div class="flex items-center justify-between p-6 border-b border-[#F0F2EE]">
+    <div class="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-[#E7EAE4] overflow-hidden transform scale-95 transition-transform duration-200 max-h-[92vh] flex flex-col">
+      <div class="flex items-center justify-between p-6 border-b border-[#F0F2EE] shrink-0">
         <div class="flex items-center gap-3 min-w-0">
           <div class="h-10 w-10 shrink-0 rounded-xl bg-[#0D382B] text-[#C6EE58] flex items-center justify-center">
             <Wrench class="w-5 h-5" />
@@ -227,15 +227,15 @@ const priorityTone = {
         </button>
       </div>
 
-      <form id="assign-repair-form" class="p-6 space-y-4" novalidate>
+      <form id="assign-repair-form" class="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto" novalidate>
         <div>
           <label for="assign-name" class="block text-xs font-semibold uppercase tracking-wider text-[#5A6862] mb-1.5">Who's going</label>
-          <input id="assign-name" name="name" type="text" required maxlength="80" autocomplete="off" placeholder="e.g. Otieno Fundi Services"
+          <input id="assign-name" name="name" type="text" required maxlength="80" autocomplete="off" placeholder="Contractor or fundi name"
             class="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E5DF] bg-[#FAFBF9] text-sm text-[#17231E] focus:outline-none focus:border-[#0D382B]" />
         </div>
         <div>
           <label for="assign-phone" class="block text-xs font-semibold uppercase tracking-wider text-[#5A6862] mb-1.5">Mobile number</label>
-          <input id="assign-phone" name="phone" type="tel" required inputmode="tel" autocomplete="off" placeholder="0712 345 678"
+          <input id="assign-phone" name="phone" type="tel" required inputmode="tel" autocomplete="off" placeholder="07XX XXX XXX"
             class="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E5DF] bg-[#FAFBF9] text-sm text-[#17231E] focus:outline-none focus:border-[#0D382B]" />
         </div>
         <div>

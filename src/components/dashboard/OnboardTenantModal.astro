@@ -33,9 +33,9 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
   aria-modal="true"
   aria-labelledby="onboard-modal-title"
 >
-  <div class="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-[#E7EAE4] overflow-hidden transform scale-95 transition-transform duration-200">
+  <div class="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-[#E7EAE4] overflow-hidden transform scale-95 transition-transform duration-200 max-h-[90vh] flex flex-col">
     <!-- Header -->
-    <div class="flex items-center justify-between p-6 border-b border-[#F0F2EE]">
+    <div class="flex items-center justify-between p-6 border-b border-[#F0F2EE] shrink-0">
       <div class="flex items-center gap-3">
         <div class="h-10 w-10 rounded-xl bg-[#0D382B] text-[#C6EE58] flex items-center justify-center">
           <UserPlus class="w-5 h-5" />
@@ -58,7 +58,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
     </div>
 
     <!-- Form -->
-    <form id="onboard-tenant-form" class="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+    <form id="onboard-tenant-form" class="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto">
       <div>
         <label for="tenant-full-name" class={labelClass}>Full name</label>
         <input type="text" id="tenant-full-name" required placeholder="Official legal name" class={inputClass} />

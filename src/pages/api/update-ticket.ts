@@ -43,7 +43,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       }
       const phone = parseKenyanPhone(assignee?.phone);
       if (!phone) {
-        return json({ error: 'Enter their Safaricom or Airtel number, e.g. 0712 345 678.' }, 400);
+        return json({ error: 'Enter a valid 10-digit mobile number starting with 07 or 01.' }, 400);
       }
       let visitAt: string | null = null;
       const rawVisit = typeof assignee?.visitAt === 'string' ? assignee.visitAt.trim() : '';

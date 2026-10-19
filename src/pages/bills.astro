@@ -136,15 +136,15 @@ const td = 'py-3 px-3 whitespace-nowrap';
             <th scope="col" class={`${th} text-right`}>Paid</th>
             <th scope="col" class={th}>Date paid</th>
             <th scope="col" class={th}>Status</th>
-            <th scope="col" class={`${th} pr-6 text-right`}>Outstanding</th>
+            <th scope="col" class={`${th} pr-4 lg:pr-6 text-right sticky right-0 bg-[#F8F9F6] z-10`}>Outstanding</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-[#E3E6DF]">
           {billRows.map(({ view, bill }) => {
             const depositCell = bill.deposit + bill.depositApplied;
             return (
-              <tr class="bill-row hover:bg-[#F8F9F6]/60" data-month={bill.month} data-property={view.property.id} data-status={bill.status}>
-                <td class={`${td} pl-6 sticky left-0 bg-white`}>
+              <tr class="bill-row group hover:bg-[#F8F9F6]/60 transition-colors" data-month={bill.month} data-property={view.property.id} data-status={bill.status}>
+                <td class={`${td} pl-4 lg:pl-6 sticky left-0 bg-white group-hover:bg-[#F8F9F6] z-10 transition-colors`}>
                   <span class="font-semibold text-[#0D382B]">{view.tenant.name}</span>
                   {!view.isActive && <span class="ml-1.5 text-[10px] uppercase tracking-wider text-[#69847A]">former</span>}
                 </td>
@@ -178,7 +178,7 @@ const td = 'py-3 px-3 whitespace-nowrap';
                 <td class={`${td} text-right`}>{formatKes(bill.amountPaid)}</td>
                 <td class={`${td} text-[#69847A]`}>{bill.datePaid ? formatDate(bill.datePaid) : '—'}</td>
                 <td class={td}><StatusBadge status={bill.status} /></td>
-                <td class={`${td} pr-6 text-right font-semibold ${bill.outstanding > 0 ? 'text-[#C04A26]' : bill.outstanding < 0 ? 'text-[#1E40AF]' : 'text-[#2E7D32]'}`}>
+                <td class={`${td} pr-4 lg:pr-6 text-right font-semibold sticky right-0 bg-white/95 backdrop-blur-xs group-hover:bg-[#F8F9F6] shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.05)] transition-colors ${bill.outstanding > 0 ? 'text-[#C04A26]' : bill.outstanding < 0 ? 'text-[#1E40AF]' : 'text-[#2E7D32]'}`}>
                   {formatKes(bill.outstanding)}
                 </td>
               </tr>

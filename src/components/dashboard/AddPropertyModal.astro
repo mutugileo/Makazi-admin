@@ -44,8 +44,8 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
   aria-modal="true"
   aria-labelledby="add-property-title"
 >
-  <div class="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-[#E7EAE4] overflow-hidden transform scale-95 transition-transform duration-200">
-    <div class="flex items-center justify-between p-6 border-b border-[#F0F2EE]">
+  <div class="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-[#E7EAE4] overflow-hidden transform scale-95 transition-transform duration-200 max-h-[90vh] flex flex-col">
+    <div class="flex items-center justify-between p-6 border-b border-[#F0F2EE] shrink-0">
       <div class="flex items-center gap-3">
         <div class="h-10 w-10 rounded-xl bg-[#0D382B] text-[#C6EE58] flex items-center justify-center">
           <Building2 class="w-5 h-5" />
@@ -60,12 +60,12 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
       </button>
     </div>
 
-    <form id="add-property-form" class="flex flex-col max-h-[75vh]" novalidate>
+    <form id="add-property-form" class="flex flex-col flex-1 min-h-0 overflow-hidden" novalidate>
     <div class="flex-1 overflow-y-auto p-6 space-y-5">
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label for="property-name" class={labelClass}>Property name</label>
-          <input id="property-name" required maxlength="80" placeholder="e.g. Kileleshwa Gardens" class={inputClass} />
+          <input id="property-name" required maxlength="80" placeholder="Property name" class={inputClass} />
         </div>
         <div>
           <span class={labelClass}>Type</span>
@@ -87,7 +87,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
           <label for="property-prefix" class={labelClass}>Account prefix</label>
-          <input id="property-prefix" required maxlength="4" placeholder="e.g. KG" autocapitalize="characters" class={`${inputClass} uppercase font-mono`} />
+          <input id="property-prefix" required maxlength="4" placeholder="Prefix (2-4 letters)" autocapitalize="characters" class={`${inputClass} uppercase font-mono`} />
           <p class="text-[11px] text-[#73827C] mt-1">Paybill account: <span id="prefix-example" class="font-mono">KG-1</span></p>
         </div>
         <div>
@@ -158,7 +158,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
         <div id="unit-rows" class="space-y-2"></div>
         <template id="unit-row-template">
           <div class="unit-row grid grid-cols-[1fr_auto_auto] gap-2 items-center">
-            <input class={`unit-label ${inputClass}`} maxlength="10" placeholder="Unit label, e.g. A1" aria-label="Unit label" />
+            <input class={`unit-label ${inputClass}`} maxlength="10" placeholder="Unit label (such as A1)" aria-label="Unit label" />
             <select class={`unit-beds ${inputClass} w-28`} aria-label="Bedrooms">
               {bedroomOptions.map((b) => <option value={b}>{bedLabel(b)}</option>)}
             </select>
@@ -269,7 +269,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
       if (ctx.names?.includes(name.toLowerCase())) return `You already have a property called ${name}.`;
       if (!(document.getElementById('property-address') as HTMLInputElement)?.value.trim()) return 'Enter the address.';
       const prefix = prefixInput!.value.trim().toUpperCase();
-      if (!/^[A-Z]{2,4}$/.test(prefix)) return 'The account prefix is 2 to 4 letters, e.g. KG.';
+      if (!/^[A-Z]{2,4}$/.test(prefix)) return 'The account prefix must be 2 to 4 uppercase letters (such as KG).';
       if (ctx.prefixes?.includes(prefix)) return `Prefix ${prefix} is already used by another of your properties.`;
       for (const id of ['property-water', 'property-garbage']) {
         const v = Number((document.getElementById(id) as HTMLInputElement)?.value);

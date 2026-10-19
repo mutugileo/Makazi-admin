@@ -10,14 +10,14 @@ const recentPayments = payments.slice(0, 3);
 
 <div 
   id="command-palette-modal" 
-  class="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-200"
+  class="fixed inset-0 z-50 flex items-start justify-center pt-10 sm:pt-16 px-4 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-200"
   role="dialog"
   aria-modal="true"
   aria-labelledby="command-palette-title"
 >
-  <div class="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-[#E7EAE4] overflow-hidden transform scale-95 transition-transform duration-200">
+  <div class="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-[#E7EAE4] overflow-hidden transform scale-95 transition-transform duration-200 max-h-[85vh] flex flex-col">
     <!-- Search Bar -->
-    <div class="flex items-center gap-3 px-5 py-4 border-b border-[#F0F2EE]">
+    <div class="flex items-center gap-3 px-5 py-4 border-b border-[#F0F2EE] shrink-0">
       <Search class="w-5 h-5 text-[#73827C] flex-shrink-0" />
       <input 
         type="text" 
@@ -42,7 +42,7 @@ const recentPayments = payments.slice(0, 3);
     </div>
 
     <!-- Results Container -->
-    <div id="command-results" class="max-h-[60vh] overflow-y-auto p-3 space-y-4">
+    <div id="command-results" class="flex-1 min-h-0 overflow-y-auto p-3 space-y-4">
       <!-- Quick Navigation Section -->
       <div class="command-section">
         <p class="px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-[#73827C]">

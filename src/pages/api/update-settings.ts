@@ -36,7 +36,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
 
     const kraPin = text(body.kraPin).toUpperCase();
     if (!/^[AP]\d{9}[A-Z]$/.test(kraPin)) {
-      return json({ error: 'KRA PIN is a letter, 9 digits and a letter, e.g. P051234567X.' }, 400);
+      return json({ error: 'KRA PIN must have 1 letter, 9 digits, and 1 letter (11 characters total).' }, 400);
     }
 
     const mpesaPaybill = text(body.mpesaPaybill).replace(/\s/g, '');
