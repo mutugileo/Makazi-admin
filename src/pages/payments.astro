@@ -207,7 +207,10 @@ const defaultTime = nairobiNow.slice(11, 16);
           >
             <option value="">Select a tenancy...</option>
             {activeTenancies.map((t) => (
-              <option value={t.tenancy.id}>
+              <option 
+                value={t.tenancy.id}
+                data-balance={t.balance}
+              >
                 {t.tenant.name} · Unit {t.unit.label} ({t.property.name}) [Ref: {t.accountNumber}]
               </option>
             ))}
@@ -225,9 +228,19 @@ const defaultTime = nairobiNow.slice(11, 16);
               required
               min="1"
               step="1"
-              placeholder="e.g. 45000"
+              placeholder="Enter amount paid"
               class="w-full px-3 py-2 text-xs rounded-xl border border-[#CCD2C7] focus:outline-none focus:border-[#0D382B] font-semibold"
             />
+            <div id="record-amount-due-container" class="mt-1.5 flex flex-wrap items-center justify-between gap-1 text-[11px] min-h-[18px]">
+              <span id="record-amount-due-hint" class="text-[#69847A]">Select a tenancy to view due amount</span>
+              <button 
+                type="button" 
+                id="record-amount-due-fill-btn" 
+                class="hidden text-[#0D382B] hover:text-[#08221A] font-bold underline cursor-pointer transition-colors"
+              >
+                Apply full balance
+              </button>
+            </div>
           </div>
 
           <div>
@@ -256,7 +269,7 @@ const defaultTime = nairobiNow.slice(11, 16);
             type="text"
             id="record-ref-input"
             required
-            placeholder="e.g. QJD92881X or EFT-10293 or CASH-OCT"
+            placeholder="QJD92881X or EFT-10293 or CASH-OCT"
             class="w-full px-3 py-2 text-xs rounded-xl border border-[#CCD2C7] focus:outline-none focus:border-[#0D382B] font-mono uppercase"
           />
         </div>
@@ -458,11 +471,66 @@ const defaultTime = nairobiNow.slice(11, 16);
     const submitRecordBtn = document.getElementById('submit-record-payment-btn') as HTMLButtonElement | null;
     const errorBox = document.getElementById('record-payment-error');
     const errorMsg = document.getElementById('record-payment-error-msg');
+    const recordTenancySelect = document.getElementById('record-tenancy-select') as HTMLSelectElement | null;
+    const recordAmountInput = document.getElementById('record-amount-input') as HTMLInputElement | null;
+    const amountDueHint = document.getElementById('record-amount-due-hint');
+    const amountDueFillBtn = document.getElementById('record-amount-due-fill-btn') as HTMLButtonElement | null;
+
+    let currentSelectedBalance: number | null = null;
+
+    function updateAmountDue() {
+      if (!recordTenancySelect || !amountDueHint || !amountDueFillBtn) return;
+      const selectedOption = recordTenancySelect.selectedOptions[0];
+      if (!selectedOption || !selectedOption.value) {
+        currentSelectedBalance = null;
+        amountDueHint.className = 'text-[#69847A]';
+        amountDueHint.textContent = 'Select a tenancy to view due amount';
+        amountDueFillBtn.classList.add('hidden');
+        return;
+      }
+
+      const balStr = selectedOption.dataset.balance;
+      const balance = balStr !== undefined ? Number(balStr) : 0;
+      currentSelectedBalance = balance;
+
+      if (balance > 0) {
+        amountDueHint.className = 'text-[#854D0E] font-medium';
+        amountDueHint.innerHTML = `Amount due: <strong class="text-[#0D382B] font-bold">KES ${balance.toLocaleString('en-KE')}</strong>`;
+        amountDueFillBtn.classList.remove('hidden');
+        amountDueFillBtn.textContent = 'Apply full balance';
+      } else if (balance === 0) {
+        amountDueHint.className = 'text-[#2F6B4F] font-semibold';
+        amountDueHint.textContent = 'Account settled (KES 0 due)';
+        amountDueFillBtn.classList.add('hidden');
+      } else {
+        const credit = Math.abs(balance);
+        amountDueHint.className = 'text-[#2F6B4F] font-semibold';
+        amountDueHint.textContent = `Credit balance: KES ${credit.toLocaleString('en-KE')}`;
+        amountDueFillBtn.classList.add('hidden');
+      }
+    }
+
+    if (recordTenancySelect) {
+      recordTenancySelect.onchange = () => {
+        updateAmountDue();
+      };
+    }
+
+    if (amountDueFillBtn && recordAmountInput) {
+      amountDueFillBtn.onclick = () => {
+        if (currentSelectedBalance !== null && currentSelectedBalance > 0) {
+          recordAmountInput.value = String(currentSelectedBalance);
+          recordAmountInput.dispatchEvent(new Event('input', { bubbles: true }));
+          recordAmountInput.focus();
+        }
+      };
+    }
 
     function openRecordModal() {
       if (recordModal) {
         recordModal.classList.remove('hidden');
         if (errorBox) errorBox.classList.add('hidden');
+        updateAmountDue();
       }
     }
 
