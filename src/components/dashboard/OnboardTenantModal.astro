@@ -122,16 +122,17 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
           <input type="date" id="tenant-move-in" required value={nextFirst} class={inputClass} />
         </div>
         <div>
-          <label for="tenant-opening-reading" class={labelClass}>Opening water reading</label>
-          <input type="number" id="tenant-opening-reading" required min="0" step="1" inputmode="numeric" class={`${inputClass} tabular-nums`} />
+          <label for="tenant-opening-reading" class={labelClass}>Opening water reading <span class="normal-case font-normal">(optional)</span></label>
+          <input type="number" id="tenant-opening-reading" min="0" step="1" inputmode="numeric" placeholder="Baseline for next bill" class={`${inputClass} tabular-nums`} />
+          <p class="text-[11px] text-[#73827C] mt-1">Starting meter baseline; water usage is billed next month</p>
         </div>
       </div>
 
       <div class={`grid grid-cols-1 ${FEATURES.leases ? 'sm:grid-cols-2' : ''} gap-4`}>
         <div>
-          <label for="tenant-garbage" class={labelClass}>Move-in garbage (KES)</label>
-          <input type="number" id="tenant-garbage" min="0" step="1" inputmode="numeric" class={`${inputClass} tabular-nums`} />
-          <p class="text-[11px] text-[#73827C] mt-1">Set to 0 if garbage collection starts next month</p>
+          <label for="tenant-garbage" class={labelClass}>Move-in garbage (KES) <span class="normal-case font-normal">(optional)</span></label>
+          <input type="number" id="tenant-garbage" min="0" step="1" inputmode="numeric" placeholder="0" class={`${inputClass} tabular-nums`} />
+          <p class="text-[11px] text-[#73827C] mt-1">Leave blank or 0 if garbage collection starts next month</p>
         </div>
         {FEATURES.leases && (
         <div>
@@ -154,7 +155,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
           <div class="flex justify-between"><span class="text-[#73827C]">Garbage</span><span id="preview-garbage" class="font-medium text-[#17231E]">—</span></div>
           <div class="flex justify-between pt-2 border-t border-[#E7EAE4]"><span class="font-semibold text-[#17231E]">Due on move-in</span><span id="preview-total" class="font-bold text-[#17231E]">—</span></div>
         </div>
-        <p class="text-[11px] text-[#73827C] mt-3">Rent is charged for the days left in the move-in month. Water starts on the next bill, from the opening reading. Normal monthly bills follow.</p>
+        <p class="text-[11px] text-[#73827C] mt-3">Initial payment is deposit plus rent for the move-in month. Water and regular garbage billing start on the next monthly bill.</p>
       </div>
 
       <!-- Action Buttons -->
@@ -258,7 +259,10 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
     const rent = Number(rentInput?.value) || 0;
     const deposit = Number(depositInput?.value) || 0;
     const moveIn = moveInInput?.value ?? '';
-    const openingReading = Number(readingInput?.value) || 0;
+    const readingVal = readingInput?.value?.trim();
+    const openingReading = readingVal !== '' && readingVal != null
+      ? Math.max(0, Number(readingVal) || 0)
+      : null;
     const garbageVal = garbageInput?.value?.trim();
     const moveInGarbage = garbageVal !== '' && garbageVal != null
       ? Math.max(0, Math.round(Number(garbageVal) || 0))

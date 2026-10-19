@@ -76,7 +76,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
         move_in: moveIn,
         lease_start: moveIn,
         lease_end: leaseEnd.toISOString().slice(0, 10),
-        opening_reading: reading ?? 0,
+        opening_reading: reading,
         opening_balance: 0,
         move_in_garbage: garbageKes,
       })
