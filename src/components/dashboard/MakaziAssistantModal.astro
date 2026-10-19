@@ -8,6 +8,8 @@ const { company, stats, currentPeriod } = await getPortfolio(Astro.locals.user!.
 
 <div
   id="makazi-assistant-modal"
+  data-company-id={company.id}
+  data-company-name={company.name}
   class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-200"
   role="dialog"
   aria-modal="true"
@@ -25,11 +27,12 @@ const { company, stats, currentPeriod } = await getPortfolio(Astro.locals.user!.
             <h3 id="assistant-modal-title" class="font-editorial text-xl font-normal text-white">
               Ask Makazi
             </h3>
-            <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-[#C6EE58]/20 border border-[#C6EE58]/40 text-[10px] font-bold text-[#C6EE58] uppercase tracking-wider">
-              Live API
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#C6EE58]/20 border border-[#C6EE58]/40 text-[10px] font-bold text-[#C6EE58]">
+              <span class="h-1.5 w-1.5 rounded-full bg-[#C6EE58]"></span>
+              {company.name}
             </span>
           </div>
-          <p class="text-xs text-[#9BB3A8]">Query tenants, arrears, maintenance, and collection data in real time</p>
+          <p class="text-xs text-[#9BB3A8]">Real-time portfolio intelligence scoped strictly to your company profile</p>
         </div>
       </div>
       <button
@@ -187,11 +190,13 @@ const { company, stats, currentPeriod } = await getPortfolio(Astro.locals.user!.
       const sendBtn = document.getElementById('assistant-send-btn') as HTMLButtonElement | null;
       if (sendBtn) sendBtn.disabled = true;
 
+      const companyProfileId = modal.dataset.companyId;
+
       try {
         const res = await fetch('/api/assistant', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query }),
+          body: JSON.stringify({ query, companyProfileId }),
         });
 
         const data = await res.json();
