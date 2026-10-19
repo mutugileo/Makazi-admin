@@ -14,7 +14,8 @@ import {
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
-  ExternalLink
+  ExternalLink,
+  Sparkles
 } from '@lucide/astro';
 import { getPortfolio } from '../../data/portfolio';
 import { FEATURES } from '../../config/features';
@@ -166,6 +167,23 @@ const navItems = [
           })}
         </nav>
       </div>
+    </div>
+
+    <!-- Ask Makazi Quick AI Assistant Trigger in Sidebar -->
+    <div class="px-1 pt-1 pb-2">
+      <button
+        type="button"
+        id="sidebar-assistant-btn"
+        class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-[#174639] via-[#143E33] to-[#10352B] text-white hover:border-[#C6EE58]/50 border border-[#26634F]/70 shadow-sm transition-all hover:scale-[1.01] cursor-pointer group"
+      >
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="h-6 w-6 rounded-lg bg-[#C6EE58] text-[#0A261F] flex items-center justify-center font-bold text-xs shadow-xs">
+            <Sparkles class="w-3.5 h-3.5 stroke-[2.5]" />
+          </div>
+          <span class="sidebar-text-label text-xs font-semibold text-white tracking-wide truncate">Ask Makazi</span>
+        </div>
+        <span class="sidebar-pill-badge text-[10px] font-bold text-[#C6EE58] bg-[#C6EE58]/15 px-1.5 py-0.5 rounded-full border border-[#C6EE58]/30">AI</span>
+      </button>
     </div>
 
     <!-- Ask Nyumbani Marketplace Promo Card -->

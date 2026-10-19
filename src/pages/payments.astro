@@ -2,7 +2,7 @@
 import DashboardLayout from '../layouts/DashboardLayout.astro';
 import { getPortfolio, formatKes } from '../data/portfolio';
 import { paymentMethodLabel } from '../lib/billing';
-import { ChevronDown, Plus, X, CreditCard, Check, AlertCircle } from '@lucide/astro';
+import { ChevronDown, Plus, X, CreditCard, Check, AlertCircle, Search } from '@lucide/astro';
 
 // This company's data only (the signed-in user's).
 const { payments, portfolioSummary, currentPeriod, activeTenancies } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
@@ -51,86 +51,120 @@ const defaultTime = nairobiNow.slice(11, 16);
 
   <!-- Filter & Summary Bar -->
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-    <div class="flex items-center gap-2" role="group" aria-label="Payment method">
-      {['All', 'M-Pesa', 'Bank'].map((m) => (
-        <button type="button" data-method-btn={m}
-          class="method-btn px-4 py-2 rounded-full border text-xs font-semibold cursor-pointer transition-colors shadow-xs">
-          {m}
-        </button>
-      ))}
+    <div class="flex flex-wrap items-center gap-3">
+      <!-- Search -->
+      <div class="relative min-w-56 sm:min-w-64">
+        <Search class="w-4 h-4 text-[#69847A] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+        <input
+          id="payment-search"
+          type="search"
+          placeholder="Search receipt, tenant, unit, ref…"
+          class="w-full pl-10 pr-4 py-2 rounded-full border border-[#E3E6DF] bg-white text-xs text-[#0D382B] placeholder:text-[#8FA69C] focus:outline-hidden focus:border-[#0D382B] transition-colors shadow-xs"
+        />
+      </div>
+      <div class="flex items-center gap-1.5" role="group" aria-label="Payment method">
+        {['All', 'M-Pesa', 'Bank'].map((m) => (
+          <button type="button" data-method-btn={m}
+            class="method-btn px-4 py-2 rounded-full border text-xs font-semibold cursor-pointer transition-colors shadow-xs">
+            {m}
+          </button>
+        ))}
+      </div>
     </div>
-    <span class="text-xs font-medium text-[#69847A] tabular-nums">
+    <span class="text-xs font-medium text-[#69847A] tabular-nums whitespace-nowrap">
       <span id="payments-count">{payments.length}</span> payments · <span id="payments-total" class="font-semibold text-[#0D382B]">{formatKes(payments.reduce((a, p) => a + p.payment.amount, 0))}</span>
     </span>
   </div>
 
   <!-- Payments Table -->
-  <div class="bg-white rounded-3xl border border-[#E3E6DF] overflow-hidden shadow-xs">
+  <div id="payments-panel" class="bg-white rounded-3xl border border-[#E3E6DF] overflow-hidden shadow-xs">
     {payments.length === 0 ? (
       <div class="p-12 text-center text-xs font-medium text-[#69847A]">
         No payment transactions recorded.
       </div>
     ) : (
-      <div class="overflow-x-auto">
-        <table class="w-full text-left text-xs tabular-nums">
-          <thead class="bg-[#F8F9F6] border-b border-[#E3E6DF] text-[#69847A] uppercase text-[10px] font-semibold tracking-wider">
-            <tr>
-              <th scope="col" class="py-3.5 px-6">Receipt</th>
-              <th scope="col" class="py-3.5 px-4">Tenant</th>
-              <th scope="col" class="py-3.5 px-4">Date</th>
-              <th scope="col" class="py-3.5 px-4">Method · Ref</th>
-              <th scope="col" class="py-3.5 px-4">For</th>
-              <th scope="col" class="py-3.5 px-4 text-right">Amount</th>
-              <th scope="col" class="py-3.5 px-6 text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-[#E3E6DF]">
-            {payments.map(({ payment, view, forDescription, dateLabel }) => (
-              <tr class="payment-tx hover:bg-[#F8F9F6]/60 transition-colors" data-method={payment.method} data-amount={payment.amount}>
-                <td class="py-4 px-6 font-mono font-medium text-[#0D382B] whitespace-nowrap">
-                  {payment.receiptNumber}
-                </td>
-                <td class="py-4 px-4">
-                  <span class="block font-semibold text-[#0D382B]">{view.tenant.name}</span>
-                  <span class="block text-[11px] text-[#69847A]">{view.unitLabel}</span>
-                </td>
-                <td class="py-4 px-4 text-[#69847A] whitespace-nowrap">
-                  {dateLabel}, {payment.time}
-                </td>
-                <td class="py-4 px-4 whitespace-nowrap">
-                  <span class="font-semibold text-[#0D382B]">{payment.method}</span>
-                  {payment.simulated && (
-                    <span class="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#FFF8E1] text-[#B78103] border border-[#FFE082]" title="M-Pesa test mode: no money moved">Test</span>
-                  )}
-                  <span class="ml-1 text-[#69847A] font-mono text-[11px]">{payment.reference}</span>
-                </td>
-                <td class="py-4 px-4 text-[#69847A]">{forDescription}</td>
-                <td class="py-4 px-4 font-semibold text-[#0D382B] text-right whitespace-nowrap">
-                  {formatKes(payment.amount)}
-                </td>
-                <td class="py-4 px-6 text-right">
-                  <button 
-                    type="button"
-                    class="payment-row px-4 py-1.5 rounded-full border border-[#E3E6DF] hover:border-[#0D382B] text-xs font-semibold text-[#0D382B] bg-[#F8F9F6] hover:bg-white transition-colors cursor-pointer shadow-xs"
-                    data-id={payment.receiptNumber}
-                    data-tenant={view.tenant.name}
-                    data-unit={view.unit.label}
-                    data-property={view.property.name}
-                    data-method={paymentMethodLabel(payment)}
-                    data-amount={payment.amount}
-                    data-date={dateLabel}
-                    data-time={payment.time}
-                    data-ref={payment.reference}
-                    data-for={forDescription}
-                  >
-                    Receipt
-                  </button>
-                </td>
+      <>
+        <div class="overflow-x-auto max-h-[calc(100vh-320px)] overflow-y-auto relative">
+          <table class="w-full text-left text-xs tabular-nums">
+            <thead class="sticky top-0 z-10 bg-[#F8F9F6] border-b border-[#E3E6DF] text-[#69847A] uppercase text-[10px] font-semibold tracking-wider">
+              <tr>
+                <th scope="col" class="py-3.5 px-6">Receipt</th>
+                <th scope="col" class="py-3.5 px-4">Tenant</th>
+                <th scope="col" class="py-3.5 px-4">Date</th>
+                <th scope="col" class="py-3.5 px-4">Method · Ref</th>
+                <th scope="col" class="py-3.5 px-4">For</th>
+                <th scope="col" class="py-3.5 px-4 text-right">Amount</th>
+                <th scope="col" class="py-3.5 px-6 text-right">Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody class="divide-y divide-[#E3E6DF]">
+              {payments.map(({ payment, view, forDescription, dateLabel }) => (
+                <tr
+                  class="payment-tx hover:bg-[#F8F9F6]/60 transition-colors"
+                  data-method={payment.method}
+                  data-amount={payment.amount}
+                  data-search={`${payment.receiptNumber} ${view.tenant.name} ${view.unit.label} ${payment.reference} ${forDescription}`.toLowerCase()}
+                >
+                  <td class="py-4 px-6 font-mono font-medium text-[#0D382B] whitespace-nowrap">
+                    {payment.receiptNumber}
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="block font-semibold text-[#0D382B]">{view.tenant.name}</span>
+                    <span class="block text-[11px] text-[#69847A]">{view.unitLabel}</span>
+                  </td>
+                  <td class="py-4 px-4 text-[#69847A] whitespace-nowrap">
+                    {dateLabel}, {payment.time}
+                  </td>
+                  <td class="py-4 px-4 whitespace-nowrap">
+                    <span class="font-semibold text-[#0D382B]">{payment.method}</span>
+                    {payment.simulated && (
+                      <span class="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#FFF8E1] text-[#B78103] border border-[#FFE082]" title="M-Pesa test mode: no money moved">Test</span>
+                    )}
+                    <span class="ml-1 text-[#69847A] font-mono text-[11px]">{payment.reference}</span>
+                  </td>
+                  <td class="py-4 px-4 text-[#69847A]">{forDescription}</td>
+                  <td class="py-4 px-4 font-semibold text-[#0D382B] text-right whitespace-nowrap">
+                    {formatKes(payment.amount)}
+                  </td>
+                  <td class="py-4 px-6 text-right">
+                    <button 
+                      type="button"
+                      class="payment-row px-4 py-1.5 rounded-full border border-[#E3E6DF] hover:border-[#0D382B] text-xs font-semibold text-[#0D382B] bg-[#F8F9F6] hover:bg-white transition-colors cursor-pointer shadow-xs"
+                      data-id={payment.receiptNumber}
+                      data-tenant={view.tenant.name}
+                      data-unit={view.unit.label}
+                      data-property={view.property.name}
+                      data-method={paymentMethodLabel(payment)}
+                      data-amount={payment.amount}
+                      data-date={dateLabel}
+                      data-time={payment.time}
+                      data-ref={payment.reference}
+                      data-for={forDescription}
+                    >
+                      Receipt
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination-bar px-6 py-3.5 border-t border-[#E3E6DF] flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#FAFBF9] text-xs text-[#5A6862]">
+          <div class="pagination-info">
+            Showing <span class="font-semibold text-[#0D382B] page-start">0</span>–<span class="font-semibold text-[#0D382B] page-end">0</span> of <span class="font-semibold text-[#0D382B] page-total">0</span> payments
+          </div>
+          <div class="flex items-center gap-1.5 pagination-controls">
+            <button type="button" class="prev-page-btn px-3 py-1.5 rounded-xl border border-[#DCE0D7] bg-white text-xs font-semibold text-[#0D382B] hover:bg-[#F4F5F1] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors">
+              Previous
+            </button>
+            <div class="page-pills flex items-center gap-1"></div>
+            <button type="button" class="next-page-btn px-3 py-1.5 rounded-xl border border-[#DCE0D7] bg-white text-xs font-semibold text-[#0D382B] hover:bg-[#F4F5F1] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors">
+              Next
+            </button>
+          </div>
+        </div>
+        <p class="empty-state hidden p-12 text-center text-xs font-medium text-[#69847A]">No payments match this search.</p>
+      </>
     )}
   </div>
 
@@ -286,40 +320,132 @@ const defaultTime = nairobiNow.slice(11, 16);
   import { setBusy } from '../lib/busy';
   function initPaymentsPage() {
     const methodBtns = document.querySelectorAll<HTMLElement>('[data-method-btn]');
+    const searchInput = document.getElementById('payment-search') as HTMLInputElement | null;
     const countEl = document.getElementById('payments-count');
     const totalEl = document.getElementById('payments-total');
+    const panel = document.getElementById('payments-panel');
 
     const ON = ['bg-[#0D382B]', 'text-white', 'border-[#0D382B]'];
     const OFF = ['bg-white', 'text-[#0D382B]', 'border-[#E3E6DF]'];
+    const PAGE_SIZE = 8;
     let method = 'All';
+    let query = '';
+    let currentPage = 1;
 
     function render() {
-      if (!countEl || !totalEl) return;
+      if (!panel) return;
       let count = 0;
       let total = 0;
-      document.querySelectorAll<HTMLElement>('.payment-tx').forEach((row) => {
-        const show = method === 'All' || row.dataset.method === method;
-        row.classList.toggle('hidden', !show);
-        if (show) {
+      const matchingRows: HTMLElement[] = [];
+
+      panel.querySelectorAll<HTMLElement>('.payment-tx').forEach((row) => {
+        const matchesMethod = method === 'All' || row.dataset.method === method;
+        const matchesQuery = !query || (row.dataset.search ?? '').includes(query);
+        const matches = matchesMethod && matchesQuery;
+
+        if (matches) {
+          matchingRows.push(row);
           count++;
           total += Number(row.dataset.amount);
+        } else {
+          row.classList.add('hidden');
         }
       });
-      countEl.textContent = String(count);
-      totalEl.textContent = `KES ${total.toLocaleString('en-KE')}`;
+
+      if (countEl) countEl.textContent = String(count);
+      if (totalEl) totalEl.textContent = `KES ${total.toLocaleString('en-KE')}`;
+
       methodBtns.forEach((b) => {
         const on = b.dataset.methodBtn === method;
         b.classList.remove(...(on ? OFF : ON));
         b.classList.add(...(on ? ON : OFF));
       });
+
+      const totalMatching = matchingRows.length;
+      const totalPages = Math.max(1, Math.ceil(totalMatching / PAGE_SIZE));
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+
+      matchingRows.forEach((row, index) => {
+        const isVisible = index >= (currentPage - 1) * PAGE_SIZE && index < currentPage * PAGE_SIZE;
+        row.classList.toggle('hidden', !isVisible);
+      });
+
+      panel.querySelector('.empty-state')?.classList.toggle('hidden', totalMatching > 0);
+
+      const paginationBar = panel.querySelector<HTMLElement>('.pagination-bar');
+      if (paginationBar) {
+        paginationBar.classList.toggle('hidden', totalMatching === 0);
+      }
+
+      const pageStartEl = panel.querySelector<HTMLElement>('.page-start');
+      const pageEndEl = panel.querySelector<HTMLElement>('.page-end');
+      const pageTotalEl = panel.querySelector<HTMLElement>('.page-total');
+      const prevBtn = panel.querySelector<HTMLButtonElement>('.prev-page-btn');
+      const nextBtn = panel.querySelector<HTMLButtonElement>('.next-page-btn');
+      const pillsContainer = panel.querySelector<HTMLElement>('.page-pills');
+
+      if (pageStartEl) pageStartEl.textContent = totalMatching === 0 ? '0' : String((currentPage - 1) * PAGE_SIZE + 1);
+      if (pageEndEl) pageEndEl.textContent = String(Math.min(totalMatching, currentPage * PAGE_SIZE));
+      if (pageTotalEl) pageTotalEl.textContent = String(totalMatching);
+
+      if (prevBtn) {
+        prevBtn.disabled = currentPage <= 1;
+        prevBtn.onclick = () => {
+          if (currentPage > 1) {
+            currentPage--;
+            render();
+          }
+        };
+      }
+
+      if (nextBtn) {
+        nextBtn.disabled = currentPage >= totalPages;
+        nextBtn.onclick = () => {
+          if (currentPage < totalPages) {
+            currentPage++;
+            render();
+          }
+        };
+      }
+
+      if (pillsContainer) {
+        pillsContainer.innerHTML = '';
+        if (totalPages > 1) {
+          for (let p = 1; p <= totalPages; p++) {
+            const pill = document.createElement('button');
+            pill.type = 'button';
+            pill.textContent = String(p);
+            pill.className = `w-7 h-7 rounded-lg text-xs font-semibold flex items-center justify-center transition-colors cursor-pointer ${
+              p === currentPage
+                ? 'bg-[#0D382B] text-white'
+                : 'text-[#5A6862] hover:bg-[#EAECE6] bg-transparent'
+            }`;
+            pill.onclick = () => {
+              currentPage = p;
+              render();
+            };
+            pillsContainer.appendChild(pill);
+          }
+        }
+      }
     }
 
     methodBtns.forEach((b) => {
       b.onclick = () => {
         method = b.dataset.methodBtn ?? 'All';
+        currentPage = 1;
         render();
       };
     });
+
+    if (searchInput) {
+      searchInput.oninput = (e) => {
+        query = (e.target as HTMLInputElement).value.trim().toLowerCase();
+        currentPage = 1;
+        render();
+      };
+    }
 
     render();
 

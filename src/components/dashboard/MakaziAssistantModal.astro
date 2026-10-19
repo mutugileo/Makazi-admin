@@ -1,0 +1,231 @@
+---
+import { Sparkles, X, Send, Bot, ArrowRight, CornerDownLeft } from '@lucide/astro';
+import { getPortfolio } from '../../data/portfolio';
+
+// Company data for initial welcome context
+const { company, stats, currentPeriod } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+---
+
+<div
+  id="makazi-assistant-modal"
+  class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-200"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="assistant-modal-title"
+>
+  <div class="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-[#E7EAE4] overflow-hidden transform scale-95 transition-transform duration-200 flex flex-col max-h-[85vh] h-[650px]">
+    <!-- Header -->
+    <div class="flex items-center justify-between p-5 border-b border-[#F0F2EE] bg-gradient-to-r from-[#0D382B] via-[#103E31] to-[#0A261F] text-white flex-shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-2xl bg-[#C6EE58] text-[#0A261F] flex items-center justify-center shadow-[0_0_15px_rgba(198,238,88,0.3)]">
+          <Sparkles class="w-5 h-5 stroke-[2.5]" />
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h3 id="assistant-modal-title" class="font-editorial text-xl font-normal text-white">
+              Ask Makazi
+            </h3>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-[#C6EE58]/20 border border-[#C6EE58]/40 text-[10px] font-bold text-[#C6EE58] uppercase tracking-wider">
+              Live API
+            </span>
+          </div>
+          <p class="text-xs text-[#9BB3A8]">Query tenants, arrears, maintenance, and collection data in real time</p>
+        </div>
+      </div>
+      <button
+        type="button"
+        id="close-assistant-modal-btn"
+        class="h-8 w-8 rounded-full bg-white/10 hover:bg-white/20 text-[#D8E4DF] hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+        aria-label="Close assistant"
+      >
+        <X class="w-4 h-4" />
+      </button>
+    </div>
+
+    <!-- Suggested Quick Queries -->
+    <div class="px-5 py-2.5 bg-[#F8F9F6] border-b border-[#E7EAE4] flex items-center gap-2 overflow-x-auto no-scrollbar flex-shrink-0">
+      <span class="text-[11px] font-semibold text-[#5A6862] flex-shrink-0">Quick ask:</span>
+      <button type="button" class="assistant-chip px-3 py-1 rounded-full bg-white border border-[#DCE0D7] hover:border-[#0D382B] hover:text-[#0D382B] text-xs text-[#17231E] transition-all flex-shrink-0 shadow-xs cursor-pointer" data-query="Who has arrears?">
+        🚨 Overdue arrears
+      </button>
+      <button type="button" class="assistant-chip px-3 py-1 rounded-full bg-white border border-[#DCE0D7] hover:border-[#0D382B] hover:text-[#0D382B] text-xs text-[#17231E] transition-all flex-shrink-0 shadow-xs cursor-pointer" data-query="What are the open maintenance issues?">
+        🛠️ Open repairs
+      </button>
+      <button type="button" class="assistant-chip px-3 py-1 rounded-full bg-white border border-[#DCE0D7] hover:border-[#0D382B] hover:text-[#0D382B] text-xs text-[#17231E] transition-all flex-shrink-0 shadow-xs cursor-pointer" data-query="Collections this month">
+        📊 Collections summary
+      </button>
+      <button type="button" class="assistant-chip px-3 py-1 rounded-full bg-white border border-[#DCE0D7] hover:border-[#0D382B] hover:text-[#0D382B] text-xs text-[#17231E] transition-all flex-shrink-0 shadow-xs cursor-pointer" data-query="Show vacant units">
+        🚪 Vacant units
+      </button>
+    </div>
+
+    <!-- Chat Messages Thread -->
+    <div id="assistant-chat-messages" class="flex-1 overflow-y-auto p-5 space-y-4 bg-[#FAFBF9]">
+      <!-- Initial Welcome Message -->
+      <div class="flex items-start gap-3">
+        <div class="h-8 w-8 rounded-xl bg-[#0D382B] text-[#C6EE58] flex items-center justify-center flex-shrink-0 mt-0.5">
+          <Bot class="w-4 h-4" />
+        </div>
+        <div class="flex-1 max-w-[85%] bg-white p-4 rounded-2xl rounded-tl-sm border border-[#E7EAE4] shadow-xs text-xs sm:text-sm text-[#17231E] leading-relaxed space-y-2">
+          <p class="font-medium text-[#0D382B]">Hello! I have live access to your <strong>{company.name}</strong> portfolio for <strong>{currentPeriod}</strong>.</p>
+          <p class="text-[#5A6862]">
+            You have <strong>{stats.occupiedUnits}</strong> active tenancies, <strong>{stats.inArrears}</strong> account(s) in arrears, and a <strong>{stats.collectionRate}%</strong> collection rate. Ask me about any tenant name, arrears, repair tickets, or financial figures!
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input Bar -->
+    <div class="p-4 bg-white border-t border-[#F0F2EE] flex-shrink-0">
+      <form id="assistant-chat-form" class="flex items-center gap-2">
+        <input
+          type="text"
+          id="assistant-chat-input"
+          required
+          autocomplete="off"
+          placeholder="Ask about arrears, tenant names, open repairs, or occupancy…"
+          class="flex-1 px-4 py-3 rounded-2xl border border-[#DCE0D7] focus:border-[#0D382B] focus:ring-2 focus:ring-[#0D382B]/10 outline-none text-xs sm:text-sm text-[#17231E] bg-[#F8F9F7] placeholder:text-[#8FA097]"
+        />
+        <button
+          type="submit"
+          id="assistant-send-btn"
+          class="h-11 px-4 rounded-2xl bg-[#0D382B] text-[#C6EE58] hover:bg-[#134637] transition-all flex items-center justify-center gap-1.5 text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50"
+        >
+          <span>Ask</span>
+          <Send class="w-3.5 h-3.5 stroke-[2.5]" />
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  function initAssistant() {
+    const modal = document.getElementById('makazi-assistant-modal');
+    const form = document.getElementById('assistant-chat-form') as HTMLFormElement | null;
+    const input = document.getElementById('assistant-chat-input') as HTMLInputElement | null;
+    const messages = document.getElementById('assistant-chat-messages');
+    const closeBtn = document.getElementById('close-assistant-modal-btn');
+    const chips = document.querySelectorAll<HTMLElement>('.assistant-chip');
+    if (!modal || !form || !input || !messages) return;
+
+    if (closeBtn) {
+      closeBtn.onclick = () => window.makaziUi?.hideModal('makazi-assistant-modal');
+    }
+
+    function scrollToBottom() {
+      if (messages) messages.scrollTop = messages.scrollHeight;
+    }
+
+    function appendUserMessage(text: string) {
+      if (!messages) return;
+      const wrap = document.createElement('div');
+      wrap.className = 'flex justify-end';
+      wrap.innerHTML = `
+        <div class="max-w-[85%] bg-[#0D382B] text-white p-3.5 rounded-2xl rounded-tr-sm shadow-xs text-xs sm:text-sm font-medium">
+          ${text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+        </div>
+      `;
+      messages.appendChild(wrap);
+      scrollToBottom();
+    }
+
+    function formatMarkdown(md: string): string {
+      // Clean, simple markdown formatter for assistant responses
+      let html = md
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/### (.*?)\n/g, '<h4 class="font-bold text-[#0D382B] mt-2 mb-1">$1</h4>')
+        .replace(/• (.*?)(?=(\n|$))/g, '<li class="ml-4 list-disc text-[#33463E]">$1</li>')
+        .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" class="font-semibold text-[#0D382B] underline hover:text-[#174637]">$1</a>')
+        .replace(/\n\n/g, '<p class="my-1.5"></p>')
+        .replace(/\n/g, '<br/>');
+      return html;
+    }
+
+    function appendBotMessage(md: string) {
+      if (!messages) return;
+      const wrap = document.createElement('div');
+      wrap.className = 'flex items-start gap-3';
+      wrap.innerHTML = `
+        <div class="h-8 w-8 rounded-xl bg-[#0D382B] text-[#C6EE58] flex items-center justify-center flex-shrink-0 mt-0.5">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+        </div>
+        <div class="flex-1 max-w-[85%] bg-white p-4 rounded-2xl rounded-tl-sm border border-[#E7EAE4] shadow-xs text-xs sm:text-sm text-[#17231E] leading-relaxed space-y-1">
+          ${formatMarkdown(md)}
+        </div>
+      `;
+      messages.appendChild(wrap);
+      scrollToBottom();
+    }
+
+    function appendTypingIndicator(): HTMLElement {
+      const wrap = document.createElement('div');
+      wrap.className = 'typing-indicator-wrap flex items-start gap-3';
+      wrap.innerHTML = `
+        <div class="h-8 w-8 rounded-xl bg-[#0D382B] text-[#C6EE58] flex items-center justify-center flex-shrink-0 mt-0.5">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+        </div>
+        <div class="bg-white px-4 py-3 rounded-2xl rounded-tl-sm border border-[#E7EAE4] shadow-xs text-xs text-[#5A6862] flex items-center gap-1.5">
+          <span class="h-2 w-2 rounded-full bg-[#0D382B] animate-bounce"></span>
+          <span class="h-2 w-2 rounded-full bg-[#0D382B] animate-bounce [animation-delay:0.2s]"></span>
+          <span class="h-2 w-2 rounded-full bg-[#0D382B] animate-bounce [animation-delay:0.4s]"></span>
+        </div>
+      `;
+      if (messages) {
+        messages.appendChild(wrap);
+        scrollToBottom();
+      }
+      return wrap;
+    }
+
+    async function handleQuery(query: string) {
+      if (!query.trim()) return;
+      appendUserMessage(query);
+      const typing = appendTypingIndicator();
+
+      const sendBtn = document.getElementById('assistant-send-btn') as HTMLButtonElement | null;
+      if (sendBtn) sendBtn.disabled = true;
+
+      try {
+        const res = await fetch('/api/assistant', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query }),
+        });
+
+        const data = await res.json();
+        typing.remove();
+
+        if (!res.ok || data.error) {
+          appendBotMessage(`Sorry, I couldn't process that query. ${data.error || 'Please try again.'}`);
+        } else {
+          appendBotMessage(data.reply);
+        }
+      } catch (err: unknown) {
+        typing.remove();
+        appendBotMessage('Network error communicating with the portfolio assistant. Please try again.');
+      } finally {
+        if (sendBtn) sendBtn.disabled = false;
+        if (input) input.focus();
+      }
+    }
+
+    form.onsubmit = (e) => {
+      e.preventDefault();
+      const val = input.value.trim();
+      if (!val) return;
+      input.value = '';
+      handleQuery(val);
+    };
+
+    chips.forEach((chip) => {
+      chip.onclick = () => {
+        const q = chip.dataset.query;
+        if (q) handleQuery(q);
+      };
+    });
+  }
+
+  document.addEventListener('astro:page-load', initAssistant);
+</script>

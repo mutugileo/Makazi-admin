@@ -1,7 +1,7 @@
 ---
 import DashboardLayout from '../layouts/DashboardLayout.astro';
 import { getPortfolio, type TicketView } from '../data/portfolio';
-import { ChevronDown, Wrench, X } from '@lucide/astro';
+import { ChevronDown, Wrench, X, Search, ChevronLeft, ChevronRight } from '@lucide/astro';
 
 // This company's data only (the signed-in user's).
 const { portfolioSummary, repairBoard, currentPeriod } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
@@ -11,6 +11,8 @@ const columns: Array<{ title: string; items: TicketView[]; empty: string; action
   { title: 'In progress', items: repairBoard.inProgress, empty: 'No tickets in progress.', action: 'Mark resolved' },
   { title: 'Resolved', items: repairBoard.resolved, empty: 'Nothing resolved yet.', action: null },
 ];
+
+const totalTicketsCount = repairBoard.open.length + repairBoard.inProgress.length + repairBoard.resolved.length;
 
 // "Thu 9 Oct, 2:00 pm" in Nairobi time, the way the app shows it.
 const visitFormat = new Intl.DateTimeFormat('en-GB', {
@@ -59,90 +61,143 @@ const priorityTone = {
     </div>
   </div>
 
+  <!-- Search & Priority Filter Bar -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div class="flex flex-wrap items-center gap-3">
+      <!-- Search -->
+      <div class="relative min-w-56 sm:min-w-64">
+        <Search class="w-4 h-4 text-[#69847A] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+        <input
+          id="maintenance-search"
+          type="search"
+          placeholder="Search issue, tenant, staff, ID…"
+          class="w-full pl-10 pr-4 py-2 rounded-full border border-[#E3E6DF] bg-white text-xs text-[#0D382B] placeholder:text-[#8FA69C] focus:outline-hidden focus:border-[#0D382B] transition-colors shadow-xs"
+        />
+      </div>
+      <!-- Priority buttons -->
+      <div class="flex items-center gap-1.5" role="group" aria-label="Priority filter">
+        {['all', 'high', 'medium', 'low'].map((p) => (
+          <button
+            type="button"
+            data-priority-btn={p}
+            class="priority-btn px-4 py-2 rounded-full border text-xs font-semibold cursor-pointer transition-colors shadow-xs capitalize"
+          >
+            {p}
+          </button>
+        ))}
+      </div>
+    </div>
+    <span class="text-xs font-medium text-[#69847A] tabular-nums whitespace-nowrap">
+      <span id="maintenance-total-count">{totalTicketsCount}</span> tickets total
+    </span>
+  </div>
+
   <!-- Board: same tickets and statuses the tenant app shows -->
   <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-    {columns.map((column) => (
-      <div class="bg-[#F8F9F6] rounded-3xl border border-[#E3E6DF] p-5 flex flex-col gap-4">
-        <div class="flex items-center justify-between pb-3 border-b border-[#E3E6DF]">
-          <h2 class="text-xs font-semibold uppercase tracking-wider text-[#0D382B]">{column.title}</h2>
-          <span class="text-xs font-bold text-[#0D382B] bg-white px-2.5 py-0.5 rounded-full border border-[#E3E6DF] shadow-xs">
-            {column.items.length}
-          </span>
-        </div>
-        <div class="space-y-4">
-          {column.items.length === 0 ? (
-            <p class="text-xs text-[#69847A] py-6 text-center">{column.empty}</p>
-          ) : (
-            column.items.map((t) => {
-              const tone = priorityTone[t.ticket.priority];
-              return (
-                <div class="bg-white rounded-2xl border border-[#E3E6DF] p-5 flex flex-col justify-between shadow-xs hover:border-[#69847A]/50 transition-colors">
-                  <div>
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="font-mono text-xs text-[#69847A]">{t.ticket.id} · {t.categoryLabel}</span>
-                      <span class={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${tone.box}`}>
-                        <span class={`h-1.5 w-1.5 rounded-full ${tone.dot}`}></span>
-                        {t.priorityLabel}
-                      </span>
-                    </div>
-                    <h3 class="text-sm font-semibold text-[#0D382B] mt-2.5">{t.ticket.title}</h3>
-                    <p class="text-xs text-[#69847A] mt-1">{t.reporter} · {t.when}</p>
-                    {t.ticket.assignedTo && (
-                      <div class="mt-3 rounded-xl bg-[#F8F9F6] border border-[#E3E6DF] px-3 py-2.5 text-[11px] text-[#5A6862] space-y-0.5">
-                        <p>
-                          <span class="font-semibold text-[#0D382B]">{t.ticket.status === 'resolved' ? 'Fixed by' : 'With'} {t.ticket.assignedTo}</span>
-                          {t.ticket.assignedPhone && (
-                            <> · <a href={`tel:${t.ticket.assignedPhone}`} class="underline decoration-[#C9D2CC] hover:text-[#0D382B]">{localPhone(t.ticket.assignedPhone)}</a></>
-                          )}
-                        </p>
-                        {t.ticket.visitAt && t.ticket.status !== 'resolved' && <p>Visit: {visitLabel(t.ticket.visitAt)}</p>}
-                        {t.ticket.resolutionNote && <p class="text-[#69847A]">{t.ticket.resolutionNote}</p>}
+    {columns.map((column, colIdx) => (
+      <div class="maintenance-column bg-[#F8F9F6] rounded-3xl border border-[#E3E6DF] p-5 flex flex-col justify-between shadow-xs" data-col-index={colIdx}>
+        <div>
+          <div class="flex items-center justify-between pb-3 border-b border-[#E3E6DF]">
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-[#0D382B]">{column.title}</h2>
+            <span class="column-count text-xs font-bold text-[#0D382B] bg-white px-2.5 py-0.5 rounded-full border border-[#E3E6DF] shadow-xs">
+              {column.items.length}
+            </span>
+          </div>
+          <div class="tickets-container space-y-4 max-h-[calc(100vh-320px)] overflow-y-auto pr-1 my-3">
+            {column.items.length === 0 ? (
+              <p class="empty-state text-xs text-[#69847A] py-8 text-center">{column.empty}</p>
+            ) : (
+              <>
+                {column.items.map((t) => {
+                  const tone = priorityTone[t.ticket.priority];
+                  return (
+                    <div
+                      class="ticket-card bg-white rounded-2xl border border-[#E3E6DF] p-5 flex flex-col justify-between shadow-xs hover:border-[#69847A]/50 transition-colors"
+                      data-priority={t.ticket.priority}
+                      data-search={`${t.ticket.id} ${t.ticket.title} ${t.categoryLabel} ${t.reporter} ${t.ticket.assignedTo ?? ''} ${t.ticket.resolutionNote ?? ''}`.toLowerCase()}
+                    >
+                      <div>
+                        <div class="flex items-center justify-between gap-2">
+                          <span class="font-mono text-xs text-[#69847A]">{t.ticket.id} · {t.categoryLabel}</span>
+                          <span class={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${tone.box}`}>
+                            <span class={`h-1.5 w-1.5 rounded-full ${tone.dot}`}></span>
+                            {t.priorityLabel}
+                          </span>
+                        </div>
+                        <h3 class="text-sm font-semibold text-[#0D382B] mt-2.5">{t.ticket.title}</h3>
+                        <p class="text-xs text-[#69847A] mt-1">{t.reporter} · {t.when}</p>
+                        {t.ticket.assignedTo && (
+                          <div class="mt-3 rounded-xl bg-[#F8F9F6] border border-[#E3E6DF] px-3 py-2.5 text-[11px] text-[#5A6862] space-y-0.5">
+                            <p>
+                              <span class="font-semibold text-[#0D382B]">{t.ticket.status === 'resolved' ? 'Fixed by' : 'With'} {t.ticket.assignedTo}</span>
+                              {t.ticket.assignedPhone && (
+                                <> · <a href={`tel:${t.ticket.assignedPhone}`} class="underline decoration-[#C9D2CC] hover:text-[#0D382B]">{localPhone(t.ticket.assignedPhone)}</a></>
+                              )}
+                            </p>
+                            {t.ticket.visitAt && t.ticket.status !== 'resolved' && <p>Visit: {visitLabel(t.ticket.visitAt)}</p>}
+                            {t.ticket.resolutionNote && <p class="text-[#69847A]">{t.ticket.resolutionNote}</p>}
+                          </div>
+                        )}
+                        {t.ticket.hasPhoto && <p class="text-[11px] text-[#69847A] mt-1">Photo attached</p>}
                       </div>
-                    )}
-                    {t.ticket.hasPhoto && <p class="text-[11px] text-[#69847A] mt-1">Photo attached</p>}
-                  </div>
-                  {column.action && (
-                    <div class="mt-4 pt-3 border-t border-[#E3E6DF] flex flex-wrap items-center gap-2">
-                      {t.ticket.status === 'open' ? (
-                        <button
-                          type="button"
-                          class="assign-repair-btn px-4 py-1.5 rounded-full border border-[#0D382B] text-xs font-semibold text-white bg-[#0D382B] hover:bg-[#154637] transition-colors cursor-pointer shadow-xs"
-                          data-ticket={t.ticket.id}
-                          data-title={t.ticket.title}
-                          data-reporter={t.reporter}
-                        >
-                          Assign & start
-                        </button>
-                      ) : (
-                        <>
-                          <button
-                            type="button"
-                            class="repair-resolve-btn px-4 py-1.5 rounded-full border border-[#E3E6DF] hover:border-[#0D382B] text-xs font-semibold text-[#0D382B] bg-[#F8F9F6] hover:bg-white transition-colors cursor-pointer shadow-xs"
-                            data-ticket={t.ticket.id}
-                          >
-                            Mark resolved
-                          </button>
-                          <button
-                            type="button"
-                            class="assign-repair-btn px-3 py-1.5 rounded-full text-xs font-semibold text-[#5A6862] hover:text-[#0D382B] hover:bg-[#F4F5F1] transition-colors cursor-pointer"
-                            data-ticket={t.ticket.id}
-                            data-title={t.ticket.title}
-                            data-reporter={t.reporter}
-                            data-editing="true"
-                            data-name={t.ticket.assignedTo ?? ''}
-                            data-phone={t.ticket.assignedPhone ? localPhone(t.ticket.assignedPhone) : ''}
-                            data-visit={t.ticket.visitAt ? t.ticket.visitAt.slice(0, 16) : ''}
-                          >
-                            Edit visit
-                          </button>
-                        </>
+                      {column.action && (
+                        <div class="mt-4 pt-3 border-t border-[#E3E6DF] flex flex-wrap items-center gap-2">
+                          {t.ticket.status === 'open' ? (
+                            <button
+                              type="button"
+                              class="assign-repair-btn px-4 py-1.5 rounded-full border border-[#0D382B] text-xs font-semibold text-white bg-[#0D382B] hover:bg-[#154637] transition-colors cursor-pointer shadow-xs"
+                              data-ticket={t.ticket.id}
+                              data-title={t.ticket.title}
+                              data-reporter={t.reporter}
+                            >
+                              Assign & start
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                class="repair-resolve-btn px-4 py-1.5 rounded-full border border-[#E3E6DF] hover:border-[#0D382B] text-xs font-semibold text-[#0D382B] bg-[#F8F9F6] hover:bg-white transition-colors cursor-pointer shadow-xs"
+                                data-ticket={t.ticket.id}
+                              >
+                                Mark resolved
+                              </button>
+                              <button
+                                type="button"
+                                class="assign-repair-btn px-3 py-1.5 rounded-full text-xs font-semibold text-[#5A6862] hover:text-[#0D382B] hover:bg-[#F4F5F1] transition-colors cursor-pointer"
+                                data-ticket={t.ticket.id}
+                                data-title={t.ticket.title}
+                                data-reporter={t.reporter}
+                                data-editing="true"
+                                data-name={t.ticket.assignedTo ?? ''}
+                                data-phone={t.ticket.assignedPhone ? localPhone(t.ticket.assignedPhone) : ''}
+                                data-visit={t.ticket.visitAt ? t.ticket.visitAt.slice(0, 16) : ''}
+                              >
+                                Edit visit
+                              </button>
+                            </>
+                          )}
+                        </div>
                       )}
                     </div>
-                  )}
-                </div>
-              );
-            })
-          )}
+                  );
+                })}
+                <p class="empty-state hidden text-xs text-[#69847A] py-8 text-center">No matching tickets</p>
+              </>
+            )}
+          </div>
+        </div>
+
+        <!-- Column pagination -->
+        <div class="col-pagination pt-3 border-t border-[#E3E6DF] flex items-center justify-between text-xs text-[#5A6862]">
+          <span class="col-page-indicator font-medium">Page 1 of 1</span>
+          <div class="flex items-center gap-1.5">
+            <button type="button" class="col-prev-btn px-2.5 py-1 rounded-lg border border-[#DCE0D7] bg-white text-xs font-semibold text-[#0D382B] hover:bg-[#F4F5F1] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors">
+              Prev
+            </button>
+            <button type="button" class="col-next-btn px-2.5 py-1 rounded-lg border border-[#DCE0D7] bg-white text-xs font-semibold text-[#0D382B] hover:bg-[#F4F5F1] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors">
+              Next
+            </button>
+          </div>
         </div>
       </div>
     ))}
@@ -218,6 +273,120 @@ const priorityTone = {
   }
 
   function initMaintenancePage() {
+    const searchInput = document.getElementById('maintenance-search') as HTMLInputElement | null;
+    const priorityBtns = document.querySelectorAll<HTMLElement>('[data-priority-btn]');
+    const totalCountEl = document.getElementById('maintenance-total-count');
+    const columns = document.querySelectorAll<HTMLElement>('.maintenance-column');
+
+    const PRIORITY_ACTIVE = ['bg-[#0D382B]', 'text-white', 'border-[#0D382B]'];
+    const PRIORITY_IDLE = ['bg-white', 'text-[#0D382B]', 'border-[#E3E6DF]'];
+    const PAGE_SIZE = 3;
+
+    let selectedPriority = 'all';
+    let searchQuery = '';
+    const colPages: number[] = Array.from({ length: columns.length }, () => 1);
+
+    function renderFilters() {
+      let totalMatchingAll = 0;
+
+      // Update priority buttons
+      priorityBtns.forEach((btn) => {
+        const on = btn.dataset.priorityBtn === selectedPriority;
+        btn.classList.remove(...(on ? PRIORITY_IDLE : PRIORITY_ACTIVE));
+        btn.classList.add(...(on ? PRIORITY_ACTIVE : PRIORITY_IDLE));
+      });
+
+      columns.forEach((col, colIdx) => {
+        const matchingCards: HTMLElement[] = [];
+        col.querySelectorAll<HTMLElement>('.ticket-card').forEach((card) => {
+          const matchesPriority = selectedPriority === 'all' || card.dataset.priority === selectedPriority;
+          const matchesSearch = !searchQuery || (card.dataset.search ?? '').includes(searchQuery);
+          const matches = matchesPriority && matchesSearch;
+
+          if (matches) {
+            matchingCards.push(card);
+          } else {
+            card.classList.add('hidden');
+          }
+        });
+
+        const totalMatching = matchingCards.length;
+        totalMatchingAll += totalMatching;
+
+        // Update column count badge
+        const countBadge = col.querySelector<HTMLElement>('.column-count');
+        if (countBadge) countBadge.textContent = String(totalMatching);
+
+        // Update empty state
+        const emptyState = col.querySelector<HTMLElement>('.empty-state');
+        if (emptyState) emptyState.classList.toggle('hidden', totalMatching > 0);
+
+        // Calculate pages
+        const totalPages = Math.max(1, Math.ceil(totalMatching / PAGE_SIZE));
+        if (colPages[colIdx] > totalPages) colPages[colIdx] = totalPages;
+        if (colPages[colIdx] < 1) colPages[colIdx] = 1;
+        const curPage = colPages[colIdx];
+
+        matchingCards.forEach((card, idx) => {
+          const isVisible = idx >= (curPage - 1) * PAGE_SIZE && idx < curPage * PAGE_SIZE;
+          card.classList.toggle('hidden', !isVisible);
+        });
+
+        // Update pagination bar
+        const paginationBar = col.querySelector<HTMLElement>('.col-pagination');
+        const indicator = col.querySelector<HTMLElement>('.col-page-indicator');
+        const prevBtn = col.querySelector<HTMLButtonElement>('.col-prev-btn');
+        const nextBtn = col.querySelector<HTMLButtonElement>('.col-next-btn');
+
+        if (paginationBar) {
+          paginationBar.classList.toggle('hidden', totalMatching <= PAGE_SIZE);
+        }
+        if (indicator) {
+          indicator.textContent = `Page ${curPage} of ${totalPages}`;
+        }
+        if (prevBtn) {
+          prevBtn.disabled = curPage <= 1;
+          prevBtn.onclick = () => {
+            if (colPages[colIdx] > 1) {
+              colPages[colIdx]--;
+              renderFilters();
+            }
+          };
+        }
+        if (nextBtn) {
+          nextBtn.disabled = curPage >= totalPages;
+          nextBtn.onclick = () => {
+            if (colPages[colIdx] < totalPages) {
+              colPages[colIdx]++;
+              renderFilters();
+            }
+          };
+        }
+      });
+
+      if (totalCountEl) {
+        totalCountEl.textContent = String(totalMatchingAll);
+      }
+    }
+
+    priorityBtns.forEach((btn) => {
+      btn.onclick = () => {
+        selectedPriority = btn.dataset.priorityBtn ?? 'all';
+        colPages.fill(1);
+        renderFilters();
+      };
+    });
+
+    if (searchInput) {
+      searchInput.oninput = (e) => {
+        searchQuery = (e.target as HTMLInputElement).value.trim().toLowerCase();
+        colPages.fill(1);
+        renderFilters();
+      };
+    }
+
+    renderFilters();
+
     const modal = document.getElementById('assign-repair-modal');
     const form = document.getElementById('assign-repair-form') as HTMLFormElement | null;
     const assignBtns = document.querySelectorAll<HTMLButtonElement>('.assign-repair-btn');

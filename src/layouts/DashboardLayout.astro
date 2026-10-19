@@ -7,7 +7,9 @@ import SendRemindersModal from '../components/dashboard/SendRemindersModal.astro
 import ReceiptModal from '../components/dashboard/ReceiptModal.astro';
 import CommandPaletteModal from '../components/dashboard/CommandPaletteModal.astro';
 import TenantAppModal from '../components/dashboard/TenantAppModal.astro';
+import MakaziAssistantModal from '../components/dashboard/MakaziAssistantModal.astro';
 import Toast from '../components/dashboard/Toast.astro';
+import { Sparkles } from '@lucide/astro';
 import { getPortfolio } from '../data/portfolio';
 import { ClientRouter } from 'astro:transitions';
 
@@ -90,6 +92,18 @@ const {
           <span>Nairobi, Kenya · East Africa Time (EAT)</span>
         </div>
       </footer>
+      <!-- Floating Ask Makazi Quick Trigger Button -->
+      <button
+        type="button"
+        id="floating-assistant-btn"
+        aria-label="Ask Makazi Assistant"
+        class="fixed bottom-6 right-6 z-30 flex items-center gap-2.5 px-4 py-3 rounded-full bg-[#0D382B] text-[#C6EE58] hover:bg-[#134637] shadow-xl hover:shadow-2xl border border-[#C6EE58]/30 transition-all hover:scale-105 group cursor-pointer"
+      >
+        <div class="h-6 w-6 rounded-full bg-[#C6EE58] text-[#0A261F] flex items-center justify-center font-bold text-xs shadow-xs">
+          <Sparkles class="w-3.5 h-3.5 stroke-[2.5]" />
+        </div>
+        <span class="text-xs font-semibold text-white tracking-wide pr-1">Ask Makazi</span>
+      </button>
     </div>
 
     <!-- Modals & Feedback Elements (persisted across page transitions) -->
@@ -99,6 +113,7 @@ const {
       <ReceiptModal />
       <CommandPaletteModal />
       <TenantAppModal />
+      <MakaziAssistantModal />
       <Toast />
     </div>
 
@@ -133,7 +148,7 @@ const {
       }
 
       function hideAllModals() {
-        ['onboard-tenant-modal', 'send-reminders-modal', 'receipt-modal', 'command-palette-modal', 'tenant-app-modal', 'move-out-modal', 'readings-modal', 'reset-password-modal', 'add-property-modal', 'edit-rates-modal'].forEach(id => {
+        ['onboard-tenant-modal', 'send-reminders-modal', 'receipt-modal', 'command-palette-modal', 'tenant-app-modal', 'move-out-modal', 'readings-modal', 'reset-password-modal', 'add-property-modal', 'edit-rates-modal', 'makazi-assistant-modal'].forEach(id => {
           hideModal(id);
         });
       }
@@ -407,6 +422,21 @@ const {
 
         if (searchTriggerBtn) searchTriggerBtn.onclick = openCommandPalette;
         if (closeCommandBtn) closeCommandBtn.onclick = () => hideModal('command-palette-modal');
+
+        // Ask Makazi Assistant triggers
+        const openAssistantBtn = document.getElementById('open-assistant-btn');
+        const floatingAssistantBtn = document.getElementById('floating-assistant-btn');
+        const assistantInput = document.getElementById('assistant-chat-input') as HTMLInputElement | null;
+
+        function openAssistant() {
+          showModal('makazi-assistant-modal');
+          setTimeout(() => assistantInput?.focus(), 50);
+        }
+
+        if (openAssistantBtn) openAssistantBtn.onclick = openAssistant;
+        if (floatingAssistantBtn) floatingAssistantBtn.onclick = openAssistant;
+        const sidebarAssistantBtn = document.getElementById('sidebar-assistant-btn');
+        if (sidebarAssistantBtn) sidebarAssistantBtn.onclick = openAssistant;
       }
 
       // Page-load handler for initial render and client-side view transitions
