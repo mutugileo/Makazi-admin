@@ -107,13 +107,5 @@ export async function issueOneTimePassword(
     userId = data.user.id;
   }
 
-  if (isTemporary) {
-    const { error: pendingErr } = await supabase.rpc('mark_password_pending', {
-      p_user: userId,
-      p_hours: validityHours,
-    });
-    if (pendingErr) console.warn('[issueOneTimePassword] mark_password_pending warning:', pendingErr);
-  }
-
   return userId;
 }
