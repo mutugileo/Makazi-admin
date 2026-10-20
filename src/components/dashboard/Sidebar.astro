@@ -15,7 +15,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   ExternalLink,
-  Sparkles
+  Sparkles,
+  KeyRound
 } from '@lucide/astro';
 import { getPortfolio } from '../../data/portfolio';
 import { FEATURES } from '../../config/features';
@@ -44,6 +45,7 @@ const navItems = [
   { name: 'Overview', href: '/', icon: LayoutGrid, active: currentPath === '/' },
   { name: 'Properties', href: '/properties', icon: Building2, active: currentPath === '/properties' },
   { name: 'Tenants', href: '/tenants', icon: Users, active: currentPath === '/tenants' },
+  { name: 'Reset tenant PIN', href: '/reset-password', icon: KeyRound, active: currentPath === '/reset-password' },
   ...(FEATURES.leases ? [{ name: 'Leases', href: '/leases', icon: FileText, active: currentPath === '/leases' }] : []),
   { name: 'Monthly bills', href: '/bills', icon: ReceiptText, active: currentPath === '/bills' },
   { name: 'Payments & receipts', href: '/payments', icon: CreditCard, active: currentPath === '/payments' },
