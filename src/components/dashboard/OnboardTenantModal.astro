@@ -302,15 +302,16 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
           const el = resetModal.querySelector(`[data-field="${field}"]`);
           if (el) el.textContent = text;
         };
-        const msg = `${resetModal.dataset.company || 'Makazi'}: your Makazi one-time password is ${data.temporaryPassword}. Sign in with ${phone}, then choose your own password. It expires in 72 hours.`;
+        const pin = data.pin || data.temporaryPassword;
+        const msg = `${resetModal.dataset.company || 'Makazi'}: your Makazi login PIN is ${pin}. Sign in with ${phone} on the Makazi app using this 4-digit PIN.`;
         setText('who', `${name} · signs in with ${phone}`);
-        setText('password', data.temporaryPassword);
+        setText('password', pin);
         setText('message', msg);
         window.makaziUi?.showModal('reset-password-modal');
       } else {
         window.makaziUi?.showToast(
           'Tenant onboarded',
-          `${name} onboarded. Password: ${data.temporaryPassword || 'Ready'}`,
+          `${name} onboarded. PIN: ${data.pin || data.temporaryPassword || 'Ready'}`,
         );
         setTimeout(() => window.location.reload(), 1500);
       }

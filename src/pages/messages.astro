@@ -9,6 +9,10 @@ const { portfolioSummary, staffById, threads, currentPeriod, whenLabel } = await
 // Rendered per request, so the open thread comes from ?thread=<tenancy id>.
 const requested = Astro.url.searchParams.get('thread');
 const active = threads.find((t) => t.view.tenancy.id === requested) ?? threads[0];
+
+// Supabase client configuration for Realtime broadcast
+const supabaseUrl = process.env.PUBLIC_SUPABASE_URL || 'https://gdapdyvgppatnjksbdco.supabase.co';
+const supabaseAnonKey = process.env.PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_qBGIzPSKLoDOtTZgDy_-mA_MSCmUWs5';
 ---
 
 <DashboardLayout title="Makazi — Messages" currentPath="/messages">
@@ -55,20 +59,25 @@ const active = threads.find((t) => t.view.tenancy.id === requested) ?? threads[0
             return (
               <a
                 href={`/messages?thread=${thread.view.tenancy.id}`}
+                data-thread-link={thread.view.tenancy.id}
+                data-tenant-name={thread.view.tenant.name}
+                data-tenant-first-name={thread.view.tenant.name.split(' ')[0]}
+                data-unit-label={thread.view.unitLabel}
+                data-tenant-phone={thread.view.tenant.phone}
                 aria-current={isActive ? 'page' : undefined}
-                class={`block p-5 transition-colors ${isActive ? 'bg-[#F8F9F6] border-l-4 border-[#0D382B]' : 'hover:bg-[#F8F9F6]/60'}`}
+                class={`thread-nav-item block p-5 transition-colors cursor-pointer ${isActive ? 'bg-[#F8F9F6] border-l-4 border-[#0D382B]' : 'hover:bg-[#F8F9F6]/60'}`}
               >
                 <div class="flex items-center justify-between gap-2">
                   <h2 class="text-sm font-semibold text-[#0D382B] truncate">{thread.view.tenant.name}</h2>
-                  <span class="text-[10px] text-[#69847A] whitespace-nowrap">{whenLabel(thread.last.sentAt)}</span>
+                  <span class="thread-last-time text-[10px] text-[#69847A] whitespace-nowrap">{whenLabel(thread.last.sentAt)}</span>
                 </div>
                 <p class="text-xs text-[#69847A] mt-0.5">{thread.view.unitLabel}</p>
                 <div class="flex items-center gap-2 mt-2">
-                  <p class={`text-xs truncate flex-1 ${thread.unread ? 'font-semibold text-[#0D382B]' : 'text-[#5A6862]'}`}>
+                  <p class={`thread-last-body text-xs truncate flex-1 ${thread.unread ? 'font-semibold text-[#0D382B]' : 'text-[#5A6862]'}`}>
                     {thread.last.sender === 'staff' && 'You: '}{thread.last.body}
                   </p>
                   {thread.unread > 0 && (
-                    <span class="h-5 min-w-5 px-1.5 rounded-full bg-[#C04A26] text-white text-[10px] font-bold flex items-center justify-center" aria-label={`${thread.unread} unread`}>
+                    <span class="unread-badge h-5 min-w-5 px-1.5 rounded-full bg-[#C04A26] text-white text-[10px] font-bold flex items-center justify-center" aria-label={`${thread.unread} unread`}>
                       {thread.unread}
                     </span>
                   )}
@@ -79,11 +88,16 @@ const active = threads.find((t) => t.view.tenancy.id === requested) ?? threads[0
         </div>
       </nav>
 
-      <section class="lg:col-span-8 bg-white rounded-3xl border border-[#E3E6DF] flex flex-col h-[460px] lg:h-full shadow-xs overflow-hidden">
+      <section
+        id="chat-section"
+        data-supabase-url={supabaseUrl}
+        data-supabase-key={supabaseAnonKey}
+        class="lg:col-span-8 bg-white rounded-3xl border border-[#E3E6DF] flex flex-col h-[460px] lg:h-full shadow-xs overflow-hidden"
+      >
         <div class="p-5 border-b border-[#E3E6DF] bg-[#F8F9F6]/50 flex items-center justify-between shrink-0">
           <div>
-            <h2 class="text-base font-semibold text-[#0D382B]">{active.view.tenant.name}</h2>
-            <p class="text-xs text-[#69847A]">{active.view.unitLabel} · {active.view.tenant.phone}</p>
+            <h2 id="active-thread-name" class="text-base font-semibold text-[#0D382B]">{active.view.tenant.name}</h2>
+            <p id="active-thread-meta" class="text-xs text-[#69847A]">{active.view.unitLabel} · {active.view.tenant.phone}</p>
           </div>
           <div class="flex items-center gap-2">
             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#E8F5E9] text-[#2E7D32] text-[11px] font-medium border border-[#C8E6C9]">
@@ -93,23 +107,67 @@ const active = threads.find((t) => t.view.tenancy.id === requested) ?? threads[0
           </div>
         </div>
 
-        <div id="chat-messages-container" class="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto chat-scroll scroll-smooth">
-          {active.messages.map((msg) => {
-            const outgoing = msg.sender === 'staff';
-            const author = outgoing ? staffById.get(msg.staffId ?? '')?.name ?? 'Staff' : active.view.tenant.name.split(' ')[0];
+        <div class="relative flex-1 min-h-0 overflow-hidden">
+          {threads.map((thread) => {
+            const isThreadActive = thread.view.tenancy.id === active.view.tenancy.id;
+            const tenantMessages = thread.messages.filter((m) => m.sender === 'tenant');
+            const latestTenantMsgSentAt = tenantMessages.length > 0 ? tenantMessages[tenantMessages.length - 1].sentAt : null;
+
             return (
-              <div class={`flex flex-col ${outgoing ? 'items-end' : 'items-start'}`}>
-                <div class={`max-w-lg p-3.5 text-xs ${
-                  outgoing
-                    ? 'bg-[#0D382B] text-white rounded-2xl rounded-tr-none shadow-xs'
-                    : 'bg-[#F3F4F0] border border-[#E3E6DF] text-[#0D382B] rounded-2xl rounded-tl-none shadow-xs'
-                }`}>
-                  {msg.body}
-                </div>
-                <span class="text-[10px] text-[#69847A] mt-1 px-1">{author} · {whenLabel(msg.sentAt)}</span>
+              <div
+                id={`chat-thread-${thread.view.tenancy.id}`}
+                class={`chat-thread-pane p-6 space-y-4 h-full overflow-y-auto chat-scroll scroll-smooth ${isThreadActive ? '' : 'hidden'}`}
+                data-thread-id={thread.view.tenancy.id}
+              >
+                {thread.messages.length === 0 ? (
+                  <div class="empty-thread-notice h-full flex items-center justify-center text-xs text-[#69847A]">
+                    No messages yet in this conversation.
+                  </div>
+                ) : (
+                  thread.messages.map((msg) => {
+                    const outgoing = msg.sender === 'staff';
+                    const author = outgoing ? staffById.get(msg.staffId ?? '')?.name ?? 'Staff' : thread.view.tenant.name.split(' ')[0];
+                    const isRead = outgoing && latestTenantMsgSentAt ? msg.sentAt <= latestTenantMsgSentAt : false;
+                    return (
+                      <div class={`flex flex-col ${outgoing ? 'items-end' : 'items-start'}`}>
+                        <div class={`max-w-lg p-3.5 text-xs ${
+                          outgoing
+                            ? 'bg-[#0D382B] text-white rounded-2xl rounded-tr-none shadow-xs'
+                            : 'bg-[#F3F4F0] border border-[#E3E6DF] text-[#0D382B] rounded-2xl rounded-tl-none shadow-xs'
+                        }`}>
+                          {msg.body}
+                        </div>
+                        <div class="flex items-center gap-1.5 mt-1 px-1">
+                          <span class="text-[10px] text-[#69847A]">{author} · {whenLabel(msg.sentAt)}</span>
+                          {outgoing && (
+                            <span
+                              class={`chat-msg-ticks inline-flex items-center ${isRead ? 'text-[#2E7D32]' : 'text-[#69847A]'}`}
+                              title={isRead ? 'Read by tenant' : 'Delivered'}
+                            >
+                              <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 6L7 17l-5-5"></path>
+                                <path d="m22 10-7.5 7.5L13 16"></path>
+                              </svg>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             );
           })}
+        </div>
+
+        <!-- Tenant Typing Indicator -->
+        <div id="tenant-typing-indicator" class="hidden px-5 py-2 bg-[#F8F9F6] border-t border-[#E3E6DF] flex items-center gap-2 shrink-0 transition-all">
+          <div class="flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-[#0D382B] animate-bounce [animation-delay:-0.3s]"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-[#0D382B] animate-bounce [animation-delay:-0.15s]"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-[#0D382B] animate-bounce"></span>
+          </div>
+          <span id="tenant-typing-text" class="text-xs font-medium text-[#69847A]">Tenant is typing…</span>
         </div>
 
         <div class="p-4 border-t border-[#E3E6DF] bg-white shrink-0">
@@ -153,65 +211,319 @@ const active = threads.find((t) => t.view.tenancy.id === requested) ?? threads[0
 
 <script>
   import { setBusy } from '../lib/busy';
+  import { createClient } from '@supabase/supabase-js';
 
-  function scrollChatToBottom(smooth = false) {
-    const container = document.getElementById('chat-messages-container');
-    if (!container) return;
+  function escapeHtml(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function scrollActiveChatToBottom(smooth = false) {
+    const pane = document.querySelector<HTMLElement>('.chat-thread-pane:not(.hidden)');
+    if (!pane) return;
     if (smooth) {
-      container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+      pane.scrollTo({ top: pane.scrollHeight, behavior: 'smooth' });
     } else {
-      container.scrollTop = container.scrollHeight;
+      pane.scrollTop = pane.scrollHeight;
     }
   }
 
+  let realtimeClient: any = null;
+  let currentChannel: any = null;
+  let activeTenancyId: string | null = null;
+  let tenantTypingTimeout: any = null;
+
+  function showTenantTyping(tenantName: string) {
+    const indicator = document.getElementById('tenant-typing-indicator');
+    const textEl = document.getElementById('tenant-typing-text');
+    if (!indicator || !textEl) return;
+    const firstName = tenantName.split(' ')[0] || 'Tenant';
+    textEl.textContent = `${firstName} is typing…`;
+    indicator.classList.remove('hidden');
+    if (tenantTypingTimeout) clearTimeout(tenantTypingTimeout);
+    tenantTypingTimeout = setTimeout(() => {
+      hideTenantTyping();
+    }, 4000);
+  }
+
+  function hideTenantTyping() {
+    if (tenantTypingTimeout) clearTimeout(tenantTypingTimeout);
+    const indicator = document.getElementById('tenant-typing-indicator');
+    if (indicator) indicator.classList.add('hidden');
+  }
+
+  function markAllOutgoingTicksGreen(tenancyId: string) {
+    const pane = document.getElementById(`chat-thread-${tenancyId}`);
+    if (!pane) return;
+    pane.querySelectorAll('.chat-msg-ticks').forEach((tick) => {
+      tick.classList.remove('text-[#69847A]');
+      tick.classList.add('text-[#2E7D32]');
+      tick.setAttribute('title', 'Read by tenant');
+    });
+  }
+
+  async function markStaffRead(tenancyId: string) {
+    try {
+      await fetch('/api/mark-read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenancyId }),
+      });
+    } catch (_) {}
+  }
+
+  function subscribeToRealtime(tenancyId: string, tenantName: string) {
+    if (!realtimeClient) {
+      const chatSection = document.getElementById('chat-section');
+      const url = chatSection?.dataset.supabaseUrl;
+      const key = chatSection?.dataset.supabaseKey;
+      if (url && key) {
+        realtimeClient = createClient(url, key, { auth: { persistSession: false } });
+      }
+    }
+    if (!realtimeClient) return;
+
+    if (currentChannel) {
+      realtimeClient.removeChannel(currentChannel);
+      currentChannel = null;
+    }
+
+    hideTenantTyping();
+    activeTenancyId = tenancyId;
+
+    // Mark messages in this tenancy as read by staff
+    markStaffRead(tenancyId);
+
+    currentChannel = realtimeClient.channel(`makazi:tenancy:${tenancyId}`);
+    currentChannel
+      .on('broadcast', { event: 'typing' }, ({ payload }: any) => {
+        if (payload?.sender === 'tenant' && activeTenancyId === tenancyId) {
+          if (payload.isTyping) {
+            showTenantTyping(tenantName);
+          } else {
+            hideTenantTyping();
+          }
+        }
+      })
+      .on('broadcast', { event: 'tenant_read' }, () => {
+        markAllOutgoingTicksGreen(tenancyId);
+      })
+      .on('broadcast', { event: 'message_sent' }, () => {
+        markAllOutgoingTicksGreen(tenancyId);
+      })
+      .subscribe();
+  }
+
+  function switchThread(tenancyId: string, updateHistory = true) {
+    const targetLink = document.querySelector<HTMLAnchorElement>(`[data-thread-link="${tenancyId}"]`);
+    const targetPane = document.getElementById(`chat-thread-${tenancyId}`);
+    if (!targetLink || !targetPane) return;
+
+    // 1. Update left list active indicator
+    document.querySelectorAll<HTMLAnchorElement>('.thread-nav-item').forEach((item) => {
+      const isTarget = item === targetLink;
+      if (isTarget) {
+        item.classList.add('bg-[#F8F9F6]', 'border-l-4', 'border-[#0D382B]');
+        item.classList.remove('hover:bg-[#F8F9F6]/60');
+        item.setAttribute('aria-current', 'page');
+      } else {
+        item.classList.remove('bg-[#F8F9F6]', 'border-l-4', 'border-[#0D382B]');
+        item.classList.add('hover:bg-[#F8F9F6]/60');
+        item.removeAttribute('aria-current');
+      }
+    });
+
+    // 2. Clear unread badge for selected thread
+    const unreadBadge = targetLink.querySelector('.unread-badge');
+    if (unreadBadge) unreadBadge.remove();
+    const lastBody = targetLink.querySelector('.thread-last-body');
+    if (lastBody) {
+      lastBody.classList.remove('font-semibold', 'text-[#0D382B]');
+      lastBody.classList.add('text-[#5A6862]');
+    }
+
+    // 3. Switch visible message pane
+    document.querySelectorAll('.chat-thread-pane').forEach((p) => p.classList.add('hidden'));
+    targetPane.classList.remove('hidden');
+
+    // 4. Update header details
+    const nameEl = document.getElementById('active-thread-name');
+    const metaEl = document.getElementById('active-thread-meta');
+    if (nameEl) nameEl.textContent = targetLink.dataset.tenantName || '';
+    if (metaEl) metaEl.textContent = `${targetLink.dataset.unitLabel || ''} · ${targetLink.dataset.tenantPhone || ''}`;
+
+    // 5. Update send form
+    const form = document.getElementById('chat-send-form') as HTMLFormElement | null;
+    if (form) {
+      form.dataset.tenancy = tenancyId;
+      const input = form.querySelector('input[name="body"]') as HTMLInputElement | null;
+      if (input) {
+        input.placeholder = `Message ${targetLink.dataset.tenantFirstName || ''}…`;
+      }
+    }
+
+    // 6. Update URL in browser history
+    if (updateHistory) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('thread', tenancyId);
+      window.history.pushState({ threadId: tenancyId }, '', url.toString());
+    }
+
+    // 7. Subscribe to realtime for this thread
+    subscribeToRealtime(tenancyId, targetLink.dataset.tenantName || 'Tenant');
+
+    // 8. Scroll pane to bottom
+    requestAnimationFrame(() => {
+      targetPane.scrollTop = targetPane.scrollHeight;
+    });
+  }
+
   function initMessagesPage() {
-    scrollChatToBottom(false);
-    // Double check after any layout reflow
-    requestAnimationFrame(() => scrollChatToBottom(false));
+    scrollActiveChatToBottom(false);
+    requestAnimationFrame(() => scrollActiveChatToBottom(false));
+
+    // Handle instant thread switching
+    document.querySelectorAll<HTMLAnchorElement>('.thread-nav-item').forEach((link) => {
+      link.onclick = (e) => {
+        if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
+        e.preventDefault();
+        const threadId = link.dataset.threadLink;
+        if (threadId) switchThread(threadId, true);
+      };
+    });
+
+    // Handle browser back/forward buttons
+    window.onpopstate = () => {
+      const params = new URLSearchParams(window.location.search);
+      const threadId = params.get('thread');
+      if (threadId) {
+        switchThread(threadId, false);
+      }
+    };
+
+    // Initialize realtime subscription for active thread
+    const initialActive = document.querySelector<HTMLAnchorElement>('.thread-nav-item[aria-current="page"]');
+    const initialThreadId = initialActive?.dataset.threadLink;
+    const initialTenantName = initialActive?.dataset.tenantName || 'Tenant';
+    if (initialThreadId) {
+      subscribeToRealtime(initialThreadId, initialTenantName);
+    }
 
     const form = document.getElementById('chat-send-form') as HTMLFormElement | null;
     if (!form) return;
     const input = form.querySelector('input[name="body"]') as HTMLInputElement | null;
-    const tenancyId = form.dataset.tenancy;
 
-    let typingTimeout: any = null;
+    let staffTypingTimeout: any = null;
+    let isStaffTyping = false;
+
     if (input) {
       input.oninput = () => {
-        if (!tenancyId) return;
-        if (typingTimeout) clearTimeout(typingTimeout);
-        typingTimeout = setTimeout(() => {
+        const currentTenancyId = form.dataset.tenancy;
+        if (!currentTenancyId) return;
+        if (!isStaffTyping) {
+          isStaffTyping = true;
           fetch('/api/typing', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tenancyId, isTyping: true }),
+            body: JSON.stringify({ tenancyId: currentTenancyId, isTyping: true, sender: 'staff' }),
           }).catch(() => {});
-        }, 200);
+        }
+        if (staffTypingTimeout) clearTimeout(staffTypingTimeout);
+        staffTypingTimeout = setTimeout(() => {
+          isStaffTyping = false;
+          fetch('/api/typing', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tenancyId: currentTenancyId, isTyping: false, sender: 'staff' }),
+          }).catch(() => {});
+        }, 2500);
+      };
+
+      input.onblur = () => {
+        const currentTenancyId = form.dataset.tenancy;
+        if (!currentTenancyId || !isStaffTyping) return;
+        isStaffTyping = false;
+        if (staffTypingTimeout) clearTimeout(staffTypingTimeout);
+        fetch('/api/typing', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tenancyId: currentTenancyId, isTyping: false, sender: 'staff' }),
+        }).catch(() => {});
       };
     }
 
     form.onsubmit = async (e) => {
       e.preventDefault();
       const body = input?.value.trim() ?? '';
-      if (!body || !tenancyId) return;
+      const currentTenancyId = form.dataset.tenancy;
+      if (!body || !currentTenancyId) return;
+
+      if (staffTypingTimeout) clearTimeout(staffTypingTimeout);
+      isStaffTyping = false;
+      fetch('/api/typing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenancyId: currentTenancyId, isTyping: false, sender: 'staff' }),
+      }).catch(() => {});
 
       const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
       const restoreSend = setBusy(submitBtn, 'Sending…');
+
+      // Optimistic message append
+      const pane = document.getElementById(`chat-thread-${currentTenancyId}`);
+      let tempBubble: HTMLElement | null = null;
+      if (pane) {
+        pane.querySelector('.empty-thread-notice')?.remove();
+        tempBubble = document.createElement('div');
+        tempBubble.className = 'flex flex-col items-end';
+        const now = new Date();
+        const timeStr = 'Today, ' + now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        tempBubble.innerHTML = `
+          <div class="max-w-lg p-3.5 text-xs bg-[#0D382B] text-white rounded-2xl rounded-tr-none shadow-xs">
+            ${escapeHtml(body)}
+          </div>
+          <div class="flex items-center gap-1.5 mt-1 px-1">
+            <span class="text-[10px] text-[#69847A]">You · ${timeStr}</span>
+            <span class="chat-msg-ticks inline-flex items-center text-[#69847A]" title="Delivered">
+              <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 6L7 17l-5-5"></path>
+                <path d="m22 10-7.5 7.5L13 16"></path>
+              </svg>
+            </span>
+          </div>
+        `;
+        pane.appendChild(tempBubble);
+        requestAnimationFrame(() => {
+          pane.scrollTop = pane.scrollHeight;
+        });
+      }
+
+      // Update snippet on left sidebar
+      const navItem = document.querySelector(`[data-thread-link="${currentTenancyId}"]`);
+      if (navItem) {
+        const lastBody = navItem.querySelector('.thread-last-body');
+        if (lastBody) lastBody.textContent = `You: ${body}`;
+        const lastTime = navItem.querySelector('.thread-last-time');
+        if (lastTime) lastTime.textContent = 'Today, ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      }
+
+      if (input) input.value = '';
 
       try {
         const res = await fetch('/api/send-message', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tenancyId, body }),
+          body: JSON.stringify({ tenancyId: currentTenancyId, body }),
         });
         const data = await res.json();
         if (!res.ok || data.error) throw new Error(data.error || 'Failed to send message');
-
-        if (input) input.value = '';
-        window.location.reload();
       } catch (err: unknown) {
-        restoreSend();
+        if (tempBubble) tempBubble.remove();
         const msg = err instanceof Error ? err.message : String(err);
         window.makaziUi?.showToast('Error', msg);
+      } finally {
+        restoreSend();
       }
     };
   }

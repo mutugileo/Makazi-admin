@@ -120,6 +120,16 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       if (readingErr) console.error('[onboard-tenant] opening reading not saved:', readingErr);
     }
 
+    // Send in-app notification for the newly generated 4-digit PIN (72h validity)
+    const { error: notifErr } = await supabase.from('notifications').insert({
+      company_id: companyId,
+      tenancy_id: newTenancy.id,
+      kind: 'payment_reminder',
+      title: 'Security: New 4-digit PIN generated',
+      body: `Your Makazi login PIN is ${temporaryPassword}. Valid for 72 hours. You can change your PIN anytime in the app under Account settings.`,
+    });
+    if (notifErr) console.warn('[onboard-tenant] notification warning:', notifErr);
+
     clearLiveCache(companyId);
 
     return json({
@@ -127,8 +137,9 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       tenantId,
       tenancyId: newTenancy.id,
       temporaryPassword,
+      pin: temporaryPassword,
       authEmail: phone.authEmail,
-      message: `Your Makazi one-time password is ${temporaryPassword}. Sign in with ${phone.local}, then choose your own password.`,
+      message: `Your Makazi login PIN is ${temporaryPassword}. Sign in with ${phone.local} on the Makazi app using this PIN.`,
     });
   } catch (err: unknown) {
     console.error('[onboard-tenant]', err);

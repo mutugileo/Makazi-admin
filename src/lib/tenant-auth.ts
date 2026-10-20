@@ -34,17 +34,19 @@ export function phoneSpellings(p: KenyanPhone): string[] {
   return [p.local, p.intl, p.digits];
 }
 
+export function pinToSupabasePassword(pin: string): string {
+  const trimmed = pin.trim();
+  return trimmed.length === 4 ? `makazi-pin-${trimmed}` : trimmed;
+}
+
+export function generateFourDigitPin(): string {
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  return (1000 + (buf[0] % 9000)).toString();
+}
+
 export function generateOneTimePassword(): string {
-  const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-  // 31 letters: reject bytes past the last full multiple so each is equally likely.
-  const chars: string[] = [];
-  while (chars.length < 12) {
-    for (const b of crypto.getRandomValues(new Uint8Array(16))) {
-      if (b < 248 && chars.length < 12) chars.push(alphabet[b % alphabet.length]);
-    }
-  }
-  const s = chars.join('');
-  return `${s.slice(0, 4)}-${s.slice(4, 8)}-${s.slice(8, 12)}`;
+  return generateFourDigitPin();
 }
 
 /** Looks through every page of auth users (listUsers returns 50 by default). */
@@ -59,26 +61,45 @@ async function findAuthUserIdByEmail(supabase: SupabaseClient, email: string): P
 }
 
 /**
- * Creates the tenant's login, or resets it, with a one-time password, and
- * locks their data until they choose their own. Returns the auth user id.
+ * Creates the tenant's login, or resets it, with a 4-digit PIN.
+ * Returns the auth user id.
  */
 export async function issueOneTimePassword(
   supabase: SupabaseClient,
-  opts: { phone: KenyanPhone; password: string; name: string; companyId: string; knownUserId?: string | null },
+  opts: {
+    phone: KenyanPhone;
+    password: string;
+    name: string;
+    companyId: string;
+    knownUserId?: string | null;
+    isTemporary?: boolean;
+    validityHours?: number;
+  },
 ): Promise<string> {
-  const metadata = { name: opts.name, phone: opts.phone.intl, company_id: opts.companyId, is_temporary: true };
+  const isTemporary = opts.isTemporary ?? true;
+  const validityHours = opts.validityHours ?? 72;
+  const expiresAt = new Date(Date.now() + validityHours * 3600 * 1000).toISOString();
+
+  const metadata = {
+    name: opts.name,
+    phone: opts.phone.intl,
+    company_id: opts.companyId,
+    is_temporary: isTemporary,
+    pin_expires_at: isTemporary ? expiresAt : null,
+  };
   let userId = opts.knownUserId ?? (await findAuthUserIdByEmail(supabase, opts.phone.authEmail));
+  const supabasePassword = pinToSupabasePassword(opts.password);
 
   if (userId) {
     const { error } = await supabase.auth.admin.updateUserById(userId, {
-      password: opts.password,
+      password: supabasePassword,
       user_metadata: metadata,
     });
     if (error) throw error;
   } else {
     const { data, error } = await supabase.auth.admin.createUser({
       email: opts.phone.authEmail,
-      password: opts.password,
+      password: supabasePassword,
       email_confirm: true,
       user_metadata: metadata,
     });
@@ -86,7 +107,13 @@ export async function issueOneTimePassword(
     userId = data.user.id;
   }
 
-  const { error: pendingErr } = await supabase.rpc('mark_password_pending', { p_user: userId, p_hours: 72 });
-  if (pendingErr) throw pendingErr;
+  if (isTemporary) {
+    const { error: pendingErr } = await supabase.rpc('mark_password_pending', {
+      p_user: userId,
+      p_hours: validityHours,
+    });
+    if (pendingErr) console.warn('[issueOneTimePassword] mark_password_pending warning:', pendingErr);
+  }
+
   return userId;
 }

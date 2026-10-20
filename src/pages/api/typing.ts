@@ -27,7 +27,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     if (error) throw error;
     if (!own) return new Response(JSON.stringify({ error: 'Not found' }), { status: 404 });
 
-    await notifyTenancy(supabase, tenancyId, 'typing', { isTyping: Boolean(isTyping) });
+    await notifyTenancy(supabase, tenancyId, 'typing', { isTyping: Boolean(isTyping), sender: 'staff' });
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

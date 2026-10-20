@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { errorMessage } from '../../lib/errors';
 import { makeSupabaseClient } from '../../lib/supabase';
+import { notifyTenancy } from '../../lib/realtime';
 import { generateOneTimePassword, issueOneTimePassword, parseKenyanPhone, phoneSpellings } from '../../lib/tenant-auth';
 
 const json = (body: unknown, status = 200) =>
@@ -36,6 +37,8 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       name: tenant.name,
       companyId: user.companyId,
       knownUserId: tenant.auth_user_id,
+      isTemporary: true,
+      validityHours: 72,
     });
 
     if (tenant.auth_user_id !== authUserId) {
@@ -47,7 +50,29 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       if (linkErr) throw linkErr;
     }
 
-    return json({ success: true, password, phone: phone.local });
+    // Send in-app notification to the tenant's active tenancy
+    const { data: tenancy } = await supabase
+      .from('tenancies')
+      .select('id')
+      .eq('company_id', user.companyId)
+      .eq('tenant_id', tenant.id)
+      .is('move_out', null)
+      .maybeSingle();
+
+    if (tenancy) {
+      const { error: notifErr } = await supabase.from('notifications').insert({
+        company_id: user.companyId,
+        tenancy_id: tenancy.id,
+        kind: 'payment_reminder',
+        title: 'Security: New 4-digit PIN generated',
+        body: `Your Makazi login PIN is ${password}. Valid for 72 hours. You can change your PIN in the app under Account settings.`,
+      });
+      if (notifErr) console.warn('[reset-password] notification warning:', notifErr);
+
+      await notifyTenancy(supabase, tenancy.id, 'data_updated', { action: 'notification' });
+    }
+
+    return json({ success: true, password, pin: password, phone: phone.local });
   } catch (err: unknown) {
     console.error('[reset-password]', err);
     return json({ error: errorMessage(err) }, 500);
