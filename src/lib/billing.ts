@@ -18,6 +18,14 @@ export type BillLineKind =
   | 'deposit_applied'
   | 'deposit_refund';
 
+export interface CompanyTheme {
+  preset?: string;
+  primary?: string;
+  navBg?: string;
+  accent?: string;
+  logoUrl?: string;
+}
+
 /** Billing rules a landlord chooses for themselves. */
 export interface CompanySettings {
   /** First month on Makazi; earlier balances come in as openingBalance. */
@@ -34,6 +42,7 @@ export interface CompanySettings {
    * database records as a flagged test payment. Off unless the owner turns it on.
    */
   mpesaSimulation?: boolean;
+  theme?: CompanyTheme;
 }
 
 /** Last numbers issued; each company has its own series. */

@@ -18,9 +18,11 @@ interface Props {
   currentPath?: string;
 }
 
-// The company's name as stored (live in Supabase mode), not the session's copy.
+// The company's name and theme as stored (live in Supabase mode), not the session's copy.
 const user = Astro.locals.user;
-const companyName = user ? (await getPortfolio(user.companyId, Astro.cookies)).company.name : 'Makazi';
+const portfolio = user ? await getPortfolio(user.companyId, Astro.cookies) : null;
+const companyName = portfolio ? portfolio.company.name : 'Makazi';
+const companyTheme = portfolio?.company.settings.theme;
 const {
   title = `Makazi — ${companyName}`,
   currentPath = "/"
@@ -61,11 +63,15 @@ const {
       }
     </script>
   </head>
-  <body class="bg-[#F3F4F0] text-[#17231E] min-h-screen antialiased flex">
+  <body 
+    style={`--color-brand-primary: ${companyTheme?.primary ?? '#0D382B'}; --color-sidebar-bg: ${companyTheme?.navBg ?? '#0A261F'}; --color-brand-accent: ${companyTheme?.accent ?? '#C6EE58'};`}
+    class="bg-[#F3F4F0] text-[#17231E] min-h-screen antialiased flex"
+  >
     <!-- Top Progress Bar for Seamless Route Transitions -->
     <div 
       id="nav-progress-bar" 
-      class="fixed top-0 left-0 h-[2.5px] bg-[#C6EE58] z-50 transition-all duration-200 ease-out pointer-events-none opacity-0 w-0 shadow-[0_0_8px_rgba(198,238,88,0.8)]" 
+      style={`background-color: ${companyTheme?.accent ?? '#C6EE58'}; box-shadow: 0 0 8px ${companyTheme?.accent ?? '#C6EE58'}CC;`}
+      class="fixed top-0 left-0 h-[2.5px] z-50 transition-all duration-200 ease-out pointer-events-none opacity-0 w-0" 
       aria-hidden="true"
     ></div>
 
