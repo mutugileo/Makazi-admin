@@ -150,8 +150,8 @@ body {
 #app-sidebar {
   width: 18rem; /* 288px default */
   transition: width 240ms cubic-bezier(0.16, 1, 0.3, 1), transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
-  background: radial-gradient(130% 40% at 50% 0%, rgba(198, 238, 88, 0.08) 0%, rgba(10, 38, 31, 0) 100%),
-              linear-gradient(180deg, #0C2E25 0%, #0A261F 35%, #061A14 100%);
+  background: radial-gradient(130% 40% at 50% 0%, var(--sidebar-accent-glow, rgba(198, 238, 88, 0.08)) 0%, transparent 100%),
+              linear-gradient(180deg, var(--sidebar-primary, #0C2E25) 0%, var(--sidebar-bg, #0A261F) 45%, #000000 100%);
 }
 
 /* The label copy that floats beside an icon only exists for the collapsed
