@@ -1,12 +1,14 @@
 ---
 import DashboardLayout from '../layouts/DashboardLayout.astro';
-import { bedLabel, getPortfolio, monthLabel } from '../data/portfolio';
+import { bedLabel, formatDate, getPortfolio, monthLabel } from '../data/portfolio';
+import { scceSharingOf } from '../lib/scce/features';
 import { ChevronDown } from '@lucide/astro';
 
 // This company's data only (the signed-in user's).
 const { company, propertyViews, portfolioSummary } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
 const { settings } = company;
 const canEdit = Astro.locals.user!.role === 'owner';
+const scce = scceSharingOf(company);
 const depositRows = Object.entries(settings.depositSchedule).sort(([a], [b]) => Number(a) - Number(b));
 
 // The Makazi plan is managed by Codzure in the super-admin portal, not here.
@@ -233,6 +235,37 @@ const fixed = 'text-sm font-semibold text-[#0D382B] mt-0.5';
       </div>
     )}
   </form>
+
+  <section id="scce-sharing" class={`${card} mt-6`} data-enabled={scce.enabled ? 'true' : 'false'}>
+    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+      <div class="max-w-xl">
+        <h2 class="font-editorial text-2xl text-[#0D382B]">Share portfolio health with lenders</h2>
+        <p class="text-xs text-[#5A6862] mt-2 leading-relaxed">
+          SCCE shows lenders your collection rate, occupancy and arrears, so you can borrow against how your
+          properties perform. Only totals are shared. Tenant names, phone numbers and payments stay in Makazi.
+        </p>
+        <p class={`${hint} mt-2`}>
+          {scce.enabled && scce.enabledAt
+            ? `Shared since ${formatDate(scce.enabledAt.slice(0, 10))}. Stopping takes effect from the next nightly sync.`
+            : 'Not shared. SCCE collects totals once a night after you start.'}
+        </p>
+      </div>
+      {canEdit && (
+        <div class="flex flex-col items-start sm:items-end gap-2 flex-shrink-0">
+          <button
+            type="button"
+            data-field="scce-toggle"
+            class={scce.enabled
+              ? 'px-5 py-2.5 rounded-xl text-sm font-semibold border border-[#E2E5DF] text-[#0D382B] hover:bg-[#F4F5F1] focus-visible:outline-2 focus-visible:outline-[#0D382B] transition-colors cursor-pointer disabled:opacity-60'
+              : 'px-5 py-2.5 rounded-xl text-sm font-semibold bg-[#0D382B] text-white hover:bg-[#154637] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0D382B] transition-all shadow-md cursor-pointer disabled:opacity-60'}
+          >
+            {scce.enabled ? 'Stop sharing with SCCE' : 'Start sharing with SCCE'}
+          </button>
+          <p data-field="scce-error" role="alert" class="hidden text-xs text-[#C04A26]"></p>
+        </div>
+      )}
+    </div>
+  </section>
 </DashboardLayout>
 
 <script>
@@ -339,10 +372,46 @@ const fixed = 'text-sm font-semibold text-[#0D382B] mt-0.5';
     });
   }
 
+  function initScceSharing() {
+    const section = document.getElementById('scce-sharing');
+    const button = section?.querySelector<HTMLButtonElement>('[data-field="scce-toggle"]');
+    const error = section?.querySelector<HTMLElement>('[data-field="scce-error"]');
+    if (!section || !button || button.dataset.bound) return;
+    button.dataset.bound = 'true';
+    button.addEventListener('click', async () => {
+      const enabled = section.dataset.enabled !== 'true';
+      error?.classList.add('hidden');
+      const restore = setBusy(button, enabled ? 'Starting…' : 'Stopping…');
+      try {
+        const res = await fetch('/api/scce/sharing', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.error) throw new Error(data.error || 'Sharing did not change. Try again.');
+        window.makaziUi?.showToast(
+          enabled ? 'Sharing with SCCE' : 'Stopped sharing with SCCE',
+          enabled ? 'Totals go to SCCE in tonight\'s sync.' : 'SCCE gets no new totals from tonight.',
+        );
+        setTimeout(() => window.location.reload(), 800);
+      } catch (err: unknown) {
+        restore();
+        if (error) {
+          error.textContent = err instanceof Error ? err.message : String(err);
+          error.classList.remove('hidden');
+        }
+      }
+    });
+  }
+
+  document.addEventListener('astro:page-load', initScceSharing);
   document.addEventListener('astro:page-load', initSettingsPage);
   if (document.readyState === 'complete' || document.readyState === 'interactive') {
     initSettingsPage();
+    initScceSharing();
   } else {
     document.addEventListener('DOMContentLoaded', initSettingsPage);
+    document.addEventListener('DOMContentLoaded', initScceSharing);
   }
 </script>

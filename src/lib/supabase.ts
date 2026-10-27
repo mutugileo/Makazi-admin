@@ -16,11 +16,13 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 // Read from astro:env or process.env
 let _url: string | undefined;
 let _key: string | undefined;
+let _serviceKey: string | undefined;
 
 try {
   const env = await import('astro:env/server');
   const envMap = env as Record<string, string | undefined>;
   _url = envMap['SUPABASE_URL'] || envMap['PUBLIC_SUPABASE_URL'];
+  _serviceKey = envMap['SUPABASE_SERVICE_ROLE_KEY'];
   _key = envMap['SUPABASE_SERVICE_ROLE_KEY'] || envMap['SUPABASE_ANON_KEY'] || envMap['PUBLIC_SUPABASE_ANON_KEY'];
 } catch {
   // Not available (test / build contexts) — seed mode.
@@ -36,6 +38,18 @@ export function getSupabaseConfig(): { url: string; key: string } | null {
 /** True once SUPABASE_URL / PUBLIC_SUPABASE_URL and key are in .env. */
 export function supabaseConfigured(): boolean {
   return Boolean(getSupabaseConfig());
+}
+
+/**
+ * A client that bypasses Row-Level Security, for server jobs that act for no
+ * signed-in user (the SCCE export). Null unless a service role key is set:
+ * an anon key would silently return no rows.
+ */
+export function makeServiceRoleClient(): SupabaseClient | null {
+  const url = process.env.SUPABASE_URL || process.env.PUBLIC_SUPABASE_URL || _url;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || _serviceKey;
+  if (!url || !key) return null;
+  return createClient(url.trim(), key.trim(), { auth: { persistSession: false } });
 }
 
 /**
