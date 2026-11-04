@@ -1,4 +1,4 @@
----
+bght6 u cdxswaq 1--
 import DashboardLayout from '../layouts/DashboardLayout.astro';
 import HeroMetricsCard from '../components/dashboard/HeroMetricsCard.astro';
 import KpiStack from '../components/dashboard/KpiStack.astro';
@@ -9,7 +9,7 @@ import LeasesActionCard from '../components/dashboard/LeasesActionCard.astro';
 import { FEATURES } from '../config/features';
 import GetStartedCard from '../components/dashboard/GetStartedCard.astro';
 import { getPortfolio, monthLabel, selectableMonths, viewMonthFrom } from '../data/portfolio';
-import { ChevronDown, Plus } from '@lucide/astro';
+import { ChevronDown, Plus, Sparkles } from '@lucide/astro';
 
 // This company's data only (the signed-in user's).
 const companyId = Astro.locals.user!.companyId;
@@ -58,11 +58,46 @@ const greeting = 'Habari';
       <button 
         type="button" 
         id="onboard-tenant-btn" 
-        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#0D382B] text-white text-xs sm:text-sm font-semibold hover:bg-[#154637] transition-all duration-200 shadow-md hover:shadow-lg cursor-pointer transform hover:-translate-y-0.5"
+        style="background-color: var(--color-brand-primary);"
+        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-white text-xs sm:text-sm font-semibold hover:opacity-90 transition-all duration-200 shadow-md hover:shadow-lg cursor-pointer transform hover:-translate-y-0.5"
       >
-        <Plus class="w-4 h-4 text-[#C6EE58]" />
+        <Plus class="w-4 h-4" style="color: var(--color-brand-accent);" />
         <span>Onboard tenant</span>
       </button>
+    </div>
+  </div>
+
+  <!-- Founding Landlord Programme Banner -->
+  <div class="mb-7 p-5 rounded-3xl bg-gradient-to-r from-[#0D382B] via-[#0A261F] to-[#124233] text-white shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 border border-[#1b4b3b]">
+    <div class="flex items-start gap-4">
+      <div class="h-10 w-10 rounded-2xl bg-[#C6EE58] text-[#0A261F] flex items-center justify-center shrink-0 font-bold">
+        <Sparkles class="w-5 h-5 text-[#0A261F]" />
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h2 class="text-sm font-semibold text-white tracking-wide">Founding Landlord Partner Programme</h2>
+          <span class="px-2 py-0.5 rounded-full bg-[#C6EE58]/20 border border-[#C6EE58]/40 text-[#C6EE58] text-[10px] font-bold uppercase tracking-wider">
+            Active Pilot
+          </span>
+        </div>
+        <p class="text-xs text-[#D1DCD6] mt-1 max-w-2xl leading-relaxed">
+          Zero software fees during pilot · Free bulk property onboarding · Instant vacancy listing on Ask Nyumbani · Direct pipeline CRM to convert prospective enquiries into paying tenants.
+        </p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2.5 shrink-0 self-start md:self-auto">
+      <a
+        href="/properties"
+        class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#C6EE58] text-[#0A261F] text-xs font-semibold hover:bg-[#b8e248] transition-all cursor-pointer shadow-xs"
+      >
+        <span>Bulk import units</span>
+      </a>
+      <a
+        href="/enquiries"
+        class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/20 text-xs font-semibold transition-all cursor-pointer"
+      >
+        <span>View leads</span>
+      </a>
     </div>
   </div>
 

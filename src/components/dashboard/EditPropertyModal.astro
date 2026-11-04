@@ -1,0 +1,174 @@
+---
+import { X, Building2 } from '@lucide/astro';
+
+const inputClass =
+  'w-full px-4 py-2.5 rounded-xl border border-[#DCE0D7] focus:border-[#0D382B] focus:ring-2 focus:ring-[#0D382B]/10 outline-none text-sm text-[#17231E] bg-white';
+const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#5A6862] mb-1.5';
+---
+
+<div
+  id="edit-property-modal"
+  class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-200"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="edit-property-title"
+>
+  <div class="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-[#E7EAE4] overflow-hidden transform scale-95 transition-transform duration-200 max-h-[90vh] flex flex-col">
+    <!-- Header -->
+    <div class="flex items-center justify-between p-6 border-b border-[#F0F2EE] shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-xl bg-[#0D382B] text-[#C6EE58] flex items-center justify-center">
+          <Building2 class="w-5 h-5" />
+        </div>
+        <div>
+          <h3 id="edit-property-title" class="font-editorial text-2xl font-normal text-[#17231E]">Edit property details</h3>
+          <p class="text-xs text-[#73827C]">Correct estate name, address, billing prefix, or property rates.</p>
+        </div>
+      </div>
+      <button
+        type="button"
+        id="close-edit-property-btn"
+        class="h-8 w-8 rounded-full bg-[#F4F5F1] text-[#73827C] hover:text-[#17231E] flex items-center justify-center transition-colors cursor-pointer"
+        aria-label="Close"
+      >
+        <X class="w-4 h-4" />
+      </button>
+    </div>
+
+    <!-- Form -->
+    <form id="edit-property-form" class="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto">
+      <input type="hidden" id="edit-property-id" />
+
+      <!-- Property Name -->
+      <div>
+        <label for="edit-property-name" class={labelClass}>Property Name</label>
+        <input type="text" id="edit-property-name" required placeholder="Building or estate name" class={inputClass} />
+      </div>
+
+      <!-- Type & Account Prefix -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label for="edit-property-type" class={labelClass}>Property Type</label>
+          <select id="edit-property-type" class={inputClass}>
+            <option value="apartments">Apartments</option>
+            <option value="houses">Houses</option>
+          </select>
+        </div>
+        <div>
+          <label for="edit-property-prefix" class={labelClass}>Account Prefix <span class="normal-case font-normal">(Paybill)</span></label>
+          <input type="text" id="edit-property-prefix" required maxlength="10" placeholder="Prefix code (such as KH)" class={`${inputClass} uppercase font-mono`} />
+        </div>
+      </div>
+
+      <!-- Address -->
+      <div>
+        <label for="edit-property-address" class={labelClass}>Physical Address</label>
+        <input type="text" id="edit-property-address" placeholder="Street, neighbourhood, town" class={inputClass} />
+      </div>
+
+      <!-- Water & Garbage Rates -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label for="edit-property-water" class={labelClass}>Water Rate (KES / m³)</label>
+          <input type="number" id="edit-property-water" min="0" step="1" class={`${inputClass} tabular-nums`} />
+        </div>
+        <div>
+          <label for="edit-property-garbage" class={labelClass}>Garbage Fee (KES / mo)</label>
+          <input type="number" id="edit-property-garbage" min="0" step="1" class={`${inputClass} tabular-nums`} />
+        </div>
+      </div>
+
+      <p id="edit-property-error" class="hidden text-xs text-[#991B1B] bg-[#FEF2F2] border border-[#F8D7DA] p-3 rounded-xl font-medium"></p>
+
+      <div class="pt-4 border-t border-[#F0F2EE] flex items-center justify-between">
+        <button
+          type="button"
+          id="cancel-edit-property-btn"
+          class="px-5 py-2.5 rounded-full border border-[#DCE0D7] text-xs font-semibold text-[#5A6862] hover:bg-[#F8F9F6] transition-colors cursor-pointer"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          id="save-edit-property-btn"
+          class="px-6 py-2.5 rounded-full bg-[#0D382B] text-white text-xs font-semibold hover:bg-[#08221A] transition-all shadow-xs cursor-pointer"
+        >
+          Save property
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function initEditPropertyModal() {
+    const modal = document.getElementById('edit-property-modal');
+    const closeBtn = document.getElementById('close-edit-property-btn');
+    const cancelBtn = document.getElementById('cancel-edit-property-btn');
+    const form = document.getElementById('edit-property-form') as HTMLFormElement | null;
+    const saveBtn = document.getElementById('save-edit-property-btn') as HTMLButtonElement | null;
+    const errorText = document.getElementById('edit-property-error');
+
+    function closeModal() {
+      if (!modal) return;
+      modal.classList.add('opacity-0', 'pointer-events-none');
+      const inner = modal.querySelector('div.transform');
+      inner?.classList.remove('scale-100');
+      inner?.classList.add('scale-95');
+      if (errorText) errorText.classList.add('hidden');
+    }
+
+    closeBtn?.addEventListener('click', closeModal);
+    cancelBtn?.addEventListener('click', closeModal);
+
+    modal?.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+
+    // Form submit
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!saveBtn) return;
+
+      const propertyId = (document.getElementById('edit-property-id') as HTMLInputElement)?.value;
+      const name = (document.getElementById('edit-property-name') as HTMLInputElement)?.value;
+      const type = (document.getElementById('edit-property-type') as HTMLSelectElement)?.value;
+      const accountPrefix = (document.getElementById('edit-property-prefix') as HTMLInputElement)?.value;
+      const address = (document.getElementById('edit-property-address') as HTMLInputElement)?.value;
+      const waterRate = (document.getElementById('edit-property-water') as HTMLInputElement)?.value;
+      const garbageFee = (document.getElementById('edit-property-garbage') as HTMLInputElement)?.value;
+
+      saveBtn.disabled = true;
+      const originalText = saveBtn.textContent;
+      saveBtn.textContent = 'Saving...';
+      if (errorText) errorText.classList.add('hidden');
+
+      try {
+        const res = await fetch('/api/update-property', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ propertyId, name, type, accountPrefix, address, waterRate, garbageFee }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to update property');
+
+        window.location.reload();
+      } catch (err: any) {
+        if (errorText) {
+          errorText.textContent = err.message || 'Error updating property';
+          errorText.classList.remove('hidden');
+        }
+        saveBtn.disabled = false;
+        saveBtn.textContent = originalText;
+      }
+    });
+  }
+
+  document.addEventListener('astro:page-load', initEditPropertyModal);
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    initEditPropertyModal();
+  } else {
+    document.addEventListener('DOMContentLoaded', initEditPropertyModal);
+  }
+</script>

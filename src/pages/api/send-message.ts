@@ -50,6 +50,21 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
 
     clearLiveCache(companyId);
 
+    // Also record in notifications inbox so the tenant's badge & alerts update
+    try {
+      const { data: comp } = await supabase.from('companies').select('name').eq('id', companyId).maybeSingle();
+      const senderTitle = comp?.name ? `Message from ${comp.name}` : 'Message from Makazi';
+      await supabase.from('notifications').insert({
+        company_id: companyId,
+        tenancy_id: tenancyId,
+        kind: 'message',
+        title: senderTitle,
+        body: messageBody.trim(),
+      });
+    } catch {
+      // Non-blocking notification mirror
+    }
+
     // Tell only this tenant's app; it re-reads the message through RLS.
     await notifyTenancy(supabase, newMessage.tenancy_id, 'message_sent', { id: newMessage.id });
 

@@ -16,7 +16,8 @@ import {
   PanelLeftOpen,
   ExternalLink,
   Sparkles,
-  KeyRound
+  KeyRound,
+  PhoneCall
 } from '@lucide/astro';
 import { getPortfolio } from '../../data/portfolio';
 import { FEATURES } from '../../config/features';
@@ -50,6 +51,7 @@ const navItems = [
   { name: 'Overview', href: '/', icon: LayoutGrid, active: currentPath === '/' },
   { name: 'Properties', href: '/properties', icon: Building2, active: currentPath === '/properties' },
   { name: 'Tenants', href: '/tenants', icon: Users, active: currentPath === '/tenants' },
+  { name: 'Enquiries & leads', href: '/enquiries', icon: PhoneCall, active: currentPath === '/enquiries' },
   { name: 'Reset tenant PIN', href: '/reset-password', icon: KeyRound, active: currentPath === '/reset-password' },
   ...(FEATURES.leases ? [{ name: 'Leases', href: '/leases', icon: FileText, active: currentPath === '/leases' }] : []),
   { name: 'Monthly bills', href: '/bills', icon: ReceiptText, active: currentPath === '/bills' },
@@ -60,13 +62,31 @@ const navItems = [
   { name: 'Reports', href: '/reports', icon: BarChart2, active: currentPath === '/reports' },
   { name: 'Settings', href: '/settings', icon: Settings, active: currentPath === '/settings' },
 ];
+function isLightColor(hexColor: string): boolean {
+  const cleanHex = hexColor.replace('#', '');
+  const r = parseInt(cleanHex.substring(0, 2), 16) || 0;
+  const g = parseInt(cleanHex.substring(2, 4), 16) || 0;
+  const b = parseInt(cleanHex.substring(4, 6), 16) || 0;
+  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+  return yiq >= 140;
+}
+
+const isLight = isLightColor(sidebarBg);
+const textPrimaryClass = isLight ? 'text-black' : 'text-white';
+const textMutedClass = isLight ? 'text-black/80' : 'text-white/90';
+const textDimClass = isLight ? 'text-black/70' : 'text-white/80';
+const hoverBgClass = isLight ? 'hover:bg-black/10' : 'hover:bg-white/15';
+const activeTextColor = isLight && isLightColor(brandPrimary) ? '#010000' : '#FFFFFF';
+const activeItemStyle = isLight
+  ? `background: rgba(0, 0, 0, 0.08); border-color: rgba(0, 0, 0, 0.15); color: ${activeTextColor};`
+  : `background: linear-gradient(to right, ${brandPrimary}, ${sidebarBg}); border-color: ${brandAccent}80; color: #FFFFFF;`;
 ---
 
 <aside 
   id="app-sidebar"
   transition:persist="sidebar"
   style={`--sidebar-bg: ${sidebarBg}; --sidebar-primary: ${brandPrimary}; --sidebar-accent: ${brandAccent}; --sidebar-accent-glow: ${brandAccent}1F;`}
-  class="fixed inset-y-0 left-0 z-40 text-[#8FA69C] flex flex-col justify-between -translate-x-full lg:translate-x-0 border-r border-white/10 shadow-[4px_0_24px_rgba(0,0,0,0.28)] select-none"
+  class={`fixed inset-y-0 left-0 z-40 ${textPrimaryClass} flex flex-col justify-between -translate-x-full lg:translate-x-0 ${isLight ? 'border-r border-black/10' : 'border-r border-white/10'} shadow-[4px_0_24px_rgba(0,0,0,0.28)] select-none`}
 >
   <div class="flex flex-col flex-1 overflow-y-auto px-3.5 py-5 scrollbar-thin">
     <!-- Brand Logo & Collapse Toggle -->
@@ -74,14 +94,14 @@ const navItems = [
       <a href="/" class="flex items-center gap-3 min-w-0 group" title={`${company.name} · Makazi HQ`}>
         <!-- Glowing Brand Emblem -->
         <div 
-          style={`background: linear-gradient(135deg, ${brandAccent}, ${brandPrimary}); color: ${theme?.preset === 'blue' ? '#FFFFFF' : '#0A261F'}; box-shadow: 0 0 18px ${brandAccent}40;`}
-          class="h-10 w-10 rounded-2xl font-extrabold text-xl flex items-center justify-center border border-white/20 flex-shrink-0 transition-transform duration-200 group-hover:scale-105"
+          style={`background: linear-gradient(135deg, ${brandAccent}, ${brandPrimary}); color: ${isLight ? '#000000' : '#FFFFFF'}; box-shadow: 0 0 18px ${brandAccent}40;`}
+          class="h-10 w-10 rounded-2xl font-black text-xl flex items-center justify-center border border-white/20 flex-shrink-0 transition-transform duration-200 group-hover:scale-105"
         >
           {company.name.charAt(0) || 'M'}
         </div>
         <div class="sidebar-header-details min-w-0">
           <div class="flex items-center gap-1.5">
-            <span class="font-editorial text-2xl font-normal text-white tracking-wide leading-none">
+            <span class={`font-editorial text-2xl font-bold ${textPrimaryClass} tracking-wide leading-none`}>
               Makazi
             </span>
             <span 
@@ -91,7 +111,7 @@ const navItems = [
               Admin
             </span>
           </div>
-          <p class="text-xs text-[#8EA69B] truncate font-medium flex items-center gap-1.5 mt-1">
+          <p class={`text-xs ${textMutedClass} truncate font-semibold flex items-center gap-1.5 mt-1`}>
             <span class="relative flex h-2 w-2 flex-shrink-0">
               <span 
                 style={`background-color: ${brandAccent};`}
@@ -111,7 +131,7 @@ const navItems = [
       <button 
         id="sidebar-collapse-toggle"
         type="button"
-        class="hidden lg:flex p-1.5 rounded-xl text-[#7F9C90] hover:text-[#C6EE58] hover:bg-[#133F33] border border-transparent hover:border-[#1F5444] transition-all cursor-pointer flex-shrink-0"
+        class={`hidden lg:flex p-1.5 rounded-xl ${textDimClass} hover:${textPrimaryClass} ${hoverBgClass} border border-transparent transition-all cursor-pointer flex-shrink-0`}
         aria-label="Toggle sidebar collapse (⌘B)"
         title="Toggle sidebar collapse (⌘B)"
       >
@@ -128,7 +148,7 @@ const navItems = [
     <div class="space-y-6">
       <div>
         <div class="px-2 mb-2 flex items-center justify-between">
-          <p class="sidebar-workspace-label text-[10px] font-bold uppercase tracking-widest text-[#527768]">
+          <p class={`sidebar-workspace-label text-[11px] font-black uppercase tracking-widest ${isLight ? 'text-black/80' : 'text-white/90'}`}>
             WORKSPACE
           </p>
         </div>
@@ -139,11 +159,11 @@ const navItems = [
               <a
                 href={item.href}
                 data-nav-href={item.href}
-                style={item.active ? `background: linear-gradient(to right, ${brandPrimary}, ${sidebarBg}); border-color: ${brandAccent}40;` : ''}
-                class={`sidebar-nav-item relative flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-sm font-medium transition-all group ${
+                style={item.active ? activeItemStyle : ''}
+                class={`sidebar-nav-item relative flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-sm transition-all group ${
                   item.active 
-                    ? 'text-white shadow-sm border' 
-                    : 'text-[#93AEA2] hover:bg-white/5 hover:text-white hover:translate-x-0.5'
+                    ? 'font-black shadow-sm border' 
+                    : `${textPrimaryClass} font-bold ${hoverBgClass} hover:translate-x-0.5`
                 }`}
               >
                 <!-- Glowing Active Neon Accent Pill -->
@@ -156,7 +176,7 @@ const navItems = [
                   <div class="relative flex items-center justify-center">
                     <Icon 
                       style={item.active ? `color: ${brandAccent}; filter: drop-shadow(0 0 5px ${brandAccent}80);` : ''}
-                      class={`w-4 h-4 flex-shrink-0 transition-colors ${item.active ? '' : 'text-[#6C8E80] group-hover:text-white'}`} 
+                      class={`w-4 h-4 flex-shrink-0 transition-colors ${item.active ? '' : `${textPrimaryClass} opacity-90 group-hover:opacity-100`}`} 
                     />
                     {item.badge && (
                       <span 
@@ -167,14 +187,14 @@ const navItems = [
                       />
                     )}
                   </div>
-                  <span class="sidebar-text-label truncate font-medium">{item.name}</span>
+                  <span class={`sidebar-text-label truncate font-bold ${item.active ? '' : textPrimaryClass}`} style={item.active ? `color: ${activeTextColor};` : ''}>{item.name}</span>
                 </div>
 
                 <!-- Full Pill Badge in Expanded Mode -->
                 {item.badge && (
                   <span 
                     style={item.badgeType !== 'alert' ? `background-color: ${brandAccent}26; border-color: ${brandAccent}4D; color: ${brandAccent};` : ''}
-                    class={`sidebar-pill-badge text-[11px] font-semibold px-2 py-0.5 rounded-full transition-all ${
+                    class={`sidebar-pill-badge text-[11px] font-bold px-2 py-0.5 rounded-full transition-all ${
                       item.badgeType === 'alert'
                         ? 'bg-[#E5532E]/20 text-[#FF8566] border border-[#E5532E]/40 shadow-[0_0_8px_rgba(229,83,46,0.25)]'
                         : 'border shadow-xs'
@@ -185,12 +205,15 @@ const navItems = [
                 )}
 
                 <!-- Floating Tooltip in Collapsed Mode -->
-                <div class="sidebar-item-tooltip">
-                  <span>{item.name}</span>
+                <div class={`sidebar-item-tooltip ${isLight ? 'bg-white text-black border-black/10' : 'bg-[#061913] text-white border-white/10'}`}>
+                  <span class="font-bold">{item.name}</span>
                   {item.badge && (
-                    <span class={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                      item.badgeType === 'alert' ? 'bg-[#E5532E] text-white' : 'bg-[#C6EE58] text-[#0A261F]'
-                    }`}>
+                    <span 
+                      style={item.badgeType === 'alert' ? '' : `background-color: ${brandAccent}; color: ${sidebarBg};`}
+                      class={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                        item.badgeType === 'alert' ? 'bg-[#E5532E] text-white' : ''
+                      }`}
+                    >
                       {item.badge}
                     </span>
                   )}
@@ -207,17 +230,17 @@ const navItems = [
       <button
         type="button"
         id="sidebar-assistant-btn"
-        style={`background: linear-gradient(to right, ${brandPrimary}, ${sidebarBg}); border-color: ${brandAccent}40;`}
-        class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-white hover:opacity-95 border shadow-sm transition-all hover:scale-[1.01] cursor-pointer group"
+        style={activeItemStyle}
+        class={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl ${textPrimaryClass} hover:opacity-95 border shadow-sm transition-all hover:scale-[1.01] cursor-pointer group`}
       >
         <div class="flex items-center gap-2.5 min-w-0">
           <div 
-            style={`background-color: ${brandAccent}; color: ${theme?.preset === 'blue' ? '#FFFFFF' : '#0A261F'};`}
+            style={`background-color: ${brandAccent}; color: ${isLight ? '#FFFFFF' : sidebarBg};`}
             class="h-6 w-6 rounded-lg flex items-center justify-center font-bold text-xs shadow-xs"
           >
             <Sparkles class="w-3.5 h-3.5 stroke-[2.5]" />
           </div>
-          <span class="sidebar-text-label text-xs font-semibold text-white tracking-wide truncate">Ask Makazi</span>
+          <span class="sidebar-text-label text-xs font-bold tracking-wide truncate" style={`color: ${activeTextColor};`}>Ask Makazi</span>
         </div>
         <span 
           style={`background-color: ${brandAccent}26; border-color: ${brandAccent}4D; color: ${brandAccent};`}
@@ -232,8 +255,8 @@ const navItems = [
         href="https://play.google.com/store/apps/details?id=com.codzure.ask_nyumbani&pcampaignid=web_share"
         target="_blank"
         rel="noopener noreferrer"
-        style={`border-color: rgba(255,255,255,0.12); background: linear-gradient(135deg, ${brandPrimary}80, ${sidebarBg});`}
-        class="group block p-3 rounded-2xl border hover:border-white/30 shadow-sm transition-all hover:scale-[1.01]"
+        style={isLight ? 'border-color: rgba(0,0,0,0.1); background: rgba(0,0,0,0.04);' : `border-color: rgba(255,255,255,0.12); background: linear-gradient(135deg, ${brandPrimary}80, ${sidebarBg});`}
+        class={`group block p-3 rounded-2xl border ${isLight ? 'hover:border-black/20' : 'hover:border-white/30'} shadow-sm transition-all hover:scale-[1.01]`}
         title="Ask Nyumbani — Find tenants & list your vacant units on Google Play"
       >
         <div class="flex items-center justify-between mb-1.5">
@@ -248,13 +271,13 @@ const navItems = [
             class="w-3.5 h-3.5 transition-colors opacity-80 group-hover:opacity-100" 
           />
         </div>
-        <p class="text-xs font-semibold text-white tracking-tight">Ask Nyumbani</p>
+        <p class={`text-xs font-bold ${textPrimaryClass} tracking-tight`}>Ask Nyumbani</p>
         {vacantUnits > 0 ? (
-          <p class="text-[11px] text-[#8EA69B] line-clamp-2 mt-0.5 leading-snug">
-            <span class="font-semibold text-white tabular-nums">{vacantUnits} vacant {vacantUnits === 1 ? 'unit' : 'units'}</span> · list them and connect with verified tenants.
+          <p class={`text-[11px] ${textDimClass} line-clamp-2 mt-0.5 leading-snug`}>
+            <span class={`font-bold ${textPrimaryClass} tabular-nums`}>{vacantUnits} vacant {vacantUnits === 1 ? 'unit' : 'units'}</span> · list them and connect with verified tenants.
           </p>
         ) : (
-          <p class="text-[11px] text-[#8EA69B] line-clamp-2 mt-0.5 leading-snug">
+          <p class={`text-[11px] ${textDimClass} line-clamp-2 mt-0.5 leading-snug`}>
             List vacant units & connect with verified tenants across East Africa.
           </p>
         )}
@@ -271,11 +294,11 @@ const navItems = [
 
   <!-- User Footer Profile Card -->
   <div 
-    style="border-color: rgba(255,255,255,0.08); background-color: rgba(0,0,0,0.25);"
+    style={isLight ? 'border-color: rgba(0,0,0,0.08); background-color: rgba(0,0,0,0.03);' : 'border-color: rgba(255,255,255,0.08); background-color: rgba(0,0,0,0.25);'}
     class="p-3 border-t backdrop-blur-md"
   >
     <div 
-      style="border-color: rgba(255,255,255,0.08); background-color: rgba(255,255,255,0.04);"
+      style={isLight ? 'border-color: rgba(0,0,0,0.08); background-color: rgba(0,0,0,0.02);' : 'border-color: rgba(255,255,255,0.08); background-color: rgba(255,255,255,0.04);'}
       class="sidebar-user-card flex items-center justify-between p-2 rounded-2xl border shadow-inner group"
     >
       <div class="flex items-center gap-2.5 min-w-0">
@@ -289,10 +312,10 @@ const navItems = [
           <span class="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[#10B981] ring-2 ring-black/40"></span>
         </div>
         <div class="sidebar-user-details min-w-0 text-left">
-          <p class="text-xs font-semibold text-white truncate leading-tight">
+          <p class={`text-xs font-bold ${textPrimaryClass} truncate leading-tight`}>
             {adminName}
           </p>
-          <p class="text-[11px] text-[#7F9C90] truncate mt-0.5" title={user?.email}>
+          <p class={`text-[11px] ${textDimClass} truncate mt-0.5`} title={user?.email}>
             {adminRole} · {user?.email}
           </p>
         </div>
@@ -300,7 +323,7 @@ const navItems = [
       <form method="post" action="/logout" class="sidebar-signout-btn">
         <button 
           type="submit" 
-          class="p-2 rounded-xl text-[#7F9C90] hover:text-[#FF8566] hover:bg-[#2B1512]/60 hover:border-[#6B2822]/50 border border-transparent transition-all cursor-pointer" 
+          class={`p-2 rounded-xl ${textDimClass} hover:text-[#FF8566] ${hoverBgClass} border border-transparent transition-all cursor-pointer`} 
           aria-label="Sign out" 
           title="Sign out"
         >

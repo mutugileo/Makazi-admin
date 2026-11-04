@@ -1,0 +1,151 @@
+---
+import { X, DoorClosed } from '@lucide/astro';
+
+const inputClass =
+  'w-full px-4 py-2.5 rounded-xl border border-[#DCE0D7] focus:border-[#0D382B] focus:ring-2 focus:ring-[#0D382B]/10 outline-none text-sm text-[#17231E] bg-white';
+const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#5A6862] mb-1.5';
+---
+
+<div
+  id="edit-unit-modal"
+  class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-200"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="edit-unit-title"
+>
+  <div class="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-[#E7EAE4] overflow-hidden transform scale-95 transition-transform duration-200 max-h-[90vh] flex flex-col">
+    <!-- Header -->
+    <div class="flex items-center justify-between p-6 border-b border-[#F0F2EE] shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-xl bg-[#0D382B] text-[#C6EE58] flex items-center justify-center">
+          <DoorClosed class="w-5 h-5" />
+        </div>
+        <div>
+          <h3 id="edit-unit-title" class="font-editorial text-2xl font-normal text-[#17231E]">Edit unit</h3>
+          <p class="text-xs text-[#73827C]">Correct unit door label or bedroom configuration.</p>
+        </div>
+      </div>
+      <button
+        type="button"
+        id="close-edit-unit-btn"
+        class="h-8 w-8 rounded-full bg-[#F4F5F1] text-[#73827C] hover:text-[#17231E] flex items-center justify-center transition-colors cursor-pointer"
+        aria-label="Close"
+      >
+        <X class="w-4 h-4" />
+      </button>
+    </div>
+
+    <!-- Form -->
+    <form id="edit-unit-form" class="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto">
+      <input type="hidden" id="edit-unit-id" />
+
+      <!-- Unit Label -->
+      <div>
+        <label for="edit-unit-label" class={labelClass}>Unit Door Label / Number</label>
+        <input type="text" id="edit-unit-label" required placeholder="Door label (such as A1 or 104)" class={inputClass} />
+      </div>
+
+      <!-- Bedrooms -->
+      <div>
+        <label for="edit-unit-bedrooms" class={labelClass}>Layout / Bedrooms</label>
+        <select id="edit-unit-bedrooms" class={inputClass}>
+          <option value="0">Bedsitter / Studio (0 bed)</option>
+          <option value="1">1 Bedroom</option>
+          <option value="2">2 Bedrooms</option>
+          <option value="3">3 Bedrooms</option>
+          <option value="4">4 Bedrooms</option>
+          <option value="5">5+ Bedrooms</option>
+        </select>
+      </div>
+
+      <p id="edit-unit-error" class="hidden text-xs text-[#991B1B] bg-[#FEF2F2] border border-[#F8D7DA] p-3 rounded-xl font-medium"></p>
+
+      <div class="pt-4 border-t border-[#F0F2EE] flex items-center justify-between">
+        <button
+          type="button"
+          id="cancel-edit-unit-btn"
+          class="px-5 py-2.5 rounded-full border border-[#DCE0D7] text-xs font-semibold text-[#5A6862] hover:bg-[#F8F9F6] transition-colors cursor-pointer"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          id="save-edit-unit-btn"
+          class="px-6 py-2.5 rounded-full bg-[#0D382B] text-white text-xs font-semibold hover:bg-[#08221A] transition-all shadow-xs cursor-pointer"
+        >
+          Save unit
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function initEditUnitModal() {
+    const modal = document.getElementById('edit-unit-modal');
+    const closeBtn = document.getElementById('close-edit-unit-btn');
+    const cancelBtn = document.getElementById('cancel-edit-unit-btn');
+    const form = document.getElementById('edit-unit-form') as HTMLFormElement | null;
+    const saveBtn = document.getElementById('save-edit-unit-btn') as HTMLButtonElement | null;
+    const errorText = document.getElementById('edit-unit-error');
+
+    function closeModal() {
+      if (!modal) return;
+      modal.classList.add('opacity-0', 'pointer-events-none');
+      const inner = modal.querySelector('div.transform');
+      inner?.classList.remove('scale-100');
+      inner?.classList.add('scale-95');
+      if (errorText) errorText.classList.add('hidden');
+    }
+
+    closeBtn?.addEventListener('click', closeModal);
+    cancelBtn?.addEventListener('click', closeModal);
+
+    modal?.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+
+    // Form submit
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!saveBtn) return;
+
+      const unitId = (document.getElementById('edit-unit-id') as HTMLInputElement)?.value;
+      const label = (document.getElementById('edit-unit-label') as HTMLInputElement)?.value;
+      const bedrooms = (document.getElementById('edit-unit-bedrooms') as HTMLSelectElement)?.value;
+
+      saveBtn.disabled = true;
+      const originalText = saveBtn.textContent;
+      saveBtn.textContent = 'Saving...';
+      if (errorText) errorText.classList.add('hidden');
+
+      try {
+        const res = await fetch('/api/update-unit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ unitId, label, bedrooms: Number(bedrooms) }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to update unit');
+
+        window.location.reload();
+      } catch (err: any) {
+        if (errorText) {
+          errorText.textContent = err.message || 'Error updating unit';
+          errorText.classList.remove('hidden');
+        }
+        saveBtn.disabled = false;
+        saveBtn.textContent = originalText;
+      }
+    });
+  }
+
+  document.addEventListener('astro:page-load', initEditUnitModal);
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    initEditUnitModal();
+  } else {
+    document.addEventListener('DOMContentLoaded', initEditUnitModal);
+  }
+</script>
+

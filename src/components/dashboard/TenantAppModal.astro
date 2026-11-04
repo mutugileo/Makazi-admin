@@ -26,9 +26,9 @@ const appFeatures = [
 >
   <div class="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-[#E7EAE4] overflow-hidden transform scale-95 transition-transform duration-200 max-h-[92vh] flex flex-col">
     <!-- Header -->
-    <div class="p-6 bg-[#0A261F] text-white flex items-center justify-between shrink-0">
+    <div style="background-color: var(--color-sidebar-bg);" class="p-6 text-white flex items-center justify-between shrink-0">
       <div class="flex items-center gap-3">
-        <div class="h-10 w-10 rounded-xl bg-[#C6EE58] text-[#0A261F] flex items-center justify-center font-bold">
+        <div style="background-color: var(--color-brand-accent); color: var(--color-sidebar-bg);" class="h-10 w-10 rounded-xl flex items-center justify-center font-bold">
           <Smartphone class="w-5 h-5" />
         </div>
         <div>
@@ -72,7 +72,7 @@ const appFeatures = [
       <div class="p-4 rounded-2xl bg-[#0D382B]/5 border border-[#0D382B]/10 text-xs text-[#2C3B34] leading-relaxed">
         <p class="font-semibold text-[#0D382B] mb-1">Giving a tenant access</p>
         Onboard them (or use <strong>Tenants → Reset password</strong>), then share the one-time password.
-        They sign in with the phone number on their record and choose their own password.
+        They sign in once with the phone number on their record, then choose their own 4-digit PIN for every sign-in after that.
       </div>
 
       <!-- Actions -->

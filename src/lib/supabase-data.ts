@@ -40,6 +40,7 @@ interface PropertyRow {
 
 interface UnitRow {
   id: string; property_id: string; label: string; bedrooms: number;
+  is_listed?: boolean | null; listed_rent?: number | null; listing_notes?: string | null;
 }
 
 interface TenantRow {
@@ -113,7 +114,13 @@ const mapProperty = (r: PropertyRow, propertyImages?: Record<string, string>): P
 });
 
 const mapUnit = (r: UnitRow): Unit => ({
-  id: r.id, propertyId: r.property_id, label: r.label, bedrooms: r.bedrooms,
+  id: r.id,
+  propertyId: r.property_id,
+  label: r.label,
+  bedrooms: r.bedrooms,
+  isListed: Boolean(r.is_listed),
+  listedRent: r.listed_rent ?? null,
+  listingNotes: r.listing_notes ?? '',
 });
 
 const mapTenant = (r: TenantRow): Tenant => ({

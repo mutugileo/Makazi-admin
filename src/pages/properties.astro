@@ -2,11 +2,14 @@
 import DashboardLayout from '../layouts/DashboardLayout.astro';
 import StatusBadge from '../components/ui/StatusBadge.astro';
 import AddPropertyModal from '../components/dashboard/AddPropertyModal.astro';
+import BulkImportModal from '../components/dashboard/BulkImportModal.astro';
 import EditRatesModal from '../components/dashboard/EditRatesModal.astro';
+import EditPropertyModal from '../components/dashboard/EditPropertyModal.astro';
+import EditUnitModal from '../components/dashboard/EditUnitModal.astro';
 import { getPortfolio, bedLabel, formatDate, formatKes, monthLabel } from '../data/portfolio';
 
 const shortMonth = (m: string) => monthLabel(m).replace(/^(\w{3})\w*/, '$1');
-import { Plus, ChevronDown, Image, ExternalLink } from '@lucide/astro';
+import { Plus, ChevronDown, Image, ExternalLink, FileSpreadsheet, Pencil } from '@lucide/astro';
 
 // This company's data only (the signed-in user's).
 const { portfolioSummary, propertyViews, currentPeriod } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
@@ -35,6 +38,17 @@ const { portfolioSummary, propertyViews, currentPeriod } = await getPortfolio(As
           <ChevronDown class="w-4 h-4 text-[#69847A]" />
         </button>
       </div>
+
+      <!-- Bulk Import Action -->
+      <button 
+        type="button" 
+        id="bulk-import-btn"
+        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white border border-[#E3E6DF] text-xs font-semibold text-[#0D382B] shadow-xs hover:border-[#0D382B] transition-colors cursor-pointer"
+        title="Import multiple units and properties via CSV"
+      >
+        <FileSpreadsheet class="w-4 h-4 text-[#0D382B]" />
+        <span>Bulk import</span>
+      </button>
 
       <!-- Add Property (Primary Action) -->
       <button 
@@ -82,17 +96,34 @@ const { portfolioSummary, propertyViews, currentPeriod } = await getPortfolio(As
                   {p.rateHistory.length > 1 && ` · ${p.rateHistory.length - 1} earlier rate${p.rateHistory.length > 2 ? 's' : ''}`}
                 </p>
               )}
-              <button
-                type="button"
-                class="edit-rates-btn mt-2 text-[11px] font-semibold text-[#0D382B] hover:underline cursor-pointer"
-                data-id={p.property.id}
-                data-name={p.property.name}
-                data-water={p.property.waterRate}
-                data-garbage={p.property.garbageFee}
-                data-history={JSON.stringify(p.rateHistory.map((r) => ({ ...r, label: r.fromMonth === r.toMonth ? monthLabel(r.fromMonth) : `${shortMonth(r.fromMonth)} – ${shortMonth(r.toMonth)}` })))}
-              >
-                Edit water & garbage rates
-              </button>
+              <div class="flex items-center gap-3 mt-2">
+                <button
+                  type="button"
+                  class="edit-property-btn inline-flex items-center gap-1 text-[11px] font-semibold text-[#0D382B] hover:underline cursor-pointer"
+                  data-id={p.property.id}
+                  data-name={p.property.name}
+                  data-type={p.property.type}
+                  data-prefix={p.property.accountPrefix}
+                  data-address={p.property.address || ''}
+                  data-water={p.property.waterRate}
+                  data-garbage={p.property.garbageFee}
+                >
+                  <Pencil class="w-3 h-3" />
+                  <span>Edit details</span>
+                </button>
+                <span class="text-[#DCE0D7]">·</span>
+                <button
+                  type="button"
+                  class="edit-rates-btn text-[11px] font-semibold text-[#0D382B] hover:underline cursor-pointer"
+                  data-id={p.property.id}
+                  data-name={p.property.name}
+                  data-water={p.property.waterRate}
+                  data-garbage={p.property.garbageFee}
+                  data-history={JSON.stringify(p.rateHistory.map((r) => ({ ...r, label: r.fromMonth === r.toMonth ? monthLabel(r.fromMonth) : `${shortMonth(r.fromMonth)} – ${shortMonth(r.toMonth)}` })))}
+                >
+                  Edit rates
+                </button>
+              </div>
             </div>
           </div>
 
@@ -146,6 +177,16 @@ const { portfolioSummary, propertyViews, currentPeriod } = await getPortfolio(As
                     <div class="min-w-0">
                       <span class="font-semibold text-[#0D382B]">{u.unit.label}</span>
                       <span class="text-[10px] uppercase tracking-wider text-[#69847A]"> {bedLabel(u.unit.bedrooms)}</span>
+                      <button
+                        type="button"
+                        class="edit-unit-btn ml-1.5 p-1 text-[#69847A] hover:text-[#0D382B] hover:bg-[#F2F5EF] rounded transition-colors cursor-pointer inline-flex items-center align-middle"
+                        title="Edit unit label or bedrooms"
+                        data-unit-id={u.unit.id}
+                        data-label={u.unit.label}
+                        data-bedrooms={u.unit.bedrooms}
+                      >
+                        <Pencil class="w-3 h-3" />
+                      </button>
                       {u.occupant ? (
                         <span class="text-[#69847A]"> · {u.occupant.tenant.name}</span>
                       ) : u.lastTenancy ? (
@@ -155,16 +196,36 @@ const { portfolioSummary, propertyViews, currentPeriod } = await getPortfolio(As
                     <div class="flex items-center gap-2 flex-shrink-0">
                       <StatusBadge status={u.occupant ? 'Occupied' : 'Vacant'} />
                       {!u.occupant && (
-                        <a
-                          href="https://play.google.com/store/apps/details?id=com.codzure.ask_nyumbani&pcampaignid=web_share"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#E6F5ED] text-[#0A6B48] hover:bg-[#D5EFE2] border border-[#BCE4D0] transition-colors"
-                          title="List vacant unit on Ask Nyumbani marketplace"
-                        >
-                          <ExternalLink class="w-3 h-3" />
-                          <span>List on Ask Nyumbani</span>
-                        </a>
+                        <div class="flex items-center gap-1.5">
+                          {u.unit.isListed ? (
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-[#E6F5ED] text-[#0A6B48] border border-[#BCE4D0]">
+                              Listed {u.unit.listedRent ? `(${formatKes(u.unit.listedRent)})` : ''}
+                            </span>
+                          ) : (
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-[#F4F5F1] text-[#73827C]">
+                              Unlisted
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            class="unit-listing-toggle-btn px-2 py-0.5 rounded text-[11px] font-medium text-[#0D382B] hover:bg-[#F2F5EF] transition-colors cursor-pointer"
+                            data-unit-id={u.unit.id}
+                            data-target-status={u.unit.isListed ? 'false' : 'true'}
+                            data-rent={u.lastTenancy?.tenancy.rent || ''}
+                          >
+                            {u.unit.isListed ? 'Delist' : 'List'}
+                          </button>
+                          <a
+                            href="https://play.google.com/store/apps/details?id=com.codzure.ask_nyumbani&pcampaignid=web_share"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#E6F5ED] text-[#0A6B48] hover:bg-[#D5EFE2] border border-[#BCE4D0] transition-colors"
+                            title="List vacant unit on Ask Nyumbani marketplace"
+                          >
+                            <ExternalLink class="w-3 h-3" />
+                            <span>Ask Nyumbani</span>
+                          </a>
+                        </div>
                       )}
                     </div>
                   </li>
@@ -186,7 +247,10 @@ const { portfolioSummary, propertyViews, currentPeriod } = await getPortfolio(As
     </div>
   )}
   <AddPropertyModal />
+  <BulkImportModal />
   <EditRatesModal />
+  <EditPropertyModal />
+  <EditUnitModal />
 </DashboardLayout>
 
 <script>
@@ -227,6 +291,116 @@ const { portfolioSummary, propertyViews, currentPeriod } = await getPortfolio(As
           if (targetLabel) targetLabel.textContent = 'Hide units';
           if (targetChevron) targetChevron.classList.add('rotate-180');
         }
+      });
+    });
+
+    // Handle unit listing status toggling
+    const listingButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.unit-listing-toggle-btn'));
+    listingButtons.forEach((btn) => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = 'true';
+
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const unitId = btn.dataset.unitId;
+        const targetStatus = btn.dataset.targetStatus === 'true';
+        const rent = btn.dataset.rent ? Number(btn.dataset.rent) : undefined;
+
+        if (!unitId) return;
+
+        btn.disabled = true;
+        const originalText = btn.textContent;
+        btn.textContent = '...';
+
+        try {
+          const res = await fetch('/api/update-unit-listing', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              unitId,
+              isListed: targetStatus,
+              listedRent: rent,
+            }),
+          });
+
+          if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.error || 'Failed to update unit listing status');
+          }
+
+          window.location.reload();
+        } catch (err: any) {
+          alert(err.message || 'Error updating listing');
+          btn.disabled = false;
+          btn.textContent = originalText;
+        }
+      });
+    });
+
+    // Handle editing property details
+    const editPropButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.edit-property-btn'));
+    const editPropModal = document.getElementById('edit-property-modal');
+    editPropButtons.forEach((btn) => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = 'true';
+      btn.addEventListener('click', () => {
+        if (!editPropModal) return;
+        const id = btn.dataset.id || '';
+        const name = btn.dataset.name || '';
+        const type = btn.dataset.type || 'apartments';
+        const prefix = btn.dataset.prefix || '';
+        const address = btn.dataset.address || '';
+        const water = btn.dataset.water || '0';
+        const garbage = btn.dataset.garbage || '0';
+
+        const idInput = document.getElementById('edit-property-id') as HTMLInputElement | null;
+        const nameInput = document.getElementById('edit-property-name') as HTMLInputElement | null;
+        const typeSelect = document.getElementById('edit-property-type') as HTMLSelectElement | null;
+        const prefixInput = document.getElementById('edit-property-prefix') as HTMLInputElement | null;
+        const addressInput = document.getElementById('edit-property-address') as HTMLInputElement | null;
+        const waterInput = document.getElementById('edit-property-water') as HTMLInputElement | null;
+        const garbageInput = document.getElementById('edit-property-garbage') as HTMLInputElement | null;
+
+        if (idInput) idInput.value = id;
+        if (nameInput) nameInput.value = name;
+        if (typeSelect) typeSelect.value = type;
+        if (prefixInput) prefixInput.value = prefix;
+        if (addressInput) addressInput.value = address;
+        if (waterInput) waterInput.value = water;
+        if (garbageInput) garbageInput.value = garbage;
+
+        editPropModal.classList.remove('opacity-0', 'pointer-events-none');
+        const inner = editPropModal.querySelector('div.transform');
+        inner?.classList.remove('scale-95');
+        inner?.classList.add('scale-100');
+      });
+    });
+
+    // Handle editing unit details
+    const editUnitButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.edit-unit-btn'));
+    const editUnitModal = document.getElementById('edit-unit-modal');
+    editUnitButtons.forEach((btn) => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = 'true';
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!editUnitModal) return;
+        const unitId = btn.dataset.unitId || '';
+        const label = btn.dataset.label || '';
+        const bedrooms = btn.dataset.bedrooms || '1';
+
+        const idInput = document.getElementById('edit-unit-id') as HTMLInputElement | null;
+        const labelInput = document.getElementById('edit-unit-label') as HTMLInputElement | null;
+        const bedSelect = document.getElementById('edit-unit-bedrooms') as HTMLSelectElement | null;
+
+        if (idInput) idInput.value = unitId;
+        if (labelInput) labelInput.value = label;
+        if (bedSelect) bedSelect.value = bedrooms;
+
+        editUnitModal.classList.remove('opacity-0', 'pointer-events-none');
+        const inner = editUnitModal.querySelector('div.transform');
+        inner?.classList.remove('scale-95');
+        inner?.classList.add('scale-100');
       });
     });
   }

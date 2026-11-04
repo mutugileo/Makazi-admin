@@ -1,0 +1,579 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+import { getPortfolio, formatKes } from '../data/portfolio';
+import { makeSupabaseClient } from '../lib/supabase';
+import { 
+  PhoneCall, 
+  Plus, 
+  Calendar, 
+  Clock, 
+  CheckCircle2, 
+  Building2, 
+  UserPlus, 
+  X, 
+  MessageSquare, 
+  ArrowRight,
+  Filter,
+  Archive,
+  ChevronDown,
+  Sparkles
+} from '@lucide/astro';
+
+const user = Astro.locals.user;
+if (!user) {
+  return Astro.redirect('/login');
+}
+
+const supabase = makeSupabaseClient(Astro.cookies);
+const { propertyViews } = await getPortfolio(user.companyId, Astro.cookies);
+
+// Fetch all enquiries for this company from Supabase
+let enquiries: any[] = [];
+if (supabase) {
+  const { data } = await supabase
+    .from('property_enquiries')
+    .select('*, properties:property_id(name), units:unit_id(label)')
+    .eq('company_id', user.companyId)
+    .order('created_at', { ascending: false });
+  enquiries = data || [];
+}
+
+const properties = propertyViews.map((p) => p.property);
+const vacantUnits = propertyViews.flatMap((p) =>
+  p.units
+    .filter((u) => !u.occupant)
+    .map((u) => ({
+      id: u.unit.id,
+      label: u.unit.label,
+      propertyId: p.property.id,
+      propertyName: p.property.name,
+      rent: u.unit.listedRent || u.lastTenancy?.tenancy.rent || 0,
+    }))
+);
+
+// Group by pipeline stages
+const newLeads = enquiries.filter((e) => e.status === 'new');
+const viewings = enquiries.filter((e) => e.status === 'viewing_scheduled');
+const vetted = enquiries.filter((e) => e.status === 'vetted');
+const converted = enquiries.filter((e) => e.status === 'converted');
+const archived = enquiries.filter((e) => e.status === 'archived');
+
+const totalActive = newLeads.length + viewings.length + vetted.length;
+const conversionRate = enquiries.length > 0 ? Math.round((converted.length / enquiries.length) * 100) : 0;
+
+const sourceLabels: Record<string, string> = {
+  walk_in: 'Walk-in',
+  website: 'Website',
+  signboard: 'Signboard',
+  referral: 'Referral',
+  whatsapp: 'WhatsApp',
+  social: 'Social media',
+};
+
+const inputClass =
+  'w-full px-4 py-2.5 rounded-xl border border-[#DCE0D7] focus:border-[#0D382B] focus:ring-2 focus:ring-[#0D382B]/10 outline-none text-sm text-[#17231E] bg-white';
+const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#5A6862] mb-1.5';
+---
+
+<DashboardLayout title="Makazi — Enquiries & Leads" currentPath="/enquiries">
+  <!-- Header & Top Actions -->
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+    <div>
+      <span class="text-xs font-semibold tracking-wider text-[#69847A] uppercase">
+        Prospective Tenant Pipeline
+      </span>
+      <h1 class="text-3xl sm:text-4xl font-normal font-editorial text-[#0D382B] tracking-tight mt-1">
+        Enquiries & Leads
+      </h1>
+      <p class="text-xs text-[#69847A] mt-1">
+        Track applicants from first contact to viewing, vetting, and confirmed move-in.
+      </p>
+    </div>
+
+    <div class="flex items-center gap-3 self-start md:self-auto">
+      <!-- Quick Metric Pills -->
+      <div class="hidden sm:flex items-center gap-3 px-4 py-2 rounded-2xl bg-white border border-[#E3E6DF] text-xs font-semibold text-[#0D382B] shadow-2xs">
+        <div>
+          <span class="text-[10px] text-[#69847A] uppercase block">Active Leads</span>
+          <span class="text-sm font-semibold text-[#0D382B]">{totalActive}</span>
+        </div>
+        <div class="w-px h-6 bg-[#E3E6DF]"></div>
+        <div>
+          <span class="text-[10px] text-[#69847A] uppercase block">Conversion</span>
+          <span class="text-sm font-semibold text-[#0A6B48]">{conversionRate}%</span>
+        </div>
+      </div>
+
+      <!-- Log Enquiry Button -->
+      <button
+        type="button"
+        id="open-log-enquiry-btn"
+        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#0D382B] text-white text-xs font-semibold hover:bg-[#08221A] transition-all shadow-xs cursor-pointer"
+      >
+        <div class="h-4 w-4 rounded-full bg-[#C6EE58] text-[#0A261F] flex items-center justify-center font-bold text-xs">
+          <Plus class="w-3 h-3 stroke-[3]" />
+        </div>
+        <span>Log enquiry</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Pipeline Kanban Board -->
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 items-start">
+    <!-- Column 1: New Enquiries -->
+    <div class="bg-[#F8F9F6] rounded-3xl border border-[#E3E6DF] p-4 flex flex-col min-h-[500px]">
+      <div class="flex items-center justify-between pb-3 mb-3 border-b border-[#E3E6DF]">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-[#3B82F6]"></span>
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-[#0D382B]">New Enquiries</h2>
+        </div>
+        <span class="px-2 py-0.5 rounded-full bg-white border border-[#E3E6DF] text-xs font-semibold text-[#0D382B]">
+          {newLeads.length}
+        </span>
+      </div>
+
+      <div class="space-y-3 flex-1">
+        {newLeads.length === 0 ? (
+          <div class="p-8 text-center text-xs text-[#73827C] border border-dashed border-[#DCE0D7] rounded-2xl bg-white/50">
+            No new enquiries.
+          </div>
+        ) : (
+          newLeads.map((e) => (
+            <div class="p-4 rounded-2xl bg-white border border-[#E3E6DF] shadow-2xs hover:border-[#0D382B]/40 transition-all space-y-3">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <h3 class="text-sm font-semibold text-[#17231E]">{e.name}</h3>
+                  <p class="text-xs font-mono text-[#5A6862]">{e.phone}</p>
+                </div>
+                <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-[#EBF0EC] text-[#0D382B]">
+                  {sourceLabels[e.source] || e.source}
+                </span>
+              </div>
+
+              <div class="text-xs text-[#5A6862] flex items-center gap-1.5">
+                <Building2 class="w-3.5 h-3.5 text-[#69847A]" />
+                <span class="font-medium text-[#17231E]">{e.properties?.name || 'General enquiry'}</span>
+                {e.units?.label && <span class="font-mono text-[#0D382B]">· Unit {e.units.label}</span>}
+              </div>
+
+              {e.notes && <p class="text-xs text-[#73827C] line-clamp-2 italic">"{e.notes}"</p>}
+
+              <div class="pt-2 border-t border-[#F0F2EE] flex items-center justify-between gap-2">
+                <div class="flex items-center gap-1.5">
+                  <a
+                    href={`tel:${e.phone}`}
+                    class="p-2 rounded-xl bg-[#F8F9F6] text-[#0D382B] hover:bg-[#EBF0EC] transition-colors"
+                    title={`Call ${e.name}`}
+                  >
+                    <PhoneCall class="w-3.5 h-3.5" />
+                  </a>
+                  <a
+                    href={`https://wa.me/254${e.phone.replace(/^0/, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="p-2 rounded-xl bg-[#E6F5ED] text-[#0A6B48] hover:bg-[#D5EFE2] transition-colors"
+                    title="WhatsApp applicant"
+                  >
+                    <MessageSquare class="w-3.5 h-3.5" />
+                  </a>
+                </div>
+
+                <button
+                  type="button"
+                  class="stage-advance-btn inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold bg-[#0D382B] text-white hover:bg-[#08221A] transition-colors cursor-pointer"
+                  data-id={e.id}
+                  data-target-status="viewing_scheduled"
+                >
+                  <span>Book viewing</span>
+                  <ArrowRight class="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+
+    <!-- Column 2: Viewing Scheduled -->
+    <div class="bg-[#F8F9F6] rounded-3xl border border-[#E3E6DF] p-4 flex flex-col min-h-[500px]">
+      <div class="flex items-center justify-between pb-3 mb-3 border-b border-[#E3E6DF]">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-[#F59E0B]"></span>
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-[#0D382B]">Viewing Scheduled</h2>
+        </div>
+        <span class="px-2 py-0.5 rounded-full bg-white border border-[#E3E6DF] text-xs font-semibold text-[#0D382B]">
+          {viewings.length}
+        </span>
+      </div>
+
+      <div class="space-y-3 flex-1">
+        {viewings.length === 0 ? (
+          <div class="p-8 text-center text-xs text-[#73827C] border border-dashed border-[#DCE0D7] rounded-2xl bg-white/50">
+            No scheduled viewings.
+          </div>
+        ) : (
+          viewings.map((e) => (
+            <div class="p-4 rounded-2xl bg-white border border-[#E3E6DF] shadow-2xs hover:border-[#0D382B]/40 transition-all space-y-3">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <h3 class="text-sm font-semibold text-[#17231E]">{e.name}</h3>
+                  <p class="text-xs font-mono text-[#5A6862]">{e.phone}</p>
+                </div>
+                <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-[#FEF3C7] text-[#92400E]">
+                  Viewing
+                </span>
+              </div>
+
+              {e.viewing_at && (
+                <div class="px-2.5 py-1.5 rounded-xl bg-[#FFFBEB] border border-[#FDE68A] text-xs font-medium text-[#92400E] flex items-center gap-2">
+                  <Calendar class="w-3.5 h-3.5" />
+                  <span>{new Date(e.viewing_at).toLocaleDateString('en-KE', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+              )}
+
+              <div class="text-xs text-[#5A6862] flex items-center gap-1.5">
+                <Building2 class="w-3.5 h-3.5 text-[#69847A]" />
+                <span class="font-medium text-[#17231E]">{e.properties?.name}</span>
+                {e.units?.label && <span class="font-mono text-[#0D382B]">· Unit {e.units.label}</span>}
+              </div>
+
+              <div class="pt-2 border-t border-[#F0F2EE] flex items-center justify-between gap-2">
+                <div class="flex items-center gap-1.5">
+                  <a href={`tel:${e.phone}`} class="p-2 rounded-xl bg-[#F8F9F6] text-[#0D382B] hover:bg-[#EBF0EC] transition-colors">
+                    <PhoneCall class="w-3.5 h-3.5" />
+                  </a>
+                  <a href={`https://wa.me/254${e.phone.replace(/^0/, '')}`} target="_blank" rel="noopener noreferrer" class="p-2 rounded-xl bg-[#E6F5ED] text-[#0A6B48] hover:bg-[#D5EFE2] transition-colors">
+                    <MessageSquare class="w-3.5 h-3.5" />
+                  </a>
+                </div>
+
+                <button
+                  type="button"
+                  class="stage-advance-btn inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold bg-[#0D382B] text-white hover:bg-[#08221A] transition-colors cursor-pointer"
+                  data-id={e.id}
+                  data-target-status="vetted"
+                >
+                  <span>Mark vetted</span>
+                  <ArrowRight class="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+
+    <!-- Column 3: Vetted & Interested -->
+    <div class="bg-[#F8F9F6] rounded-3xl border border-[#E3E6DF] p-4 flex flex-col min-h-[500px]">
+      <div class="flex items-center justify-between pb-3 mb-3 border-b border-[#E3E6DF]">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-[#10B981]"></span>
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-[#0D382B]">Vetted / Ready</h2>
+        </div>
+        <span class="px-2 py-0.5 rounded-full bg-white border border-[#E3E6DF] text-xs font-semibold text-[#0D382B]">
+          {vetted.length}
+        </span>
+      </div>
+
+      <div class="space-y-3 flex-1">
+        {vetted.length === 0 ? (
+          <div class="p-8 text-center text-xs text-[#73827C] border border-dashed border-[#DCE0D7] rounded-2xl bg-white/50">
+            No vetted applicants awaiting lease.
+          </div>
+        ) : (
+          vetted.map((e) => (
+            <div class="p-4 rounded-2xl bg-white border border-[#E3E6DF] shadow-2xs hover:border-[#0D382B]/40 transition-all space-y-3">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <h3 class="text-sm font-semibold text-[#17231E]">{e.name}</h3>
+                  <p class="text-xs font-mono text-[#5A6862]">{e.phone}</p>
+                </div>
+                <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-[#E6F5ED] text-[#0A6B48]">
+                  Vetted
+                </span>
+              </div>
+
+              <div class="text-xs text-[#5A6862] flex items-center gap-1.5">
+                <Building2 class="w-3.5 h-3.5 text-[#69847A]" />
+                <span class="font-medium text-[#17231E]">{e.properties?.name}</span>
+                {e.units?.label && <span class="font-mono text-[#0D382B]">· Unit {e.units.label}</span>}
+              </div>
+
+              {e.notes && <p class="text-xs text-[#73827C] italic">"{e.notes}"</p>}
+
+              <div class="pt-2 border-t border-[#F0F2EE] flex items-center justify-between gap-2">
+                <a
+                  href={`/tenants?onboard=true&name=${encodeURIComponent(e.name)}&phone=${encodeURIComponent(e.phone)}&propertyId=${e.property_id}&unitId=${e.unit_id || ''}`}
+                  class="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-[#0D382B] text-white hover:bg-[#08221A] transition-colors shadow-2xs cursor-pointer"
+                >
+                  <UserPlus class="w-3.5 h-3.5 text-[#C6EE58]" />
+                  <span>Onboard to tenant</span>
+                </a>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+
+    <!-- Column 4: Converted to Tenant -->
+    <div class="bg-[#F8F9F6] rounded-3xl border border-[#E3E6DF] p-4 flex flex-col min-h-[500px]">
+      <div class="flex items-center justify-between pb-3 mb-3 border-b border-[#E3E6DF]">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-[#0D382B]"></span>
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-[#0D382B]">Converted</h2>
+        </div>
+        <span class="px-2 py-0.5 rounded-full bg-white border border-[#E3E6DF] text-xs font-semibold text-[#0D382B]">
+          {converted.length}
+        </span>
+      </div>
+
+      <div class="space-y-3 flex-1">
+        {converted.length === 0 ? (
+          <div class="p-8 text-center text-xs text-[#73827C] border border-dashed border-[#DCE0D7] rounded-2xl bg-white/50">
+            No converted tenants yet.
+          </div>
+        ) : (
+          converted.map((e) => (
+            <div class="p-4 rounded-2xl bg-white border border-[#E3E6DF] shadow-2xs space-y-2">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <h3 class="text-sm font-semibold text-[#17231E]">{e.name}</h3>
+                  <p class="text-xs font-mono text-[#5A6862]">{e.phone}</p>
+                </div>
+                <CheckCircle2 class="w-4 h-4 text-[#0A6B48]" />
+              </div>
+
+              <div class="text-xs text-[#5A6862]">
+                <span>{e.properties?.name}</span>
+                {e.units?.label && <span class="font-mono text-[#0D382B]"> · Unit {e.units.label}</span>}
+              </div>
+
+              <span class="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-[#EBF0EC] text-[#0D382B]">
+                Active Tenant
+              </span>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  </div>
+
+  <!-- Log Enquiry Modal -->
+  <div
+    id="log-enquiry-modal"
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-200"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="log-enquiry-title"
+  >
+    <div class="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-[#E7EAE4] overflow-hidden transform scale-95 transition-transform duration-200 max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between p-6 border-b border-[#F0F2EE] shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 rounded-xl bg-[#0D382B] text-[#C6EE58] flex items-center justify-center">
+            <PhoneCall class="w-5 h-5" />
+          </div>
+          <div>
+            <h3 id="log-enquiry-title" class="font-editorial text-2xl font-normal text-[#17231E]">Log prospective enquiry</h3>
+            <p class="text-xs text-[#73827C]">Record applicant details and schedule an upcoming property viewing.</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          id="close-enquiry-modal-btn"
+          class="h-8 w-8 rounded-full bg-[#F4F5F1] text-[#73827C] hover:text-[#17231E] flex items-center justify-center transition-colors cursor-pointer"
+          aria-label="Close"
+        >
+          <X class="w-4 h-4" />
+        </button>
+      </div>
+
+      <form id="log-enquiry-form" class="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto">
+        <!-- Target Property -->
+        <div>
+          <label for="enquiry-property-id" class={labelClass}>Target Property</label>
+          <select id="enquiry-property-id" required class={inputClass}>
+            {properties.map((p) => (
+              <option value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <!-- Target Unit (Optional) -->
+        <div>
+          <label for="enquiry-unit-id" class={labelClass}>Preferred Unit <span class="normal-case font-normal">(optional)</span></label>
+          <select id="enquiry-unit-id" class={inputClass}>
+            <option value="">Any available unit</option>
+            {vacantUnits.map((u) => (
+              <option value={u.id} data-prop={u.propertyId}>
+                {u.propertyName} — Unit {u.label} {u.rent ? `(KES ${u.rent.toLocaleString()})` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <!-- Applicant Name & Phone -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="enquiry-name" class={labelClass}>Applicant Full Name</label>
+            <input type="text" id="enquiry-name" required placeholder="Prospect name" class={inputClass} />
+          </div>
+          <div>
+            <label for="enquiry-phone" class={labelClass}>Phone Number</label>
+            <input type="tel" id="enquiry-phone" required placeholder="07XX XXX XXX" class={inputClass} />
+          </div>
+        </div>
+
+        <!-- Source & Viewing Date -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="enquiry-source" class={labelClass}>Lead Source</label>
+            <select id="enquiry-source" class={inputClass}>
+              <option value="walk_in">Walk-in</option>
+              <option value="signboard">Signboard</option>
+              <option value="website">Website</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="referral">Referral</option>
+              <option value="social">Social media</option>
+            </select>
+          </div>
+          <div>
+            <label for="enquiry-viewing-date" class={labelClass}>Viewing Date & Time <span class="normal-case font-normal">(optional)</span></label>
+            <input type="datetime-local" id="enquiry-viewing-date" class={inputClass} />
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div>
+          <label for="enquiry-notes" class={labelClass}>Notes / Requirements</label>
+          <textarea id="enquiry-notes" rows="2" placeholder="Budget, move-in timeline, special requests" class={inputClass}></textarea>
+        </div>
+
+        <div class="pt-4 border-t border-[#F0F2EE] flex items-center justify-between">
+          <button
+            type="button"
+            id="cancel-enquiry-btn"
+            class="px-5 py-2.5 rounded-full border border-[#DCE0D7] text-xs font-semibold text-[#5A6862] hover:bg-[#F8F9F6] transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            id="save-enquiry-btn"
+            class="px-6 py-2.5 rounded-full bg-[#0D382B] text-white text-xs font-semibold hover:bg-[#08221A] transition-all shadow-xs cursor-pointer"
+          >
+            Save enquiry
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</DashboardLayout>
+
+<script>
+  function initEnquiriesPage() {
+    const modal = document.getElementById('log-enquiry-modal');
+    const openBtn = document.getElementById('open-log-enquiry-btn');
+    const closeBtn = document.getElementById('close-enquiry-modal-btn');
+    const cancelBtn = document.getElementById('cancel-enquiry-btn');
+    const form = document.getElementById('log-enquiry-form') as HTMLFormElement | null;
+    const saveBtn = document.getElementById('save-enquiry-btn') as HTMLButtonElement | null;
+
+    function openModal() {
+      if (!modal) return;
+      modal.classList.remove('opacity-0', 'pointer-events-none');
+      const inner = modal.querySelector('div.transform');
+      inner?.classList.remove('scale-95');
+      inner?.classList.add('scale-100');
+    }
+
+    function closeModal() {
+      if (!modal) return;
+      modal.classList.add('opacity-0', 'pointer-events-none');
+      const inner = modal.querySelector('div.transform');
+      inner?.classList.remove('scale-100');
+      inner?.classList.add('scale-95');
+    }
+
+    openBtn?.addEventListener('click', openModal);
+    closeBtn?.addEventListener('click', closeModal);
+    cancelBtn?.addEventListener('click', closeModal);
+
+    modal?.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+
+    // Form submission
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!saveBtn) return;
+
+      const propertyId = (document.getElementById('enquiry-property-id') as HTMLSelectElement)?.value;
+      const unitId = (document.getElementById('enquiry-unit-id') as HTMLSelectElement)?.value || null;
+      const name = (document.getElementById('enquiry-name') as HTMLInputElement)?.value;
+      const phone = (document.getElementById('enquiry-phone') as HTMLInputElement)?.value;
+      const source = (document.getElementById('enquiry-source') as HTMLSelectElement)?.value;
+      const viewingAt = (document.getElementById('enquiry-viewing-date') as HTMLInputElement)?.value || null;
+      const notes = (document.getElementById('enquiry-notes') as HTMLTextAreaElement)?.value;
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+
+      try {
+        const res = await fetch('/api/enquiries', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ propertyId, unitId, name, phone, source, viewingAt, notes }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to save enquiry');
+
+        window.location.reload();
+      } catch (err: any) {
+        alert(err.message || 'Error saving enquiry');
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save enquiry';
+      }
+    });
+
+    // Stage advancement buttons
+    const stageButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.stage-advance-btn'));
+    stageButtons.forEach((btn) => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = 'true';
+
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        const targetStatus = btn.dataset.targetStatus;
+        if (!id || !targetStatus) return;
+
+        btn.disabled = true;
+
+        try {
+          const res = await fetch('/api/enquiries', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, status: targetStatus }),
+          });
+
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Failed to update stage');
+
+          window.location.reload();
+        } catch (err: any) {
+          alert(err.message || 'Error updating stage');
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', initEnquiriesPage);
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    initEnquiriesPage();
+  } else {
+    document.addEventListener('DOMContentLoaded', initEnquiriesPage);
+  }
+</script>
+

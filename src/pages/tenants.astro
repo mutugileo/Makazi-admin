@@ -2,9 +2,10 @@
 import DashboardLayout from '../layouts/DashboardLayout.astro';
 import MoveOutModal from '../components/dashboard/MoveOutModal.astro';
 import ResetPasswordModal from '../components/dashboard/ResetPasswordModal.astro';
+import EditTenantModal from '../components/dashboard/EditTenantModal.astro';
 import StatusBadge from '../components/ui/StatusBadge.astro';
 import { getPortfolio, bedLabel, formatDate, formatKes } from '../data/portfolio';
-import { Plus, ChevronDown, FileText, KeyRound } from '@lucide/astro';
+import { Plus, ChevronDown, FileText, KeyRound, Pencil } from '@lucide/astro';
 
 // This company's data only (the signed-in user's).
 const { activeTenancies, formerTenancies, lastReading, portfolioSummary, propertyViews, stats, asOf, currentPeriod } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
@@ -149,6 +150,22 @@ const searchText = (parts: string[]) => parts.join(' ').toLowerCase();
               <td class="py-3.5 px-3 lg:px-4"><StatusBadge status={t.status} /></td>
               <td class="py-3.5 px-4 lg:px-6 text-right sticky right-0 bg-white/95 backdrop-blur-xs group-hover:bg-[#F8F9F6] shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.05)] transition-colors">
                 <div class="flex items-center justify-end gap-1.5">
+                  <button
+                    type="button"
+                    class="edit-tenant-btn p-1.5 rounded-full text-[#69847A] hover:text-[#0D382B] hover:bg-[#F1F3ED] transition-colors cursor-pointer"
+                    data-tenancy={t.tenancy.id}
+                    data-tenant-id={t.tenant.id}
+                    data-name={t.tenant.name}
+                    data-phone={t.tenant.phone}
+                    data-email={t.tenant.email}
+                    data-rent={t.tenancy.rent}
+                    data-deposit={t.depositHeld}
+                    data-move-in={t.tenancy.moveIn}
+                    data-lease-end={t.tenancy.leaseEnd}
+                    title="Edit and correct tenant details"
+                  >
+                    <Pencil class="w-3.5 h-3.5" />
+                  </button>
                   <a href={`/statement/${t.tenancy.id}`} class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold text-[#0D382B] hover:bg-[#F1F3ED] transition-colors" title="Statement of payments">
                     <FileText class="w-3.5 h-3.5" /> <span>Statement</span>
                   </a>
@@ -280,6 +297,7 @@ const searchText = (parts: string[]) => parts.join(' ').toLowerCase();
 
   <MoveOutModal />
   <ResetPasswordModal />
+  <EditTenantModal />
 </DashboardLayout>
 
 <script>
@@ -434,6 +452,32 @@ const searchText = (parts: string[]) => parts.join(' ').toLowerCase();
         render();
       };
     }
+
+    // Bind Edit Tenant modal triggers
+    document.querySelectorAll<HTMLButtonElement>('.edit-tenant-btn').forEach((btn) => {
+      btn.onclick = () => {
+        const modal = document.getElementById('edit-tenant-modal');
+        if (!modal) return;
+        const setVal = (id: string, val: string | undefined) => {
+          const el = document.getElementById(id) as HTMLInputElement | null;
+          if (el) el.value = val || '';
+        };
+        setVal('edit-tenancy-id', btn.dataset.tenancy);
+        setVal('edit-tenant-id', btn.dataset.tenantId);
+        setVal('edit-tenant-name', btn.dataset.name);
+        setVal('edit-tenant-phone', btn.dataset.phone);
+        setVal('edit-tenant-email', btn.dataset.email);
+        setVal('edit-tenant-rent', btn.dataset.rent);
+        setVal('edit-tenant-deposit', btn.dataset.deposit);
+        setVal('edit-tenant-move-in', btn.dataset.moveIn);
+        setVal('edit-tenant-lease-end', btn.dataset.leaseEnd);
+
+        modal.classList.remove('opacity-0', 'pointer-events-none');
+        const inner = modal.querySelector('div.transform');
+        inner?.classList.remove('scale-95');
+        inner?.classList.add('scale-100');
+      };
+    });
 
     render();
   }

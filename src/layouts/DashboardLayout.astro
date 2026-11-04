@@ -23,6 +23,20 @@ const user = Astro.locals.user;
 const portfolio = user ? await getPortfolio(user.companyId, Astro.cookies) : null;
 const companyName = portfolio ? portfolio.company.name : 'Makazi';
 const companyTheme = portfolio?.company.settings.theme;
+function isLightColor(hexColor: string): boolean {
+  const cleanHex = hexColor.replace('#', '');
+  const r = parseInt(cleanHex.substring(0, 2), 16) || 0;
+  const g = parseInt(cleanHex.substring(2, 4), 16) || 0;
+  const b = parseInt(cleanHex.substring(4, 6), 16) || 0;
+  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+  return yiq >= 140;
+}
+const brandPrimary = companyTheme?.primary ?? '#0D382B';
+const sidebarBg = companyTheme?.navBg ?? '#0A261F';
+const brandAccent = companyTheme?.accent ?? '#C6EE58';
+const onPrimaryColor = isLightColor(brandPrimary) ? '#071A2C' : '#FFFFFF';
+const onAccentColor = isLightColor(brandAccent) ? sidebarBg : '#FFFFFF';
+
 const {
   title = `Makazi — ${companyName}`,
   currentPath = "/"
@@ -103,12 +117,16 @@ const {
         type="button"
         id="floating-assistant-btn"
         aria-label="Ask Makazi Assistant"
-        class="fixed bottom-6 right-6 z-30 flex items-center gap-2.5 px-4 py-3 rounded-full bg-[#0D382B] text-[#C6EE58] hover:bg-[#134637] shadow-xl hover:shadow-2xl border border-[#C6EE58]/30 transition-all hover:scale-105 group cursor-pointer"
+        style={`background-color: ${brandPrimary}; color: ${onPrimaryColor}; border-color: ${brandAccent}4D;`}
+        class="fixed bottom-6 right-6 z-30 flex items-center gap-2.5 px-4 py-3 rounded-full shadow-xl hover:shadow-2xl border transition-all hover:scale-105 group cursor-pointer"
       >
-        <div class="h-6 w-6 rounded-full bg-[#C6EE58] text-[#0A261F] flex items-center justify-center font-bold text-xs shadow-xs">
+        <div 
+          style={`background-color: ${brandAccent}; color: ${onAccentColor};`}
+          class="h-6 w-6 rounded-full flex items-center justify-center font-bold text-xs shadow-xs"
+        >
           <Sparkles class="w-3.5 h-3.5 stroke-[2.5]" />
         </div>
-        <span class="text-xs font-semibold text-white tracking-wide pr-1">Ask Makazi</span>
+        <span class="text-xs font-semibold tracking-wide pr-1" style={`color: ${onPrimaryColor};`}>Ask Makazi</span>
       </button>
     </div>
 

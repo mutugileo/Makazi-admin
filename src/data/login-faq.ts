@@ -15,7 +15,7 @@ export const ADMIN_FAQ: FaqItem[] = [
   {
     question: 'How do tenants get access?',
     answer:
-      'You onboard each tenant from the admin. The tenant gets a one-time password and signs in to the Makazi app with their phone number. They choose their own password on first sign-in.',
+      'You onboard each tenant from the admin. The tenant gets a one-time password and signs in to the Makazi app with their phone number. On first sign-in they choose their own 4-digit PIN, which they use from then on.',
   },
   {
     question: 'How is rent calculated each month?',

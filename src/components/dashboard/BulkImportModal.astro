@@ -1,0 +1,406 @@
+---
+import { X, FileSpreadsheet, Download, Upload, Check, Building2, Users } from '@lucide/astro';
+import { getPortfolio } from '../../data/portfolio';
+
+const { seed } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+const managers = seed.staff
+  .filter((s) => s.role === 'manager' || s.role === 'owner')
+  .sort((a, b) => (a.role === b.role ? a.name.localeCompare(b.name) : a.role === 'manager' ? -1 : 1));
+---
+
+<div
+  id="bulk-import-modal"
+  class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-200"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="bulk-import-title"
+>
+  <div class="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl border border-[#E7EAE4] overflow-hidden transform scale-95 transition-transform duration-200 max-h-[90vh] flex flex-col">
+    <!-- Modal Header -->
+    <div class="flex items-center justify-between p-6 border-b border-[#F0F2EE] shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-xl bg-[#0D382B] text-[#C6EE58] flex items-center justify-center">
+          <FileSpreadsheet class="w-5 h-5" />
+        </div>
+        <div>
+          <h3 id="bulk-import-title" class="font-editorial text-2xl font-normal text-[#17231E]">Bulk property onboarding</h3>
+          <p class="text-xs text-[#73827C]">Import 50–500 units from Excel/CSV with rents, deposits, and active tenancies.</p>
+        </div>
+      </div>
+      <button
+        type="button"
+        id="bulk-import-close-btn"
+        class="h-8 w-8 rounded-full bg-[#F4F5F1] text-[#73827C] hover:text-[#17231E] flex items-center justify-center transition-colors cursor-pointer"
+        aria-label="Close"
+      >
+        <X class="w-4 h-4" />
+      </button>
+    </div>
+
+    <!-- Modal Body (Scrollable) -->
+    <div class="flex-1 min-h-0 overflow-y-auto p-6 space-y-6">
+      <!-- Download Template Banner -->
+      <div class="p-4 rounded-2xl bg-[#F8F9F6] border border-[#E3E6DF] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h4 class="text-xs font-semibold text-[#0D382B] uppercase tracking-wider">Need the standard spreadsheet format?</h4>
+          <p class="text-xs text-[#5A6862] mt-0.5">Download our pre-formatted template with Kenyan column examples and water readings.</p>
+        </div>
+        <a
+          href="/api/download-template"
+          download
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-[#DCE0D7] hover:border-[#0D382B] text-xs font-semibold text-[#0D382B] transition-colors shadow-2xs shrink-0 self-start sm:self-auto cursor-pointer"
+        >
+          <Download class="w-3.5 h-3.5 text-[#0D382B]" />
+          <span>Download CSV template</span>
+        </a>
+      </div>
+
+      <!-- File Dropzone -->
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-[#5A6862] mb-2">Upload Rent Roll (.CSV)</label>
+        <div
+          id="csv-dropzone"
+          class="border-2 border-dashed border-[#DCE0D7] hover:border-[#0D382B] rounded-2xl p-6 text-center cursor-pointer transition-colors bg-[#FAFAF8]"
+        >
+          <input type="file" id="bulk-csv-input" accept=".csv,text/csv" class="hidden" />
+          <div class="flex flex-col items-center justify-center pointer-events-none">
+            <div class="h-12 w-12 rounded-full bg-[#EBF0EC] text-[#0D382B] flex items-center justify-center mb-3">
+              <Upload class="w-6 h-6" />
+            </div>
+            <p class="text-sm font-semibold text-[#17231E]">Click to select CSV file or drag and drop</p>
+            <p class="text-xs text-[#73827C] mt-1" id="file-info-text">Supports UTF-8 CSV exported from Excel, Google Sheets, or property software</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Assign Manager Selector -->
+      <div>
+        <label for="bulk-manager-select" class="block text-xs font-semibold uppercase tracking-wider text-[#5A6862] mb-1.5">Assign Managing Staff</label>
+        <select
+          id="bulk-manager-select"
+          class="w-full px-4 py-2.5 rounded-xl border border-[#DCE0D7] focus:border-[#0D382B] focus:ring-2 focus:ring-[#0D382B]/10 outline-none text-sm text-[#17231E] bg-white"
+        >
+          {managers.map((m) => (
+            <option value={m.id}>
+              {m.name} ({m.role === 'owner' ? 'Owner' : 'Property Manager'})
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <!-- Pre-flight Validation Results Box (hidden initially) -->
+      <div id="validation-panel" class="hidden space-y-4">
+        <!-- Summary Stats Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="p-3.5 rounded-xl bg-[#F8F9F6] border border-[#E3E6DF]">
+            <span class="text-[10px] uppercase font-semibold text-[#69847A] block">Properties</span>
+            <span id="stat-props-count" class="text-lg font-semibold text-[#0D382B]">0</span>
+          </div>
+          <div class="p-3.5 rounded-xl bg-[#F8F9F6] border border-[#E3E6DF]">
+            <span class="text-[10px] uppercase font-semibold text-[#69847A] block">Total Units</span>
+            <span id="stat-units-count" class="text-lg font-semibold text-[#0D382B]">0</span>
+          </div>
+          <div class="p-3.5 rounded-xl bg-[#F8F9F6] border border-[#E3E6DF]">
+            <span class="text-[10px] uppercase font-semibold text-[#69847A] block">Tenancies</span>
+            <span id="stat-tenants-count" class="text-lg font-semibold text-[#0D382B]">0</span>
+          </div>
+          <div class="p-3.5 rounded-xl bg-[#F8F9F6] border border-[#E3E6DF]">
+            <span class="text-[10px] uppercase font-semibold text-[#69847A] block">Monthly Rent Roll</span>
+            <span id="stat-rent-total" class="text-sm font-semibold text-[#0D382B] truncate block">KES 0</span>
+          </div>
+        </div>
+
+        <!-- Properties to be created / updated list -->
+        <div id="properties-chips-container" class="flex flex-wrap gap-2 pt-1"></div>
+
+        <!-- Error Messages Container -->
+        <div id="validation-errors" class="hidden p-4 rounded-xl bg-[#FDF2F2] border border-[#F8D7DA] text-xs text-[#991B1B] space-y-1">
+          <p class="font-semibold text-sm">Please resolve the following issues in your CSV:</p>
+          <ul id="errors-list" class="list-disc list-inside space-y-0.5 mt-2 max-h-36 overflow-y-auto"></ul>
+        </div>
+
+        <!-- Sample Preview Table -->
+        <div>
+          <span class="block text-xs font-semibold uppercase tracking-wider text-[#5A6862] mb-2">Parsed Preview (First 5 Rows)</span>
+          <div class="overflow-x-auto border border-[#E3E6DF] rounded-xl">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-[#F8F9F6] border-b border-[#E3E6DF] text-[#69847A] uppercase text-[10px] font-semibold">
+                <tr>
+                  <th class="px-3 py-2">Property</th>
+                  <th class="px-3 py-2">Unit</th>
+                  <th class="px-3 py-2">Beds</th>
+                  <th class="px-3 py-2">Rent (KES)</th>
+                  <th class="px-3 py-2">Tenant</th>
+                  <th class="px-3 py-2">Phone</th>
+                  <th class="px-3 py-2">Status</th>
+                </tr>
+              </thead>
+              <tbody id="preview-table-body" class="divide-y divide-[#F0F2EE] text-[#17231E]"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Execution Feedback Progress (hidden initially) -->
+      <div id="execution-panel" class="hidden p-4 rounded-xl bg-[#EBF0EC] border border-[#C6EE58] text-center space-y-2">
+        <div class="inline-block animate-spin rounded-full h-8 w-8 border-2 border-[#0D382B] border-t-transparent"></div>
+        <p class="text-xs font-semibold text-[#0D382B]" id="execution-status-text">Creating properties, units, and tenant accounts in Supabase...</p>
+      </div>
+    </div>
+
+    <!-- Modal Footer Actions -->
+    <div class="flex items-center justify-between p-6 border-t border-[#F0F2EE] bg-[#FAFAF8] shrink-0">
+      <button
+        type="button"
+        id="bulk-import-cancel-btn"
+        class="px-5 py-2.5 rounded-full border border-[#DCE0D7] text-xs font-semibold text-[#5A6862] hover:bg-white transition-colors cursor-pointer"
+      >
+        Cancel
+      </button>
+
+      <button
+        type="button"
+        id="bulk-import-submit-btn"
+        disabled
+        class="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#0D382B] text-white text-xs font-semibold hover:bg-[#08221A] transition-all shadow-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+      >
+        <Building2 class="w-4 h-4 text-[#C6EE58]" />
+        <span id="bulk-submit-label">Select CSV to import</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function initBulkImportModal() {
+    const modal = document.getElementById('bulk-import-modal');
+    const openBtn = document.getElementById('bulk-import-btn');
+    const closeBtn = document.getElementById('bulk-import-close-btn');
+    const cancelBtn = document.getElementById('bulk-import-cancel-btn');
+    const dropzone = document.getElementById('csv-dropzone');
+    const fileInput = document.getElementById('bulk-csv-input') as HTMLInputElement | null;
+    const fileInfoText = document.getElementById('file-info-text');
+    const validationPanel = document.getElementById('validation-panel');
+    const validationErrors = document.getElementById('validation-errors');
+    const errorsList = document.getElementById('errors-list');
+    const previewTableBody = document.getElementById('preview-table-body');
+    const propertiesChips = document.getElementById('properties-chips-container');
+    const submitBtn = document.getElementById('bulk-import-submit-btn') as HTMLButtonElement | null;
+    const submitLabel = document.getElementById('bulk-submit-label');
+    const managerSelect = document.getElementById('bulk-manager-select') as HTMLSelectElement | null;
+    const executionPanel = document.getElementById('execution-panel');
+    const executionStatusText = document.getElementById('execution-status-text');
+
+    let currentCsvText = '';
+    let isImporting = false;
+
+    function openModal() {
+      if (!modal) return;
+      modal.classList.remove('opacity-0', 'pointer-events-none');
+      const inner = modal.querySelector('div.transform');
+      inner?.classList.remove('scale-95');
+      inner?.classList.add('scale-100');
+    }
+
+    function closeModal() {
+      if (!modal || isImporting) return;
+      modal.classList.add('opacity-0', 'pointer-events-none');
+      const inner = modal.querySelector('div.transform');
+      inner?.classList.remove('scale-100');
+      inner?.classList.add('scale-95');
+    }
+
+    openBtn?.addEventListener('click', openModal);
+    closeBtn?.addEventListener('click', closeModal);
+    cancelBtn?.addEventListener('click', closeModal);
+
+    modal?.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+
+    // File selection
+    dropzone?.addEventListener('click', () => fileInput?.click());
+
+    dropzone?.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.classList.add('border-[#0D382B]', 'bg-[#F2F5EF]');
+    });
+
+    dropzone?.addEventListener('dragleave', () => {
+      dropzone.classList.remove('border-[#0D382B]', 'bg-[#F2F5EF]');
+    });
+
+    dropzone?.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('border-[#0D382B]', 'bg-[#F2F5EF]');
+      if (e.dataTransfer?.files.length) {
+        handleFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    fileInput?.addEventListener('change', () => {
+      if (fileInput.files?.length) {
+        handleFile(fileInput.files[0]);
+      }
+    });
+
+    function handleFile(file: File) {
+      if (!file.name.toLowerCase().endsWith('.csv') && file.type !== 'text/csv') {
+        alert('Please choose a .csv file.');
+        return;
+      }
+
+      if (fileInfoText) {
+        fileInfoText.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+      }
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const text = e.target?.result as string;
+        currentCsvText = text;
+        await runPreflightValidation(text);
+      };
+      reader.readAsText(file);
+    }
+
+    async function runPreflightValidation(csvText: string) {
+      if (!validationPanel || !submitBtn || !submitLabel) return;
+
+      submitBtn.disabled = true;
+      submitLabel.textContent = 'Validating file...';
+
+      try {
+        const res = await fetch('/api/bulk-import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ csvText, mode: 'validate' }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to validate CSV');
+        }
+
+        validationPanel.classList.remove('hidden');
+
+        // Render stats
+        const statProps = document.getElementById('stat-props-count');
+        const statUnits = document.getElementById('stat-units-count');
+        const statTenants = document.getElementById('stat-tenants-count');
+        const statRent = document.getElementById('stat-rent-total');
+
+        if (statProps) statProps.textContent = String(data.summary.propertiesCount);
+        if (statUnits) statUnits.textContent = String(data.summary.unitsCount);
+        if (statTenants) statTenants.textContent = String(data.summary.tenanciesCount);
+        if (statRent) statRent.textContent = `KES ${data.summary.totalMonthlyRent.toLocaleString()}`;
+
+        // Render property chips
+        if (propertiesChips) {
+          propertiesChips.innerHTML = data.summary.propertiesList
+            .map(
+              (p: string) => `
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#EBF0EC] text-[11px] font-semibold text-[#0D382B]">
+                <span class="w-1.5 h-1.5 rounded-full bg-[#0D382B]"></span>
+                ${p}
+              </span>
+            `
+            )
+            .join('');
+        }
+
+        // Render errors if any
+        if (data.errors && data.errors.length > 0) {
+          validationErrors?.classList.remove('hidden');
+          if (errorsList) {
+            errorsList.innerHTML = data.errors
+              .map((err: { row: number; message: string }) => `<li>Row ${err.row}: ${err.message}</li>`)
+              .join('');
+          }
+          submitBtn.disabled = true;
+          submitLabel.textContent = `Fix ${data.errors.length} issue${data.errors.length > 1 ? 's' : ''} in CSV`;
+        } else {
+          validationErrors?.classList.add('hidden');
+          submitBtn.disabled = false;
+          submitLabel.textContent = `Import ${data.summary.unitsCount} units (${data.summary.propertiesCount} properties)`;
+        }
+
+        // Render preview table
+        if (previewTableBody && data.sampleRows) {
+          previewTableBody.innerHTML = data.sampleRows
+            .map(
+              (r: any) => `
+              <tr class="hover:bg-[#F8F9F6]">
+                <td class="px-3 py-2 font-semibold">${r.propertyName}</td>
+                <td class="px-3 py-2 font-mono">${r.unitLabel}</td>
+                <td class="px-3 py-2">${r.bedrooms} bd</td>
+                <td class="px-3 py-2 font-semibold">KES ${r.rent.toLocaleString()}</td>
+                <td class="px-3 py-2 text-[#5A6862]">${r.tenantName || '—'}</td>
+                <td class="px-3 py-2 text-[#5A6862] font-mono">${r.tenantPhone || '—'}</td>
+                <td class="px-3 py-2">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold ${r.tenantName ? 'bg-[#EBF0EC] text-[#0D382B]' : 'bg-[#FEF3F2] text-[#991B1B]'}">
+                    ${r.tenantName ? 'Occupied' : 'Vacant'}
+                  </span>
+                </td>
+              </tr>
+            `
+            )
+            .join('');
+        }
+      } catch (err: any) {
+        alert(err.message || 'Error parsing CSV');
+        submitBtn.disabled = true;
+        submitLabel.textContent = 'Upload valid CSV';
+      }
+    }
+
+    // Commit import
+    submitBtn?.addEventListener('click', async () => {
+      if (!currentCsvText || isImporting) return;
+      isImporting = true;
+      submitBtn.disabled = true;
+
+      executionPanel?.classList.remove('hidden');
+      validationPanel?.classList.add('hidden');
+
+      try {
+        const managerId = managerSelect?.value;
+        const res = await fetch('/api/bulk-import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            csvText: currentCsvText,
+            mode: 'commit',
+            defaultManagerId: managerId,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Import failed');
+        }
+
+        if (executionStatusText) {
+          executionStatusText.textContent = `Successfully imported ${data.result.unitsCreated} units and ${data.result.tenanciesCreated} tenancies! Refreshing portfolio...`;
+        }
+
+        setTimeout(() => {
+          window.location.reload();
+        }, 1200);
+      } catch (err: any) {
+        alert(err.message || 'Import failed');
+        isImporting = false;
+        executionPanel?.classList.add('hidden');
+        validationPanel?.classList.remove('hidden');
+        submitBtn.disabled = false;
+      }
+    });
+  }
+
+  document.addEventListener('astro:page-load', initBulkImportModal);
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    initBulkImportModal();
+  } else {
+    document.addEventListener('DOMContentLoaded', initBulkImportModal);
+  }
+</script>
+

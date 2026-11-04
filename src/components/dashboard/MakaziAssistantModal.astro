@@ -17,9 +17,9 @@ const { company, stats, currentPeriod } = await getPortfolio(Astro.locals.user!.
 >
   <div class="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-[#E7EAE4] overflow-hidden transform scale-95 transition-transform duration-200 flex flex-col h-[85vh] max-h-[650px]">
     <!-- Header -->
-    <div class="flex items-center justify-between p-5 border-b border-[#F0F2EE] bg-gradient-to-r from-[#0D382B] via-[#103E31] to-[#0A261F] text-white flex-shrink-0">
+    <div style="background: linear-gradient(to right, var(--color-brand-primary), var(--color-sidebar-bg));" class="flex items-center justify-between p-5 border-b border-[#F0F2EE] text-white flex-shrink-0">
       <div class="flex items-center gap-3">
-        <div class="h-10 w-10 rounded-2xl bg-[#C6EE58] text-[#0A261F] flex items-center justify-center shadow-[0_0_15px_rgba(198,238,88,0.3)]">
+        <div style="background-color: var(--color-brand-accent); color: var(--color-sidebar-bg);" class="h-10 w-10 rounded-2xl flex items-center justify-center shadow-md">
           <Sparkles class="w-5 h-5 stroke-[2.5]" />
         </div>
         <div>

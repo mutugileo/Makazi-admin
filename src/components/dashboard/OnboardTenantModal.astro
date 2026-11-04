@@ -326,4 +326,29 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
 
   syncUnit();
   updatePreview();
+
+  // Handle URL pre-fill when directed from Enquiries CRM
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('onboard') === 'true') {
+      const nameParam = urlParams.get('name');
+      const phoneParam = urlParams.get('phone');
+      const emailParam = urlParams.get('email');
+      const unitIdParam = urlParams.get('unitId');
+
+      if (nameParam && nameInput) nameInput.value = nameParam;
+      if (phoneParam && phoneInput) phoneInput.value = phoneParam;
+      if (emailParam && emailInput) emailInput.value = emailParam;
+      if (unitIdParam && unitSelect) {
+        unitSelect.value = unitIdParam;
+        syncUnit();
+        updatePreview();
+      }
+      setTimeout(() => {
+        window.makaziUi?.showModal('onboard-tenant-modal');
+      }, 100);
+    }
+  } catch (err) {
+    // Non-blocking URL parse
+  }
 </script>

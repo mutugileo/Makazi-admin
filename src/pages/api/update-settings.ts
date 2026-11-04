@@ -84,6 +84,8 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       depositSchedule[beds] = amount;
     }
 
+    // The brand theme is set only by Codzure in the super-admin portal. Any
+    // `theme` sent here is ignored, so the stored theme stays as it is.
     const settings = {
       ...current.settings,
       dueDay,
@@ -131,6 +133,12 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
           propBankAccount = rawBankAccount;
         }
 
+        let propPesalinkPhone: string | null = null;
+        const rawPesalink = text(item.pesalinkPhone).replace(/\s/g, '');
+        if (rawPesalink) {
+          propPesalinkPhone = rawPesalink;
+        }
+
         const { error: propErr } = await supabase
           .from('properties')
           .update({
@@ -142,7 +150,23 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
           .eq('company_id', user.companyId);
 
         if (propErr) throw propErr;
+
+        if (!settings.propertyPayments) {
+          settings.propertyPayments = {};
+        }
+        settings.propertyPayments[propId] = {
+          mpesaPaybill: propPaybill,
+          bankName: propBankName,
+          bankAccount: propBankAccount,
+          pesalinkPhone: propPesalinkPhone,
+          updatedAt: new Date().toISOString(),
+        };
       }
+
+      await supabase
+        .from('companies')
+        .update({ settings })
+        .eq('id', user.companyId);
     }
 
     clearLiveCache(user.companyId);

@@ -130,11 +130,14 @@ const supabaseAnonKey = process.env.PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_
                     const isRead = outgoing && latestTenantMsgSentAt ? msg.sentAt <= latestTenantMsgSentAt : false;
                     return (
                       <div class={`flex flex-col ${outgoing ? 'items-end' : 'items-start'}`}>
-                        <div class={`max-w-lg p-3.5 text-xs ${
-                          outgoing
-                            ? 'bg-[#0D382B] text-white rounded-2xl rounded-tr-none shadow-xs'
-                            : 'bg-[#F3F4F0] border border-[#E3E6DF] text-[#0D382B] rounded-2xl rounded-tl-none shadow-xs'
-                        }`}>
+                        <div 
+                          style={outgoing ? 'background-color: var(--color-brand-primary);' : ''}
+                          class={`max-w-lg p-3.5 text-xs ${
+                            outgoing
+                              ? 'text-white rounded-2xl rounded-tr-none shadow-xs'
+                              : 'bg-[#F3F4F0] border border-[#E3E6DF] text-[#0D382B] rounded-2xl rounded-tl-none shadow-xs'
+                          }`}
+                        >
                           {msg.body}
                         </div>
                         <div class="flex items-center gap-1.5 mt-1 px-1">
@@ -179,7 +182,11 @@ const supabaseAnonKey = process.env.PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_
               aria-label="Message"
               class="flex-1 px-4 py-2.5 rounded-full border border-[#E3E6DF] bg-[#F8F9F6] text-xs text-[#0D382B] placeholder:text-[#69847A] focus:border-[#0D382B] focus:ring-1 focus:ring-[#0D382B] outline-none shadow-xs"
             />
-            <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#0D382B] text-white text-xs font-semibold hover:bg-[#08221A] transition-all shadow-xs cursor-pointer">
+            <button 
+              type="submit" 
+              style="background-color: var(--color-brand-primary);"
+              class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-xs font-semibold hover:brightness-110 transition-all shadow-xs cursor-pointer"
+            >
               Send
             </button>
           </form>

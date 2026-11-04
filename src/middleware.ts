@@ -2,7 +2,7 @@ import { defineMiddleware } from 'astro:middleware';
 import { readSession } from './lib/auth/session';
 
 // Pages and probe endpoints anyone can open. Everything else needs a signed-in admin.
-const PUBLIC_PATHS = new Set(['/login', '/api/health', '/api/preview-login']);
+const PUBLIC_PATHS = new Set(['/login', '/api/health']);
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const { pathname, search } = context.url;

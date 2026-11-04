@@ -120,6 +120,9 @@ export interface Unit {
   propertyId: string;
   label: string;
   bedrooms: number;
+  isListed?: boolean;
+  listedRent?: number | null;
+  listingNotes?: string;
 }
 
 export interface Tenant {
