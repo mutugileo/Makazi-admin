@@ -129,7 +129,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       const list = activeTickets
         .map(
           (t) =>
-            `• **${t.ticket.id}**: *${t.ticket.title}* (${t.reporter} · ${t.unitLabel}) — Priority: **${t.priorityLabel}** · Status: **${t.ticket.status}**${t.ticket.assignedTo ? ` · Assigned to: ${t.ticket.assignedTo}` : ''}`
+            `• **${t.ticket.id}**: *${t.ticket.title}* (${t.reporter} · ${t.view.unitLabel}) — Priority: **${t.priorityLabel}** · Status: **${t.ticket.status}**${t.ticket.assignedTo ? ` · Assigned to: ${t.ticket.assignedTo}` : ''}`
         )
         .join('\n');
 
@@ -148,7 +148,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
 
     // 3. Collections & Revenue (Strictly company-scoped)
     if (q.includes('collect') || q.includes('revenue') || q.includes('income') || q.includes('payment') || q.includes('mpesa') || q.includes('bank')) {
-      const billed = stats.billedThisMonth;
+      const billed = stats.expectedThisMonth;
       const collected = stats.collectedThisMonth;
       const rate = stats.collectionRate;
       const companyPayments = portfolio.payments.filter((p) => p.view.property.companyId === targetCompanyId);
@@ -166,7 +166,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     if (q.includes('vacant') || q.includes('empty') || q.includes('occupan') || q.includes('available')) {
       const totalUnits = stats.totalUnits;
       const occupiedUnits = stats.occupiedUnits;
-      const vacantCount = stats.vacantUnits;
+      const vacantCount = totalUnits - occupiedUnits;
       const rate = stats.occupancyRate;
 
       const vacantList = propertyViews
@@ -216,7 +216,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     const sampleTenant = tenancies.find((t) => t.tenant.companyId === targetCompanyId && t.isActive)?.tenant.name;
 
     return json({
-      reply: `Here is a live snapshot of **${company.name}** (Company ID: \`${targetCompanyId}\`) for **${currentPeriod}**:\n\n• **Occupancy**: ${stats.occupancyRate}% (${stats.occupiedUnits}/${stats.totalUnits} units)\n• **Collections**: ${stats.collectionRate}% (${formatKes(stats.collectedThisMonth)} collected of ${formatKes(stats.billedThisMonth)} billed)\n• **Arrears**: ${stats.inArrears} tenant${stats.inArrears === 1 ? '' : 's'} owing **${formatKes(stats.overdueAmount)}**\n• **Maintenance**: ${activeOpenTickets.length} open ticket${activeOpenTickets.length === 1 ? '' : 's'}\n\n*You can ask me specifically about arrears, maintenance issues, tenant details${sampleTenant ? ` (such as "Tell me about ${sampleTenant}")` : ''}, or collections!*`,
+      reply: `Here is a live snapshot of **${company.name}** (Company ID: \`${targetCompanyId}\`) for **${currentPeriod}**:\n\n• **Occupancy**: ${stats.occupancyRate}% (${stats.occupiedUnits}/${stats.totalUnits} units)\n• **Collections**: ${stats.collectionRate}% (${formatKes(stats.collectedThisMonth)} collected of ${formatKes(stats.expectedThisMonth)} billed)\n• **Arrears**: ${stats.tenantsOwingCount} tenant${stats.tenantsOwingCount === 1 ? '' : 's'} owing **${formatKes(stats.overdueAmount)}**\n• **Maintenance**: ${activeOpenTickets.length} open ticket${activeOpenTickets.length === 1 ? '' : 's'}\n\n*You can ask me specifically about arrears, maintenance issues, tenant details${sampleTenant ? ` (such as "Tell me about ${sampleTenant}")` : ''}, or collections!*`,
       type: 'overview',
       companyProfile,
       data: { stats },

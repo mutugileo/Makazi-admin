@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { Buffer } from 'node:buffer';
 import { makeSupabaseClient } from '../../lib/supabase';
 import { notifyTenancy } from '../../lib/realtime';
 import { clearLiveCache } from '../../data/portfolio';
@@ -81,3 +82,4 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     return json({ error: message }, 500);
   }
 };
+

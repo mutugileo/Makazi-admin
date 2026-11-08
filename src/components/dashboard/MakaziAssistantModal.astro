@@ -72,7 +72,7 @@ const { company, stats, currentPeriod } = await getPortfolio(Astro.locals.user!.
         <div class="flex-1 max-w-[85%] bg-white p-4 rounded-2xl rounded-tl-sm border border-[#E7EAE4] shadow-xs text-xs sm:text-sm text-[#17231E] leading-relaxed space-y-2">
           <p class="font-medium text-[#0D382B]">Hello! I have live access to your <strong>{company.name}</strong> portfolio for <strong>{currentPeriod}</strong>.</p>
           <p class="text-[#5A6862]">
-            You have <strong>{stats.occupiedUnits}</strong> active tenancies, <strong>{stats.inArrears}</strong> account(s) in arrears, and a <strong>{stats.collectionRate}%</strong> collection rate. Ask me about any tenant name, arrears, repair tickets, or financial figures!
+            You have <strong>{stats.occupiedUnits}</strong> active tenancies, <strong>{stats.tenantsOwingCount}</strong> account(s) in arrears, and a <strong>{stats.collectionRate}%</strong> collection rate. Ask me about any tenant name, arrears, repair tickets, or financial figures!
           </p>
         </div>
       </div>

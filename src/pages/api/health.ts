@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import process from 'node:process';
 import { getSupabaseConfig } from '../../lib/supabase';
 
 export const GET: APIRoute = async () => {
@@ -13,7 +14,7 @@ export const GET: APIRoute = async () => {
     } else {
       const t0 = Date.now();
       const res = await fetch(`${config.url}/rest/v1/`, {
-        headers: { apikey: config.anonKey },
+        headers: { apikey: config.key },
       });
       dbLatencyMs = Date.now() - t0;
       if (!res.ok && res.status !== 404) {

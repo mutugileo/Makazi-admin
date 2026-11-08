@@ -51,7 +51,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
 
       if (result.success) {
         clearLiveCache(user.companyId);
-        notifyCompany(user.companyId);
+        notifyCompany(supabase, user.companyId, 'bulk_import');
       }
 
       return new Response(JSON.stringify({

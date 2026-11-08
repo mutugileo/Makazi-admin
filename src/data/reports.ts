@@ -75,8 +75,8 @@ export function buildReports(p: Portfolio, range: ReportRange) {
       month === p.currentMonth
         ? p.stats.occupiedUnits
         : p.tenancies.filter(
-            (t) => t.tenancy.moveIn <= monthEnd && (!t.tenancy.moveOut || t.tenancy.moveOut > monthEnd),
-          ).length;
+          (t) => t.tenancy.moveIn <= monthEnd && (!t.tenancy.moveOut || t.tenancy.moveOut > monthEnd),
+        ).length;
     return {
       month,
       short: shortMonth(month),

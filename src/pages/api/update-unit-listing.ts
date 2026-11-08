@@ -43,7 +43,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     }
 
     clearLiveCache(user.companyId);
-    notifyCompany(user.companyId);
+    notifyCompany(supabase, user.companyId, 'unit_updated');
 
     return new Response(JSON.stringify({ ok: true, unit: updated }), {
       status: 200,

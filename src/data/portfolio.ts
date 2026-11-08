@@ -100,6 +100,26 @@ export function whenLabelAt(iso: string, asOf: string): string {
   return formatDate(date).slice(0, 6).replace(/^0/, '');
 }
 
+export interface TenancyView {
+  tenancy: Tenancy;
+  tenant: Tenant;
+  unit: Unit;
+  property: Property;
+  bills: MonthlyBill[];
+  currentBill: MonthlyBill | null;
+  balance: number;
+  status: BillStatus;
+  isActive: boolean;
+  accountNumber: string;
+  unitLabel: string;
+  arrears: ArrearsSlice[];
+  overdueAmount: number;
+  daysOverdue: number;
+  stage: ArrearsStage | null;
+  recordsKeptUntil: string | null;
+  depositHeld: number;
+}
+
 export interface UnitView {
   unit: Unit;
   occupant: TenancyView | null;
