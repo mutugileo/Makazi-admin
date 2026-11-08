@@ -23,19 +23,30 @@ const user = Astro.locals.user;
 const portfolio = user ? await getPortfolio(user.companyId, Astro.cookies) : null;
 const companyName = portfolio ? portfolio.company.name : 'Makazi';
 const companyTheme = portfolio?.company.settings.theme;
+function darkenColor(hexColor: string, factor = 0.2): string {
+  const cleanHex = hexColor.replace('#', '');
+  const r = Math.round((parseInt(cleanHex.substring(0, 2), 16) || 0) * factor);
+  const g = Math.round((parseInt(cleanHex.substring(2, 4), 16) || 0) * factor);
+  const b = Math.round((parseInt(cleanHex.substring(4, 6), 16) || 0) * factor);
+  return '#' + [r, g, b].map(x => Math.min(255, Math.max(0, x)).toString(16).padStart(2, '0')).join('');
+}
+
 function isLightColor(hexColor: string): boolean {
   const cleanHex = hexColor.replace('#', '');
   const r = parseInt(cleanHex.substring(0, 2), 16) || 0;
   const g = parseInt(cleanHex.substring(2, 4), 16) || 0;
   const b = parseInt(cleanHex.substring(4, 6), 16) || 0;
   const yiq = (r * 299 + g * 587 + b * 114) / 1000;
-  return yiq >= 140;
+  return yiq >= 120;
 }
-const brandPrimary = companyTheme?.primary ?? '#0D382B';
-const sidebarBg = companyTheme?.navBg ?? '#0A261F';
+
+const rawPrimary = companyTheme?.primary ?? '#0D382B';
+const rawSidebarBg = companyTheme?.navBg ?? '#0A261F';
 const brandAccent = companyTheme?.accent ?? '#C6EE58';
-const onPrimaryColor = isLightColor(brandPrimary) ? '#071A2C' : '#FFFFFF';
-const onAccentColor = isLightColor(brandAccent) ? sidebarBg : '#FFFFFF';
+const brandPrimary = isLightColor(rawPrimary) ? darkenColor(rawPrimary, 0.26) : rawPrimary;
+const sidebarBg = isLightColor(rawSidebarBg) ? darkenColor(rawSidebarBg, 0.16) : rawSidebarBg;
+const onPrimaryColor = '#FFFFFF';
+const onAccentColor = '#081B2E';
 
 const {
   title = `Makazi — ${companyName}`,
@@ -78,7 +89,7 @@ const {
     </script>
   </head>
   <body 
-    style={`--color-brand-primary: ${companyTheme?.primary ?? '#0D382B'}; --color-sidebar-bg: ${companyTheme?.navBg ?? '#0A261F'}; --color-brand-accent: ${companyTheme?.accent ?? '#C6EE58'};`}
+    style={`--color-brand-primary: ${brandPrimary}; --color-sidebar-bg: ${sidebarBg}; --color-brand-accent: ${brandAccent};`}
     class="bg-[#F3F4F0] text-[#17231E] min-h-screen antialiased flex"
   >
     <!-- Top Progress Bar for Seamless Route Transitions -->
