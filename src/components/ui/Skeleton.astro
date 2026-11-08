@@ -1,0 +1,88 @@
+---
+interface Props {
+  variant?: 'box' | 'text' | 'circle' | 'card' | 'row' | 'kpi';
+  dark?: boolean;
+  class?: string;
+  count?: number;
+  lines?: number;
+}
+
+const {
+  variant = 'box',
+  dark = false,
+  class: className = '',
+  count = 1,
+  lines = 3,
+} = Astro.props;
+
+const shimmerClass = dark ? 'shimmer-dark' : 'shimmer';
+const items = Array.from({ length: Math.max(1, count) });
+const textLines = Array.from({ length: Math.max(1, lines) });
+---
+
+{items.map((_, idx) => (
+  <>
+    {variant === 'box' && (
+      <div class={`${shimmerClass} rounded-2xl ${className || 'h-12 w-full'}`} />
+    )}
+
+    {variant === 'circle' && (
+      <div class={`${shimmerClass} rounded-full shrink-0 ${className || 'h-10 w-10'}`} />
+    )}
+
+    {variant === 'text' && (
+      <div class={`space-y-2.5 ${className}`}>
+        {textLines.map((_, lineIdx) => (
+          <div
+            class={`${shimmerClass} h-3.5 rounded-md ${
+              lineIdx === textLines.length - 1 ? 'w-3/5' : 'w-full'
+            }`}
+          />
+        ))}
+      </div>
+    )}
+
+    {variant === 'kpi' && (
+      <div class={`p-5 rounded-3xl bg-white border border-[#E3E6DF] shadow-xs space-y-3 ${className}`}>
+        <div class="flex items-center justify-between">
+          <div class={`${shimmerClass} h-3.5 w-24 rounded-md`} />
+          <div class={`${shimmerClass} h-7 w-7 rounded-xl`} />
+        </div>
+        <div class={`${shimmerClass} h-7 w-32 rounded-lg`} />
+        <div class={`${shimmerClass} h-3 w-40 rounded-md`} />
+      </div>
+    )}
+
+    {variant === 'card' && (
+      <div class={`p-6 rounded-3xl bg-white border border-[#E3E6DF] shadow-xs space-y-4 ${className}`}>
+        <div class="flex items-center gap-3">
+          <div class={`${shimmerClass} h-10 w-10 rounded-2xl shrink-0`} />
+          <div class="space-y-2 flex-1">
+            <div class={`${shimmerClass} h-4 w-1/3 rounded-md`} />
+            <div class={`${shimmerClass} h-3 w-1/4 rounded-md`} />
+          </div>
+        </div>
+        <div class={`${shimmerClass} h-20 w-full rounded-2xl`} />
+        <div class="flex items-center justify-between pt-2">
+          <div class={`${shimmerClass} h-4 w-20 rounded-md`} />
+          <div class={`${shimmerClass} h-7 w-24 rounded-full`} />
+        </div>
+      </div>
+    )}
+
+    {variant === 'row' && (
+      <div class={`flex items-center justify-between p-4 bg-white border-b border-[#F0F2EE] gap-4 ${className}`}>
+        <div class="flex items-center gap-3 min-w-0 flex-1">
+          <div class={`${shimmerClass} h-9 w-9 rounded-xl shrink-0`} />
+          <div class="space-y-1.5 flex-1 min-w-0">
+            <div class={`${shimmerClass} h-3.5 w-32 rounded-md`} />
+            <div class={`${shimmerClass} h-3 w-20 rounded-md`} />
+          </div>
+        </div>
+        <div class={`${shimmerClass} h-4 w-24 rounded-md hidden sm:block`} />
+        <div class={`${shimmerClass} h-5 w-16 rounded-full`} />
+        <div class={`${shimmerClass} h-8 w-20 rounded-xl`} />
+      </div>
+    )}
+  </>
+))}

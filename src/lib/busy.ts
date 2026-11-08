@@ -18,11 +18,13 @@ export function setBusy(button: HTMLButtonElement | null | undefined, label = 'S
   const wasDisabled = button.disabled;
   button.disabled = true;
   button.setAttribute('aria-busy', 'true');
+  button.classList.add('shimmer');
   // `label` is always a constant from our own code, never user input.
   button.innerHTML = `${SPINNER}<span>${label}</span>`;
   return () => {
     button.innerHTML = originalHtml;
     button.disabled = wasDisabled;
     button.removeAttribute('aria-busy');
+    button.classList.remove('shimmer');
   };
 }

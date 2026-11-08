@@ -92,13 +92,20 @@ const {
     style={`--color-brand-primary: ${brandPrimary}; --color-sidebar-bg: ${sidebarBg}; --color-brand-accent: ${brandAccent};`}
     class="bg-[#F3F4F0] text-[#17231E] min-h-screen antialiased flex"
   >
-    <!-- Top Progress Bar for Seamless Route Transitions -->
+    <!-- Top Progress Bar & Shimmer for Seamless Route Transitions -->
     <div 
       id="nav-progress-bar" 
-      style={`background-color: ${companyTheme?.accent ?? '#C6EE58'}; box-shadow: 0 0 8px ${companyTheme?.accent ?? '#C6EE58'}CC;`}
+      style={`background-color: ${companyTheme?.accent ?? '#C6EE58'}; box-shadow: 0 0 10px ${companyTheme?.accent ?? '#C6EE58'};`}
       class="fixed top-0 left-0 h-[2.5px] z-50 transition-all duration-200 ease-out pointer-events-none opacity-0 w-0" 
       aria-hidden="true"
     ></div>
+    <div 
+      id="nav-shimmer-bar"
+      class="fixed top-0 left-0 right-0 h-[2.5px] z-49 pointer-events-none opacity-0 transition-opacity duration-150 overflow-hidden"
+      aria-hidden="true"
+    >
+      <div class="h-full w-full shimmer"></div>
+    </div>
 
     <!-- Desktop & Mobile Sidebar Navigation -->
     <Sidebar currentPath={currentPath} />
@@ -474,9 +481,28 @@ const {
         if (sidebarAssistantBtn) sidebarAssistantBtn.onclick = openAssistant;
       }
 
+      // Route Navigation Shimmer Listeners
+      document.addEventListener('astro:before-preparation', () => {
+        const bar = document.getElementById('nav-progress-bar');
+        const shimmer = document.getElementById('nav-shimmer-bar');
+        if (bar) {
+          bar.style.opacity = '1';
+          bar.style.width = '70%';
+        }
+        if (shimmer) {
+          shimmer.style.opacity = '1';
+        }
+      });
+
+      document.addEventListener('astro:after-preparation', () => {
+        const bar = document.getElementById('nav-progress-bar');
+        if (bar) bar.style.width = '92%';
+      });
+
       // Page-load handler for initial render and client-side view transitions
       function onPageReady() {
         const bar = document.getElementById('nav-progress-bar');
+        const shimmer = document.getElementById('nav-shimmer-bar');
         if (bar) {
           bar.style.width = '100%';
           setTimeout(() => {
@@ -485,6 +511,11 @@ const {
               bar.style.width = '0%';
             }, 200);
           }, 150);
+        }
+        if (shimmer) {
+          setTimeout(() => {
+            shimmer.style.opacity = '0';
+          }, 180);
         }
 
         initBarsAnimation();
