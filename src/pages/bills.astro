@@ -6,7 +6,7 @@ import { getPortfolio, formatDate, formatKes, monthLabel } from '../data/portfol
 import { Download, Gauge } from '@lucide/astro';
 
 // This company's data only (the signed-in user's).
-const { billMonths, billRows, portfolioSummary, propertyViews, currentMonth } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+const { billMonths, billRows, portfolioSummary, propertyViews, currentMonth, dueDay, graceDay } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
 
 const billedMonths = [...new Set(billRows.map((r) => r.month))].sort();
 const latestBilledMonth = billedMonths[billedMonths.length - 1];
@@ -56,7 +56,7 @@ const td = 'py-3 px-3 whitespace-nowrap';
       <span class="text-xs font-semibold tracking-wider text-[#69847A] uppercase">{portfolioSummary}</span>
       <h1 class="text-3xl sm:text-4xl font-normal font-editorial text-[#0D382B] tracking-tight mt-1">Monthly bills</h1>
       <p class="text-xs text-[#69847A] mt-2 max-w-xl">
-        One row per tenant per month: rent, water, garbage and anything carried forward. Due on the 5th, overdue after the 20th. Unpaid amounts move to the next month automatically.
+        One row per tenant per month: rent, water, garbage and anything carried forward. Due on the {dueDay}th, overdue after the {graceDay}th. Rent auto-generates every month leaving water units blank for reading entry. Unpaid amounts carry forward automatically.
       </p>
     </div>
 

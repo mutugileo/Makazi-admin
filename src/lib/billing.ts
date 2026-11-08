@@ -202,7 +202,7 @@ export interface StaffMember {
 export const REPAIR_CATEGORIES = ['plumbing', 'electrical', 'carpentry', 'appliance', 'security'] as const;
 export type RepairCategory = (typeof REPAIR_CATEGORIES)[number];
 export type RepairPriority = 'low' | 'medium' | 'high';
-export type RepairStatus = 'open' | 'in_progress' | 'resolved';
+export type RepairStatus = 'open' | 'in_progress' | 'resolved' | 'voided';
 
 export const REPAIR_CATEGORY_LABELS: Record<RepairCategory, string> = {
   plumbing: 'Plumbing',
@@ -215,6 +215,7 @@ export const REPAIR_STATUS_LABELS: Record<RepairStatus, string> = {
   open: 'Open',
   in_progress: 'In progress',
   resolved: 'Resolved',
+  voided: 'Voided',
 };
 export const REPAIR_PRIORITY_LABELS: Record<RepairPriority, string> = { low: 'Low', medium: 'Medium', high: 'High' };
 
@@ -231,6 +232,7 @@ export interface RepairTicket {
   title: string;
   description: string;
   hasPhoto: boolean;
+  photoUrl?: string | null;
   /** ISO date-time, Nairobi time. */
   createdAt: string;
   resolvedAt: string | null;

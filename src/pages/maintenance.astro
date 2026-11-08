@@ -1,10 +1,11 @@
 ---
 import DashboardLayout from '../layouts/DashboardLayout.astro';
 import { getPortfolio, type TicketView } from '../data/portfolio';
-import { ChevronDown, Wrench, X, Search, ChevronLeft, ChevronRight } from '@lucide/astro';
+import { ChevronDown, Wrench, X, Search, ChevronLeft, ChevronRight, Share2, Copy, Ban, Image as ImageIcon } from '@lucide/astro';
 
 // This company's data only (the signed-in user's).
 const { portfolioSummary, repairBoard, currentPeriod } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+const voidedTickets = repairBoard.voided;
 
 const columns: Array<{ title: string; items: TicketView[]; empty: string; action: string | null }> = [
   { title: 'Open', items: repairBoard.open, empty: 'No open tickets.', action: 'Assign & start' },
@@ -86,6 +87,14 @@ const priorityTone = {
           </button>
         ))}
       </div>
+      <button
+        type="button"
+        id="toggle-voided-btn"
+        aria-pressed="false"
+        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-[#E3E6DF] bg-white text-xs font-semibold text-[#5A6862] hover:text-[#C04A26] hover:border-[#F6C6B8] transition-colors cursor-pointer shadow-xs"
+      >
+        <Ban class="w-3.5 h-3.5" /> Voided ({voidedTickets.length})
+      </button>
     </div>
     <span class="text-xs font-medium text-[#69847A] tabular-nums whitespace-nowrap">
       <span id="maintenance-total-count">{totalTicketsCount}</span> tickets total
@@ -93,7 +102,7 @@ const priorityTone = {
   </div>
 
   <!-- Board: same tickets and statuses the tenant app shows -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+  <div id="active-board" class="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
     {columns.map((column, colIdx) => (
       <div class="maintenance-column bg-[#F8F9F6] rounded-3xl border border-[#E3E6DF] p-5 flex flex-col justify-between shadow-xs" data-col-index={colIdx}>
         <div>
@@ -138,7 +147,27 @@ const priorityTone = {
                             {t.ticket.resolutionNote && <p class="text-[#69847A]">{t.ticket.resolutionNote}</p>}
                           </div>
                         )}
-                        {t.ticket.hasPhoto && <p class="text-[11px] text-[#69847A] mt-1">Photo attached</p>}
+                        {t.ticket.photoUrl ? (
+                          <button
+                            type="button"
+                            class="view-photo-btn group mt-3 block w-full rounded-xl overflow-hidden border border-[#E3E6DF] bg-[#F4F5F1] cursor-pointer text-left"
+                            data-photo={t.ticket.photoUrl}
+                            data-ticket={t.ticket.id}
+                            data-title={t.ticket.title}
+                            data-reporter={t.reporter}
+                            data-description={t.ticket.description}
+                            data-fundi={t.ticket.assignedTo ?? ''}
+                            data-phone={t.ticket.assignedPhone ?? ''}
+                          >
+                            <img src={t.ticket.photoUrl} alt={`Photo for ${t.ticket.id}`} loading="lazy" class="h-32 w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
+                            <span class="flex items-center justify-between px-3 py-1.5 text-[11px] text-[#5A6862] border-t border-[#E3E6DF] bg-white">
+                              <span class="inline-flex items-center gap-1 font-semibold text-[#0D382B]"><ImageIcon class="w-3.5 h-3.5" /> Damage photo</span>
+                              <span>View & share</span>
+                            </span>
+                          </button>
+                        ) : t.ticket.hasPhoto ? (
+                          <p class="text-[11px] text-[#69847A] mt-2">Photo was taken but not received. Older app versions didn't upload it; ask the tenant to resend.</p>
+                        ) : null}
                       </div>
                       {column.action && (
                         <div class="mt-4 pt-3 border-t border-[#E3E6DF] flex flex-wrap items-center gap-2">
@@ -176,6 +205,15 @@ const priorityTone = {
                               </button>
                             </>
                           )}
+                          <button
+                            type="button"
+                            class="void-ticket-btn ml-auto px-3 py-1.5 rounded-full text-xs font-semibold text-[#C04A26] hover:bg-[#FDEEE9] transition-colors cursor-pointer"
+                            data-ticket={t.ticket.id}
+                            data-title={t.ticket.title}
+                            data-reporter={t.reporter}
+                          >
+                            Void
+                          </button>
                         </div>
                       )}
                     </div>
@@ -252,14 +290,112 @@ const priorityTone = {
       </form>
     </div>
   </div>
+
+  <section id="voided-board" class="hidden bg-[#F8F9F6] rounded-3xl border border-[#E3E6DF] p-5 shadow-xs" aria-label="Voided tickets">
+    <div class="pb-3 mb-4 border-b border-[#E3E6DF]">
+      <h2 class="text-xs font-semibold uppercase tracking-wider text-[#0D382B]">Voided</h2>
+      <p class="text-xs text-[#69847A] mt-1">Requests closed as irrelevant. Kept here for the record; the tenant sees them as Voided.</p>
+    </div>
+    {voidedTickets.length === 0 ? (
+      <p class="text-xs text-[#69847A] py-8 text-center">No voided tickets.</p>
+    ) : (
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {voidedTickets.map((t) => (
+          <div class="bg-white rounded-2xl border border-[#E3E6DF] p-5 shadow-xs">
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-mono text-xs text-[#69847A]">{t.ticket.id} · {t.categoryLabel}</span>
+              <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold border bg-[#FDEEE9] text-[#C04A26] border-[#F6C6B8]">Voided</span>
+            </div>
+            <h3 class="text-sm font-semibold text-[#5A6862] mt-2.5 line-through">{t.ticket.title}</h3>
+            <p class="text-xs text-[#69847A] mt-1">{t.reporter} · {t.when}</p>
+            {t.ticket.resolutionNote && <p class="mt-3 text-[11px] text-[#5A6862] rounded-xl bg-[#F8F9F6] border border-[#E3E6DF] px-3 py-2">Reason: {t.ticket.resolutionNote}</p>}
+          </div>
+        ))}
+      </div>
+    )}
+  </section>
+
+  <div
+    id="repair-photo-modal"
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-200"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="repair-photo-title"
+  >
+    <div class="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-[#E7EAE4] overflow-hidden transform scale-95 transition-transform duration-200 max-h-[92vh] flex flex-col">
+      <div class="flex items-center justify-between p-6 border-b border-[#F0F2EE] shrink-0">
+        <div class="min-w-0">
+          <h3 id="repair-photo-title" class="font-editorial text-2xl font-normal text-[#17231E]">Damage photo</h3>
+          <p class="text-xs text-[#73827C] truncate" data-photo-field="who"></p>
+        </div>
+        <button type="button" data-close class="h-8 w-8 shrink-0 rounded-full bg-[#F4F5F1] text-[#73827C] hover:text-[#17231E] flex items-center justify-center transition-colors cursor-pointer" aria-label="Close">
+          <X class="w-4 h-4" />
+        </button>
+      </div>
+      <div class="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto">
+        <a data-photo-field="open" href="#" target="_blank" rel="noopener noreferrer" class="block rounded-2xl overflow-hidden border border-[#E3E6DF] bg-[#F4F5F1]">
+          <img data-photo-field="img" src="" alt="Damage photo" class="w-full max-h-[50vh] object-contain" />
+        </a>
+        <p class="text-sm text-[#17231E]" data-photo-field="desc"></p>
+        <p class="text-xs text-[#5A6862]" data-photo-field="fundi"></p>
+      </div>
+      <div class="px-6 py-4 border-t border-[#F0F2EE] flex flex-wrap items-center justify-end gap-2 shrink-0">
+        <button type="button" data-photo-field="copy" class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium text-[#0D382B] border border-[#E3E6DF] hover:bg-[#F4F5F1] transition-colors cursor-pointer">
+          <Copy class="w-4 h-4" /> Copy photo link
+        </button>
+        <a data-photo-field="whatsapp" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-semibold bg-[#0D382B] text-white hover:bg-[#154637] transition-colors shadow-md">
+          <Share2 class="w-4 h-4" /> <span data-photo-field="share-label">Send to fundi on WhatsApp</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div
+    id="void-ticket-modal"
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-200"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="void-ticket-title"
+  >
+    <div class="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-[#E7EAE4] overflow-hidden transform scale-95 transition-transform duration-200 max-h-[92vh] flex flex-col">
+      <div class="flex items-center justify-between p-6 border-b border-[#F0F2EE] shrink-0">
+        <div class="min-w-0">
+          <h3 id="void-ticket-title" class="font-editorial text-2xl font-normal text-[#17231E]">Void ticket</h3>
+          <p class="text-xs text-[#73827C] truncate" data-void-field="who"></p>
+        </div>
+        <button type="button" data-close class="h-8 w-8 shrink-0 rounded-full bg-[#F4F5F1] text-[#73827C] hover:text-[#17231E] flex items-center justify-center transition-colors cursor-pointer" aria-label="Close">
+          <X class="w-4 h-4" />
+        </button>
+      </div>
+      <form id="void-ticket-form" class="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto" novalidate>
+        <p class="text-xs text-[#5A6862]">The ticket leaves the board and the tenant sees it as Voided with your reason.</p>
+        <div class="flex flex-wrap gap-1.5">
+          {['Not a repair issue', 'Duplicate request', 'Tenant fixed it', 'Tenant responsibility'].map((r) => (
+            <button type="button" class="void-reason-chip text-[11px] px-2.5 py-1 rounded-full bg-[#F4F5F1] text-[#0D382B] hover:bg-[#E7EAE4] transition-colors cursor-pointer" data-reason={r}>{r}</button>
+          ))}
+        </div>
+        <div>
+          <label for="void-reason" class="block text-xs font-semibold uppercase tracking-wider text-[#5A6862] mb-1.5">Reason</label>
+          <input id="void-reason" name="reason" type="text" required maxlength="300" autocomplete="off" placeholder="Shown to the tenant"
+            class="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E5DF] bg-[#FAFBF9] text-sm text-[#17231E] focus:outline-none focus:border-[#0D382B]" />
+        </div>
+        <p data-void-field="error" class="hidden text-xs text-[#C04A26]" role="alert"></p>
+        <div class="pt-4 flex items-center justify-end gap-3 border-t border-[#F0F2EE]">
+          <button type="button" data-close class="px-5 py-2.5 rounded-xl text-sm font-medium text-[#5A6862] hover:bg-[#F4F5F1] transition-colors cursor-pointer">Keep ticket</button>
+          <button type="submit" data-void-field="submit" class="px-6 py-2.5 rounded-xl text-sm font-semibold bg-[#C04A26] text-white hover:bg-[#A83D1D] transition-all shadow-md cursor-pointer disabled:opacity-60">Void ticket</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </DashboardLayout>
 
 <script>
   import { setBusy } from '../lib/busy';
   type UpdateBody = {
     ticketId: string;
-    status: 'in_progress' | 'resolved';
+    status: 'in_progress' | 'resolved' | 'voided';
     assignee?: { name: string; phone: string; visitAt: string };
+    resolutionNote?: string;
   };
 
   async function updateTicket(body: UpdateBody) {
@@ -386,6 +522,108 @@ const priorityTone = {
     }
 
     renderFilters();
+
+    const activeBoard = document.getElementById('active-board');
+    const voidedBoard = document.getElementById('voided-board');
+    const toggleVoided = document.getElementById('toggle-voided-btn');
+    if (toggleVoided && activeBoard && voidedBoard) {
+      toggleVoided.onclick = () => {
+        const showVoided = voidedBoard.classList.contains('hidden');
+        voidedBoard.classList.toggle('hidden', !showVoided);
+        activeBoard.classList.toggle('hidden', showVoided);
+        toggleVoided.setAttribute('aria-pressed', String(showVoided));
+        toggleVoided.classList.toggle('border-[#C04A26]', showVoided);
+        toggleVoided.classList.toggle('text-[#C04A26]', showVoided);
+      };
+    }
+
+    const photoModal = document.getElementById('repair-photo-modal');
+    if (photoModal) {
+      const photoField = (name: string) => photoModal.querySelector<HTMLElement>(`[data-photo-field="${name}"]`)!;
+      let currentPhoto = '';
+      document.querySelectorAll<HTMLButtonElement>('.view-photo-btn').forEach((btn) => {
+        btn.onclick = () => {
+          const { photo = '', ticket = '', title = '', reporter = '', description = '', fundi = '', phone = '' } = btn.dataset;
+          currentPhoto = photo;
+          (photoField('img') as HTMLImageElement).src = photo;
+          (photoField('open') as HTMLAnchorElement).href = photo;
+          photoField('who').textContent = `${ticket} · ${title} · ${reporter}`;
+          photoField('desc').textContent = description || title;
+          photoField('fundi').textContent = fundi
+            ? `Assigned to ${fundi}. WhatsApp opens a chat with them, details and photo link filled in.`
+            : 'No one assigned yet. WhatsApp lets you pick who to send it to.';
+          photoField('share-label').textContent = fundi ? `Send to ${fundi} on WhatsApp` : 'Share on WhatsApp';
+          const message = [
+            `Repair job ${ticket}: ${title}`,
+            reporter,
+            description && description !== title ? description : '',
+            `Photo: ${photo}`,
+          ].filter(Boolean).join('\n');
+          const digits = phone.replace(/\D/g, '');
+          (photoField('whatsapp') as HTMLAnchorElement).href =
+            `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+          window.makaziUi?.showModal('repair-photo-modal');
+        };
+      });
+      photoField('copy').onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(currentPhoto);
+          window.makaziUi?.showToast('Link copied', 'Paste it into SMS, email or any chat.');
+        } catch {
+          window.makaziUi?.showToast('Could not copy', 'Open the photo and copy the address from the browser.');
+        }
+      };
+      photoModal.querySelectorAll('[data-close]').forEach((el) => {
+        (el as HTMLElement).onclick = () => window.makaziUi?.hideModal('repair-photo-modal');
+      });
+    }
+
+    const voidModal = document.getElementById('void-ticket-modal');
+    const voidForm = document.getElementById('void-ticket-form') as HTMLFormElement | null;
+    if (voidModal && voidForm) {
+      const voidField = (name: string) => voidModal.querySelector<HTMLElement>(`[data-void-field="${name}"]`)!;
+      const reasonInput = voidForm.elements.namedItem('reason') as HTMLInputElement;
+      let voidId = '';
+      const showVoidError = (message: string | null) => {
+        voidField('error').textContent = message ?? '';
+        voidField('error').classList.toggle('hidden', !message);
+      };
+      document.querySelectorAll<HTMLButtonElement>('.void-ticket-btn').forEach((btn) => {
+        btn.onclick = () => {
+          const { ticket = '', title = '', reporter = '' } = btn.dataset;
+          voidId = ticket;
+          voidField('who').textContent = `${ticket} · ${title} · ${reporter}`;
+          reasonInput.value = '';
+          showVoidError(null);
+          window.makaziUi?.showModal('void-ticket-modal');
+          setTimeout(() => reasonInput.focus(), 50);
+        };
+      });
+      voidModal.querySelectorAll<HTMLButtonElement>('.void-reason-chip').forEach((chip) => {
+        chip.onclick = () => {
+          reasonInput.value = chip.dataset.reason ?? '';
+        };
+      });
+      voidModal.querySelectorAll('[data-close]').forEach((el) => {
+        (el as HTMLElement).onclick = () => window.makaziUi?.hideModal('void-ticket-modal');
+      });
+      voidForm.onsubmit = async (event) => {
+        event.preventDefault();
+        const reason = reasonInput.value.trim();
+        if (reason.length < 3) return showVoidError('Add a short reason so the tenant knows why.');
+        showVoidError(null);
+        const restore = setBusy(voidField('submit') as HTMLButtonElement, 'Voiding…');
+        try {
+          await updateTicket({ ticketId: voidId, status: 'voided', resolutionNote: reason });
+          window.makaziUi?.hideModal('void-ticket-modal');
+          window.makaziUi?.showToast('Ticket voided', `${voidId} moved to Voided.`);
+          setTimeout(() => window.location.reload(), 800);
+        } catch (err: unknown) {
+          restore();
+          showVoidError(err instanceof Error ? err.message : String(err));
+        }
+      };
+    }
 
     const modal = document.getElementById('assign-repair-modal');
     const form = document.getElementById('assign-repair-form') as HTMLFormElement | null;

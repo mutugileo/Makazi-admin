@@ -75,7 +75,7 @@ interface RepairTicketRow {
   id: string; company_id: string; tenancy_id: string; unit_id: string;
   category: RepairTicket['category']; priority: RepairTicket['priority'];
   status: RepairTicket['status']; title: string; description: string;
-  has_photo: boolean; created_at: string; resolved_at: string | null;
+  has_photo: boolean; photo_url?: string | null; created_at: string; resolved_at: string | null;
   assigned_to: string | null; resolution_note: string | null;
   // Added by 20261008090000_repair_visit_details; absent before it's applied.
   assigned_phone?: string | null; visit_at?: string | null;
@@ -147,10 +147,17 @@ const mapStaff = (r: StaffRow): StaffMember => ({
   phone: r.phone, propertyIds: r.property_ids ?? [],
 });
 
+const repairPhotoUrl = (path: string | null | undefined): string | null => {
+  const base = import.meta.env.PUBLIC_SUPABASE_URL;
+  if (!path || !base || !/^[\w-]+\/[\w-]+\/[\w-]+\.[A-Za-z0-9]{1,5}$/.test(path)) return null;
+  return `${base}/storage/v1/object/public/repair-photos/${path}`;
+};
+
 const mapTicket = (r: RepairTicketRow): RepairTicket => ({
   id: r.id, companyId: r.company_id, tenancyId: r.tenancy_id, unitId: r.unit_id,
   category: r.category, priority: r.priority, status: r.status,
   title: r.title, description: r.description, hasPhoto: r.has_photo,
+  photoUrl: repairPhotoUrl(r.photo_url),
   createdAt: nairobiIso(r.created_at), resolvedAt: r.resolved_at ? nairobiIso(r.resolved_at) : null,
   assignedTo: r.assigned_to, resolutionNote: r.resolution_note,
   assignedPhone: r.assigned_phone ?? null, visitAt: r.visit_at ? nairobiIso(r.visit_at) : null,

@@ -17,8 +17,9 @@ const first = propertyViews[0]?.property;
 // the standard Makazi rates or the rates of the company's first property.
 const seq = (prefix: string, n: number) => Array.from({ length: n }, (_, i) => `${prefix}${i + 1}`);
 const UNIT_PRESETS = [
-  { label: 'A1–A4', labels: seq('A', 4) },
   { label: 'A1–A8', labels: seq('A', 8) },
+  { label: '1–10', labels: Array.from({ length: 10 }, (_, i) => String(i + 1)) },
+  { label: 'House 1–6', labels: seq('House ', 6) },
   { label: 'A and B, 1–4 each', labels: [...seq('A', 4), ...seq('B', 4)] },
   { label: '3 floors × 4 flats', labels: [1, 2, 3].flatMap((f) => ['A', 'B', 'C', 'D'].map((l) => `${f}${l}`)) },
 ];
@@ -154,11 +155,19 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
           {UNIT_PRESETS.map((p) => (
             <button type="button" class="unit-preset-btn text-[11px] px-2.5 py-0.5 rounded-full bg-[#F4F5F1] text-[#0D382B] hover:bg-[#E7EAE4] transition-colors cursor-pointer" data-labels={p.labels.join(',')}>{p.label}</button>
           ))}
+          <button type="button" id="toggle-custom-numbering" class="text-[11px] px-2.5 py-0.5 rounded-full border border-[#DCE0D7] text-[#5A6862] hover:text-[#0D382B] hover:bg-[#F4F5F1] transition-colors cursor-pointer">+ My own numbering</button>
+        </div>
+        <div id="custom-numbering-box" class="hidden mb-3 p-3 rounded-2xl bg-[#F8F9F6] border border-[#E3E6DF] space-y-2">
+          <p class="text-[11px] text-[#73827C]">Type your own labels separated by commas, or a range with a prefix such as H1-H10. Every label stays editable below.</p>
+          <div class="flex items-center gap-2">
+            <input id="custom-numbering-input" type="text" aria-label="Your unit labels" placeholder="Comma-separated labels or a range" class="flex-1 min-w-0 px-3 py-1.5 rounded-xl border border-[#DCE0D7] bg-white text-xs text-[#17231E] outline-none focus:border-[#0D382B]" />
+            <button type="button" id="apply-custom-numbering" class="px-3.5 py-1.5 rounded-xl bg-[#0D382B] text-white text-xs font-semibold hover:bg-[#154637] transition-all cursor-pointer">Fill units</button>
+          </div>
         </div>
         <div id="unit-rows" class="space-y-2"></div>
         <template id="unit-row-template">
           <div class="unit-row grid grid-cols-[1fr_auto_auto] gap-2 items-center">
-            <input class={`unit-label ${inputClass}`} maxlength="10" placeholder="Unit label (such as A1)" aria-label="Unit label" />
+            <input class={`unit-label ${inputClass}`} maxlength="40" placeholder="Any label you use" aria-label="Unit label" />
             <select class={`unit-beds ${inputClass} w-28`} aria-label="Bedrooms">
               {bedroomOptions.map((b) => <option value={b}>{bedLabel(b)}</option>)}
             </select>
@@ -348,6 +357,39 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
         updatePrefixExample();
       };
     });
+
+    const customBox = document.getElementById('custom-numbering-box');
+    const customInput = document.getElementById('custom-numbering-input') as HTMLInputElement | null;
+    const toggleCustom = document.getElementById('toggle-custom-numbering');
+    if (toggleCustom && customBox) {
+      toggleCustom.onclick = () => {
+        customBox.classList.toggle('hidden');
+        if (!customBox.classList.contains('hidden')) customInput?.focus();
+      };
+    }
+    const applyCustom = document.getElementById('apply-custom-numbering');
+    if (applyCustom && customInput) {
+      applyCustom.onclick = () => {
+        const value = customInput.value.trim();
+        if (!value) return;
+        let labels: string[] = [];
+        const range = value.match(/^(.*?)(\d+)\s*-\s*\1?(\d+)$/);
+        if (range && !value.includes(',')) {
+          const [, prefix, from, to] = range;
+          const start = Number(from);
+          const end = Number(to);
+          if (end >= start && end - start < 200) {
+            labels = Array.from({ length: end - start + 1 }, (_, i) => `${prefix}${start + i}`);
+          }
+        }
+        if (!labels.length) labels = value.split(/[,;\n]+/).map((s) => s.trim()).filter(Boolean);
+        labels = labels.map((l) => l.slice(0, 40));
+        rows!.innerHTML = '';
+        labels.forEach((l) => addRow(l));
+        updatePrefixExample();
+        customBox?.classList.add('hidden');
+      };
+    }
     document.querySelectorAll<HTMLButtonElement>('.rate-preset-btn').forEach((btn) => {
       btn.onclick = () => {
         (document.getElementById('property-water') as HTMLInputElement).value = btn.dataset.water ?? '';

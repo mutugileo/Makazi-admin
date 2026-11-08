@@ -5,7 +5,7 @@ import { notifyTenancy } from '../../lib/realtime';
 import { parseKenyanPhone } from '../../lib/tenant-auth';
 import { clearLiveCache } from '../../data/portfolio';
 
-const STATUSES = new Set(['open', 'in_progress', 'resolved']);
+const STATUSES = new Set(['open', 'in_progress', 'resolved', 'voided']);
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -67,8 +67,10 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     if (resolutionNote !== undefined) {
       const note = typeof resolutionNote === 'string' ? resolutionNote.trim() : '';
       updateData.resolution_note = note ? note.slice(0, 2000) : null;
+    } else if (status === 'voided') {
+      updateData.resolution_note = 'Voided by property manager as irrelevant or invalid';
     }
-    if (status === 'resolved') updateData.resolved_at = new Date().toISOString();
+    if (status === 'resolved' || status === 'voided') updateData.resolved_at = new Date().toISOString();
 
     const { data: updated, error } = await supabase
       .from('repair_tickets')

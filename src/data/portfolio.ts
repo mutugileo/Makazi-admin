@@ -58,7 +58,7 @@ function createEmptySeed(companyId: string): Seed {
       bankAccount: '',
       settings: {
         ledgerStartMonth: '2026-10',
-        dueDay: 5,
+        dueDay: 4,
         graceDay: 20,
         depositSchedule: {},
         recordRetentionMonths: 6,
@@ -539,6 +539,7 @@ function buildPortfolio(companyId: string, seedOverride?: Seed) {
     open: tickets.filter((t) => t.ticket.status === 'open'),
     inProgress: tickets.filter((t) => t.ticket.status === 'in_progress'),
     resolved: tickets.filter((t) => t.ticket.status === 'resolved'),
+    voided: tickets.filter((t) => t.ticket.status === 'voided'),
   };
 
   const repairStats = {
