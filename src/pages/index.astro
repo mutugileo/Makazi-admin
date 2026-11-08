@@ -9,7 +9,7 @@ import LeasesActionCard from '../components/dashboard/LeasesActionCard.astro';
 import { FEATURES } from '../config/features';
 import GetStartedCard from '../components/dashboard/GetStartedCard.astro';
 import { getPortfolio, monthLabel, selectableMonths, viewMonthFrom } from '../data/portfolio';
-import { ChevronDown, Plus, Sparkles } from '@lucide/astro';
+import { ChevronDown, Plus, Sparkles, FileSpreadsheet } from '@lucide/astro';
 
 // This company's data only (the signed-in user's).
 const companyId = Astro.locals.user!.companyId;
@@ -87,9 +87,10 @@ const greeting = 'Habari';
     </div>
     <div class="flex items-center gap-2.5 shrink-0 self-start md:self-auto">
       <a
-        href="/properties"
+        href="/properties?action=bulk-import"
         class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#C6EE58] text-[#0A261F] text-xs font-semibold hover:bg-[#b8e248] transition-all cursor-pointer shadow-xs"
       >
+        <FileSpreadsheet class="w-3.5 h-3.5 text-[#0A261F]" />
         <span>Bulk import units</span>
       </a>
       <a

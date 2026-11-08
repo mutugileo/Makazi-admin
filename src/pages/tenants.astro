@@ -3,9 +3,10 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
 import MoveOutModal from '../components/dashboard/MoveOutModal.astro';
 import ResetPasswordModal from '../components/dashboard/ResetPasswordModal.astro';
 import EditTenantModal from '../components/dashboard/EditTenantModal.astro';
+import BulkImportModal from '../components/dashboard/BulkImportModal.astro';
 import StatusBadge from '../components/ui/StatusBadge.astro';
 import { getPortfolio, bedLabel, formatDate, formatKes } from '../data/portfolio';
-import { Plus, ChevronDown, FileText, KeyRound, Pencil } from '@lucide/astro';
+import { Plus, ChevronDown, FileText, KeyRound, Pencil, FileSpreadsheet } from '@lucide/astro';
 
 // This company's data only (the signed-in user's).
 const { activeTenancies, formerTenancies, lastReading, portfolioSummary, propertyViews, stats, asOf, currentPeriod } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
@@ -43,6 +44,16 @@ const searchText = (parts: string[]) => parts.join(' ').toLowerCase();
         <KeyRound class="w-3.5 h-3.5 text-[#0D382B]" />
         <span>Reset Tenant PIN</span>
       </a>
+
+      <button
+        type="button"
+        id="bulk-import-btn"
+        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white border border-[#E3E6DF] text-xs font-semibold text-[#0D382B] shadow-xs hover:border-[#0D382B] transition-colors cursor-pointer"
+        title="Import multiple units and tenants via CSV"
+      >
+        <FileSpreadsheet class="w-4 h-4 text-[#0D382B]" />
+        <span>Bulk import</span>
+      </button>
 
       <button
         type="button"
@@ -298,6 +309,7 @@ const searchText = (parts: string[]) => parts.join(' ').toLowerCase();
   <MoveOutModal />
   <ResetPasswordModal />
   <EditTenantModal />
+  <BulkImportModal />
 </DashboardLayout>
 
 <script>

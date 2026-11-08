@@ -1,5 +1,5 @@
 ---
-import { X, FileSpreadsheet, Download, Upload, Check, Building2, Users } from '@lucide/astro';
+import { X, FileSpreadsheet, Download, Upload, Check, Building2, Users, Info, ChevronDown } from '@lucide/astro';
 import { getPortfolio } from '../../data/portfolio';
 
 const { seed } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
@@ -40,20 +40,65 @@ const managers = seed.staff
     <!-- Modal Body (Scrollable) -->
     <div class="flex-1 min-h-0 overflow-y-auto p-6 space-y-6">
       <!-- Download Template Banner -->
-      <div class="p-4 rounded-2xl bg-[#F8F9F6] border border-[#E3E6DF] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div class="p-4.5 rounded-2xl bg-[#F8F9F6] border border-[#E3E6DF] flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h4 class="text-xs font-semibold text-[#0D382B] uppercase tracking-wider">Need the standard spreadsheet format?</h4>
-          <p class="text-xs text-[#5A6862] mt-0.5">Download our pre-formatted template with Kenyan column examples and water readings.</p>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-[#EBF0EC] text-[#0D382B] text-[10px] font-bold uppercase tracking-wider">
+              Standard Format
+            </span>
+            <h4 class="text-xs font-semibold text-[#0D382B] uppercase tracking-wider">Download Pre-formatted CSV Template</h4>
+          </div>
+          <p class="text-xs text-[#5A6862]">Download the official Makazi spreadsheet, fill in your properties and tenancies, and upload below.</p>
         </div>
-        <a
-          href="/api/download-template"
-          download
-          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-[#DCE0D7] hover:border-[#0D382B] text-xs font-semibold text-[#0D382B] transition-colors shadow-2xs shrink-0 self-start sm:self-auto cursor-pointer"
-        >
-          <Download class="w-3.5 h-3.5 text-[#0D382B]" />
-          <span>Download CSV template</span>
-        </a>
+        <div class="flex items-center gap-2 shrink-0 flex-wrap">
+          <a
+            href="/api/download-template"
+            download="makazi_bulk_property_template.csv"
+            class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-[#DCE0D7] hover:border-[#0D382B] text-xs font-semibold text-[#0D382B] transition-colors shadow-2xs cursor-pointer"
+            title="Download CSV pre-filled with sample Kenyan apartments and houses"
+          >
+            <Download class="w-3.5 h-3.5 text-[#0D382B]" />
+            <span>Sample template (with data)</span>
+          </a>
+          <a
+            href="/api/download-template?type=blank"
+            download="makazi_bulk_property_blank_template.csv"
+            class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#0D382B] hover:bg-[#08221A] text-xs font-semibold text-white transition-colors shadow-2xs cursor-pointer"
+            title="Download clean CSV header row for direct data entry"
+          >
+            <Download class="w-3.5 h-3.5 text-[#C6EE58]" />
+            <span>Blank template (headers only)</span>
+          </a>
+        </div>
       </div>
+
+      <!-- Format Guide Accordion -->
+      <details class="group rounded-2xl bg-[#FAFBF9] border border-[#E3E6DF] p-3 text-xs">
+        <summary class="flex items-center justify-between font-semibold text-[#0D382B] cursor-pointer select-none">
+          <span class="flex items-center gap-2">
+            <Info class="w-4 h-4 text-[#69847A]" />
+            <span>Spreadsheet column requirements & guidelines</span>
+          </span>
+          <ChevronDown class="w-4 h-4 text-[#69847A] group-open:rotate-180 transition-transform duration-200" />
+        </summary>
+        <div class="mt-3 pt-3 border-t border-[#E3E6DF] grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px] text-[#5A6862]">
+          <div class="space-y-1.5">
+            <p><strong class="text-[#17231E]">Property Name*</strong>: Name of building or estate (e.g. Kilimani Heights)</p>
+            <p><strong class="text-[#17231E]">Property Type</strong>: <code class="font-mono bg-white px-1 py-0.5 rounded border border-[#E3E6DF]">apartments</code> or <code class="font-mono bg-white px-1 py-0.5 rounded border border-[#E3E6DF]">houses</code></p>
+            <p><strong class="text-[#17231E]">Unit Label*</strong>: Door / house / apt number (e.g. A1, 104, Villa 2)</p>
+            <p><strong class="text-[#17231E]">Bedrooms</strong>: 0 for bedsitter/studio, 1, 2, 3, 4</p>
+            <p><strong class="text-[#17231E]">Monthly Rent (KES)*</strong>: Positive monthly rent figure</p>
+            <p><strong class="text-[#17231E]">Deposit (KES)</strong>: Security deposit (defaults to 1 month rent if empty)</p>
+          </div>
+          <div class="space-y-1.5">
+            <p><strong class="text-[#17231E]">Listed</strong>: <code class="font-mono bg-white px-1 py-0.5 rounded border border-[#E3E6DF]">yes</code> to publish vacancy, <code class="font-mono bg-white px-1 py-0.5 rounded border border-[#E3E6DF]">no</code> if occupied</p>
+            <p><strong class="text-[#17231E]">Tenant Name & Phone</strong>: Required for occupied units. Kenyan phone format: 07XXXXXXXX or 01XXXXXXXX</p>
+            <p><strong class="text-[#17231E]">Move In Date</strong>: Tenancy start in <code class="font-mono bg-white px-1 py-0.5 rounded border border-[#E3E6DF]">YYYY-MM-DD</code> format</p>
+            <p><strong class="text-[#17231E]">Opening Balance</strong>: Prior arrears or advance payment (+/- KES, 0 if clean)</p>
+            <p><strong class="text-[#17231E]">Opening Water Reading</strong>: Current water meter reading in m³</p>
+          </div>
+        </div>
+      </details>
 
       <!-- File Dropzone -->
       <div>
@@ -174,7 +219,7 @@ const managers = seed.staff
 <script>
   function initBulkImportModal() {
     const modal = document.getElementById('bulk-import-modal');
-    const openBtn = document.getElementById('bulk-import-btn');
+    const openBtns = document.querySelectorAll('#bulk-import-btn, [data-open-bulk-import]');
     const closeBtn = document.getElementById('bulk-import-close-btn');
     const cancelBtn = document.getElementById('bulk-import-cancel-btn');
     const dropzone = document.getElementById('csv-dropzone');
@@ -210,9 +255,14 @@ const managers = seed.staff
       inner?.classList.add('scale-95');
     }
 
-    openBtn?.addEventListener('click', openModal);
+    openBtns.forEach((btn) => btn.addEventListener('click', openModal));
     closeBtn?.addEventListener('click', closeModal);
     cancelBtn?.addEventListener('click', closeModal);
+
+    // Auto-open if redirected with ?action=bulk-import
+    if (new URLSearchParams(window.location.search).get('action') === 'bulk-import') {
+      openModal();
+    }
 
     modal?.addEventListener('click', (e) => {
       if (e.target === modal) closeModal();
