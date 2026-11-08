@@ -72,6 +72,12 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     }
     if (status === 'resolved' || status === 'voided') updateData.resolved_at = new Date().toISOString();
 
+    if (body.photoUrl !== undefined) {
+      const p = typeof body.photoUrl === 'string' ? body.photoUrl.trim() : null;
+      updateData.photo_url = p;
+      updateData.has_photo = Boolean(p);
+    }
+
     const { data: updated, error } = await supabase
       .from('repair_tickets')
       .update(updateData)

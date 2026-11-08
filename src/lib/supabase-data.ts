@@ -147,21 +147,47 @@ const mapStaff = (r: StaffRow): StaffMember => ({
   phone: r.phone, propertyIds: r.property_ids ?? [],
 });
 
-const repairPhotoUrl = (path: string | null | undefined): string | null => {
-  const base = import.meta.env.PUBLIC_SUPABASE_URL;
-  if (!path || !base || !/^[\w-]+\/[\w-]+\/[\w-]+\.[A-Za-z0-9]{1,5}$/.test(path)) return null;
-  return `${base}/storage/v1/object/public/repair-photos/${path}`;
+const repairPhotoUrl = (
+  path: string | null | undefined,
+  companyId?: string,
+  tenancyId?: string,
+  ticketId?: string,
+  hasPhoto?: boolean,
+): string | null => {
+  const base = import.meta.env.PUBLIC_SUPABASE_URL || 'https://gdapdyvgppatnjksbdco.supabase.co';
+  if (path) {
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    const clean = path.replace(/^\/+/, '');
+    return `${base}/storage/v1/object/public/repair-photos/${clean}`;
+  }
+  if (hasPhoto && companyId && tenancyId && ticketId) {
+    return `${base}/storage/v1/object/public/repair-photos/${companyId}/${tenancyId}/${ticketId}.jpg`;
+  }
+  return null;
 };
 
-const mapTicket = (r: RepairTicketRow): RepairTicket => ({
-  id: r.id, companyId: r.company_id, tenancyId: r.tenancy_id, unitId: r.unit_id,
-  category: r.category, priority: r.priority, status: r.status,
-  title: r.title, description: r.description, hasPhoto: r.has_photo,
-  photoUrl: repairPhotoUrl(r.photo_url),
-  createdAt: nairobiIso(r.created_at), resolvedAt: r.resolved_at ? nairobiIso(r.resolved_at) : null,
-  assignedTo: r.assigned_to, resolutionNote: r.resolution_note,
-  assignedPhone: r.assigned_phone ?? null, visitAt: r.visit_at ? nairobiIso(r.visit_at) : null,
-});
+const mapTicket = (r: RepairTicketRow): RepairTicket => {
+  const photo = repairPhotoUrl(r.photo_url, r.company_id, r.tenancy_id, r.id, r.has_photo);
+  return {
+    id: r.id,
+    companyId: r.company_id,
+    tenancyId: r.tenancy_id,
+    unitId: r.unit_id,
+    category: r.category,
+    priority: r.priority,
+    status: r.status,
+    title: r.title,
+    description: r.description,
+    hasPhoto: Boolean(r.has_photo || photo),
+    photoUrl: photo,
+    createdAt: nairobiIso(r.created_at),
+    resolvedAt: r.resolved_at ? nairobiIso(r.resolved_at) : null,
+    assignedTo: r.assigned_to,
+    resolutionNote: r.resolution_note,
+    assignedPhone: r.assigned_phone ?? null,
+    visitAt: r.visit_at ? nairobiIso(r.visit_at) : null,
+  };
+};
 
 const mapMessage = (r: MessageRow): Message => ({
   id: r.id, companyId: r.company_id, tenancyId: r.tenancy_id,
