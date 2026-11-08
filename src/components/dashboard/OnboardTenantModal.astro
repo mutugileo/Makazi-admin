@@ -1,21 +1,29 @@
 ---
-import { X, UserPlus } from '@lucide/astro';
+import { X, UserPlus, Building, Sparkles } from '@lucide/astro';
 import { getPortfolio, bedLabel } from '../../data/portfolio';
 import { FEATURES } from '../../config/features';
 
 // This company's data only (the signed-in user's).
 const { depositSchedule, lastReading, propertyViews, asOf } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
 
-const vacantUnits = propertyViews.flatMap((p) =>
-  p.units
+// Serialized property and unit preset data for client-side interactivity
+const propertiesData = propertyViews.map((p) => ({
+  id: p.property.id,
+  name: p.property.name,
+  typeLabel: p.typeLabel,
+  accountPrefix: p.property.accountPrefix,
+  waterRate: p.property.waterRate,
+  garbageFee: p.property.garbageFee,
+  vacantUnits: p.units
     .filter((u) => !u.occupant)
     .map((u) => ({
-      property: p.property,
-      unit: u.unit,
+      id: u.unit.id,
+      label: u.unit.label,
+      bedrooms: u.unit.bedrooms,
       reading: lastReading(u.unit.id).value,
       deposit: depositSchedule[String(u.unit.bedrooms)] ?? 0,
     })),
-);
+}));
 
 // Default move-in: the 1st of next month.
 const [y, m] = asOf.split('-').map(Number);
@@ -44,7 +52,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
           <h3 id="onboard-modal-title" class="font-editorial text-2xl font-normal text-[#17231E]">
             Onboard new tenant
           </h3>
-          <p class="text-xs text-[#73827C]">Move into a vacant unit. First bill: deposit plus rent for the days left in the month.</p>
+          <p class="text-xs text-[#73827C]">Set alphanumeric unit presets, assign account prefixes, and issue move-in bills.</p>
         </div>
       </div>
       <button
@@ -71,37 +79,105 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
         </div>
         <div>
           <label for="tenant-email" class={labelClass}>Email <span class="normal-case font-normal">(optional)</span></label>
-          <input type="email" id="tenant-email" placeholder="For receipts" class={inputClass} />
+          <input type="email" id="tenant-email" placeholder="For digital receipts" class={inputClass} />
         </div>
       </div>
 
-      <div>
-        <label for="tenant-unit" class={labelClass}>Vacant unit</label>
-        {vacantUnits.length === 0 ? (
-          <p class="text-sm text-[#73827C]">
-            {propertyViews.length === 0
-              ? <>No units yet. <a href="/properties" class="font-semibold text-[#0D382B] hover:underline">Add a property</a> with its units first.</>
-              : 'No vacant units. Add units to a property or move a tenant out first.'}
-          </p>
-        ) : (
-          <select id="tenant-unit" required class={inputClass}>
-            {propertyViews.filter((p) => p.vacant > 0).map((p) => (
-              <optgroup label={`${p.property.name} · ${p.typeLabel}`}>
-                {vacantUnits.filter((v) => v.property.id === p.property.id).map((v) => (
-                  <option
-                    value={v.unit.id}
-                    data-garbage={v.property.garbageFee}
-                    data-water-rate={v.property.waterRate}
-                    data-reading={v.reading}
-                    data-deposit={v.deposit}
-                  >
-                    {v.unit.label} · {bedLabel(v.unit.bedrooms)} · {v.property.name}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
-        )}
+      <!-- Property & Unit Mode Selectors -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label for="tenant-property-select" class={labelClass}>Property & Account Prefix</label>
+          {propertiesData.length === 0 ? (
+            <p class="text-xs text-[#73827C]">
+              No properties yet. <a href="/properties" class="font-semibold text-[#0D382B] hover:underline">Add property</a> first.
+            </p>
+          ) : (
+            <select id="tenant-property-select" required class={inputClass}>
+              {propertiesData.map((p) => (
+                <option value={p.id}>
+                  {p.name} · Prefix: {p.accountPrefix}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        <div>
+          <label class={labelClass}>Unit Selection Mode</label>
+          <div class="flex items-center gap-1.5 p-1 bg-[#F4F5F1] rounded-xl border border-[#DCE0D7]">
+            <button
+              type="button"
+              id="unit-mode-preset-btn"
+              class="flex-1 py-1.5 px-2.5 rounded-lg text-xs font-semibold bg-white text-[#0D382B] shadow-2xs transition-all cursor-pointer"
+            >
+              Unit Presets
+            </button>
+            <button
+              type="button"
+              id="unit-mode-custom-btn"
+              class="flex-1 py-1.5 px-2.5 rounded-lg text-xs font-semibold text-[#5A6862] hover:text-[#0D382B] transition-all cursor-pointer"
+            >
+              + Custom Unit
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Unit Presets Dropdown Container -->
+      <div id="unit-preset-container">
+        <label for="tenant-unit" class={labelClass}>Admin Unit Preset</label>
+        <select id="tenant-unit" class={inputClass}>
+          <!-- Dynamically populated based on selected property -->
+        </select>
+        <p id="no-vacant-text" class="hidden text-xs text-[#C04A26] mt-1 font-medium">
+          No vacant units in this property. Switch to "+ Custom Unit" to enter an alphanumeric unit directly.
+        </p>
+      </div>
+
+      <!-- Custom Alphanumeric Unit Entry Container (hidden by default) -->
+      <div id="unit-custom-container" class="hidden space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="tenant-custom-label" class={labelClass}>Alphanumeric Unit Label</label>
+            <input
+              type="text"
+              id="tenant-custom-label"
+              placeholder="e.g. A1, 102, B-4, Villa 1"
+              maxlength="40"
+              class={inputClass}
+            />
+            <p class="text-[11px] text-[#73827C] mt-1">Letters, numbers, and dashes allowed.</p>
+          </div>
+          <div>
+            <label for="tenant-custom-bedrooms" class={labelClass}>Bedrooms</label>
+            <select id="tenant-custom-bedrooms" class={inputClass}>
+              <option value="0">Bedsitter / Studio</option>
+              <option value="1" selected>1 Bedroom</option>
+              <option value="2">2 Bedrooms</option>
+              <option value="3">3 Bedrooms</option>
+              <option value="4">4 Bedrooms</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live M-Pesa Paybill Account Preset Card -->
+      <div class="p-3.5 rounded-2xl bg-[#F8F9F7] border border-[#E3E6DF] flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="h-9 w-9 rounded-xl bg-[#0D382B] text-[#C6EE58] flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
+            <span id="badge-prefix">—</span>
+          </div>
+          <div>
+            <p class="text-[10px] uppercase font-bold text-[#69847A] tracking-wider">M-Pesa Account Reference</p>
+            <p class="text-sm font-mono font-bold text-[#0D382B]" id="preview-account-ref">—</p>
+          </div>
+        </div>
+        <div class="text-right">
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#DCFCE7] text-[#16A34A] border border-[#BBF7D0]">
+            Alphanumerical
+          </span>
+          <p class="text-[10px] text-[#73827C] mt-0.5">Paybill rent account</p>
+        </div>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -112,7 +188,9 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
         <div>
           <label for="tenant-deposit" class={labelClass}>Deposit (KES)</label>
           <input type="number" id="tenant-deposit" required min="0" step="1" inputmode="numeric" placeholder="Set by bedrooms" class={`${inputClass} tabular-nums`} />
-          <p class="text-[11px] text-[#73827C] mt-1">{Object.entries(depositSchedule).map(([b, amount]) => `${bedLabel(Number(b))}: KES ${amount.toLocaleString('en-KE')}`).join(' · ')}</p>
+          <p class="text-[11px] text-[#73827C] mt-1" id="deposit-schedule-hint">
+            {Object.entries(depositSchedule).map(([b, amount]) => `${bedLabel(Number(b))}: KES ${amount.toLocaleString('en-KE')}`).join(' · ')}
+          </p>
         </div>
       </div>
 
@@ -124,7 +202,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
         <div>
           <label for="tenant-opening-reading" class={labelClass}>Opening water reading <span class="normal-case font-normal">(optional)</span></label>
           <input type="number" id="tenant-opening-reading" min="0" step="1" inputmode="numeric" placeholder="Baseline for next bill" class={`${inputClass} tabular-nums`} />
-          <p class="text-[11px] text-[#73827C] mt-1">Starting meter baseline; water usage is billed next month</p>
+          <p class="text-[11px] text-[#73827C] mt-1">Starting meter baseline; usage is billed next month</p>
         </div>
       </div>
 
@@ -178,177 +256,343 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
   </div>
 </div>
 
-<script>
-  import { setBusy } from '../../lib/busy';
+<script define:vars={{ propertiesData, depositSchedule }}>
+  function initOnboardModal() {
+    const form = document.getElementById('onboard-tenant-form');
+    const nameInput = document.getElementById('tenant-full-name');
+    const phoneInput = document.getElementById('tenant-phone');
+    const emailInput = document.getElementById('tenant-email');
+    const propertySelect = document.getElementById('tenant-property-select');
+    const unitSelect = document.getElementById('tenant-unit');
+    const unitPresetContainer = document.getElementById('unit-preset-container');
+    const unitCustomContainer = document.getElementById('unit-custom-container');
+    const unitModePresetBtn = document.getElementById('unit-mode-preset-btn');
+    const unitModeCustomBtn = document.getElementById('unit-mode-custom-btn');
+    const customLabelInput = document.getElementById('tenant-custom-label');
+    const customBedroomsSelect = document.getElementById('tenant-custom-bedrooms');
+    const badgePrefix = document.getElementById('badge-prefix');
+    const previewAccountRef = document.getElementById('preview-account-ref');
+    const noVacantText = document.getElementById('no-vacant-text');
 
-  const form = document.getElementById('onboard-tenant-form') as HTMLFormElement | null;
-  const unitSelect = document.getElementById('tenant-unit') as HTMLSelectElement | null;
-  const rentInput = document.getElementById('tenant-rent') as HTMLInputElement | null;
-  const depositInput = document.getElementById('tenant-deposit') as HTMLInputElement | null;
-  const readingInput = document.getElementById('tenant-opening-reading') as HTMLInputElement | null;
-  const moveInInput = document.getElementById('tenant-move-in') as HTMLInputElement | null;
-  const garbageInput = document.getElementById('tenant-garbage') as HTMLInputElement | null;
-  const kes = (n: number) => `KES ${n.toLocaleString('en-KE')}`;
-  let depositTouched = false;
-  let garbageTouched = false;
+    const rentInput = document.getElementById('tenant-rent');
+    const depositInput = document.getElementById('tenant-deposit');
+    const readingInput = document.getElementById('tenant-opening-reading');
+    const moveInInput = document.getElementById('tenant-move-in');
+    const garbageInput = document.getElementById('tenant-garbage');
 
-  function selectedUnit() {
-    return unitSelect?.selectedOptions[0] ?? null;
-  }
+    let currentMode = 'preset'; // 'preset' or 'custom'
+    let depositTouched = false;
+    let garbageTouched = false;
 
-  function syncUnit() {
-    const option = selectedUnit();
-    if (!option) return;
-    if (readingInput) {
-      readingInput.value = option.dataset.reading ?? '';
-      readingInput.min = option.dataset.reading ?? '0';
+    const kes = (n) => `KES ${n.toLocaleString('en-KE')}`;
+
+    function getSelectedProperty() {
+      const propId = propertySelect?.value;
+      return propertiesData.find((p) => p.id === propId) || propertiesData[0] || null;
     }
-    if (depositInput && !depositTouched) depositInput.value = option.dataset.deposit ?? '';
-    if (garbageInput && !garbageTouched) garbageInput.value = '';
-  }
 
-  // Same rule as proratedRent in lib/billing.ts.
-  function prorate(rent: number, iso: string): { amount: number; days: number; of: number } {
-    const [y, m, d] = iso.split('-').map(Number);
-    const of = new Date(Date.UTC(y, m, 0)).getUTCDate();
-    const days = of - d + 1;
-    return days >= of || !d ? { amount: rent, days: of, of } : { amount: Math.round((rent * days) / of), days, of };
-  }
+    function populateUnitsForProperty() {
+      const prop = getSelectedProperty();
+      if (!unitSelect || !prop) return;
 
-  function updatePreview() {
-    const rent = Number(rentInput?.value) || 0;
-    const deposit = Number(depositInput?.value) || 0;
-    const prorated = prorate(rent, moveInInput?.value ?? '');
-    const garbageVal = garbageInput?.value?.trim();
-    const garbage = garbageVal !== '' && garbageVal != null
-      ? Math.max(0, Number(garbageVal) || 0)
-      : 0;
-    const set = (id: string, text: string) => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = text;
-    };
-    set('preview-deposit', rent || deposit ? kes(deposit) : '—');
-    set('preview-rent', rent ? kes(prorated.amount) : '—');
-    set('preview-rent-days', rent && prorated.days < prorated.of ? `(${prorated.days} of ${prorated.of} days)` : '');
-    set('preview-garbage', unitSelect ? (garbage > 0 ? kes(garbage) : 'KES 0') : '—');
-    set('preview-total', rent ? kes(deposit + prorated.amount + garbage) : '—');
-  }
+      unitSelect.innerHTML = '';
+      const units = prop.vacantUnits || [];
 
-  unitSelect?.addEventListener('change', () => {
-    syncUnit();
-    updatePreview();
-  });
-  rentInput?.addEventListener('input', updatePreview);
-  moveInInput?.addEventListener('input', updatePreview);
-  depositInput?.addEventListener('input', () => {
-    depositTouched = depositInput.value !== '';
-    updatePreview();
-  });
-  garbageInput?.addEventListener('input', () => {
-    garbageTouched = garbageInput.value !== '';
-    updatePreview();
-  });
+      if (units.length === 0) {
+        if (noVacantText) noVacantText.classList.remove('hidden');
+        const emptyOption = document.createElement('option');
+        emptyOption.value = '';
+        emptyOption.textContent = 'No vacant units in this property';
+        unitSelect.appendChild(emptyOption);
+      } else {
+        if (noVacantText) noVacantText.classList.add('hidden');
+        units.forEach((u) => {
+          const opt = document.createElement('option');
+          opt.value = u.id;
+          opt.dataset.label = u.label;
+          opt.dataset.bedrooms = String(u.bedrooms);
+          opt.dataset.reading = String(u.reading ?? 0);
+          opt.dataset.deposit = String(u.deposit ?? (depositSchedule[String(u.bedrooms)] || 0));
+          opt.textContent = `${u.label} · ${u.bedrooms === 0 ? 'Bedsitter' : `${u.bedrooms} Bed`} · Acc: ${prop.accountPrefix}-${u.label}`;
+          unitSelect.appendChild(opt);
+        });
+      }
 
-  form?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!form.reportValidity()) return;
-    const name = (document.getElementById('tenant-full-name') as HTMLInputElement).value.trim();
-    const phone = (document.getElementById('tenant-phone') as HTMLInputElement).value.trim();
-    const email = (document.getElementById('tenant-email') as HTMLInputElement).value.trim();
-    const unitId = unitSelect?.value ?? '';
-    const rent = Number(rentInput?.value) || 0;
-    const deposit = Number(depositInput?.value) || 0;
-    const moveIn = moveInInput?.value ?? '';
-    const readingVal = readingInput?.value?.trim();
-    const openingReading = readingVal !== '' && readingVal != null
-      ? Math.max(0, Number(readingVal) || 0)
-      : null;
-    const garbageVal = garbageInput?.value?.trim();
-    const moveInGarbage = garbageVal !== '' && garbageVal != null
-      ? Math.max(0, Math.round(Number(garbageVal) || 0))
-      : 0;
-    const leaseTerm = (document.getElementById('tenant-lease-term') as HTMLSelectElement | null)?.value ?? '12';
+      syncUnitFields();
+      updateAccountRefBadge();
+    }
 
-    const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
-    const restoreSubmit = setBusy(submitBtn);
+    function syncUnitFields() {
+      const prop = getSelectedProperty();
+      if (!prop) return;
 
-    try {
-      const res = await fetch('/api/onboard-tenant', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      if (currentMode === 'preset') {
+        const option = unitSelect?.selectedOptions[0];
+        if (!option || !option.value) return;
+
+        if (readingInput) {
+          readingInput.value = option.dataset.reading ?? '';
+          readingInput.min = option.dataset.reading ?? '0';
+        }
+        if (depositInput && !depositTouched) {
+          depositInput.value = option.dataset.deposit ?? (depositSchedule[option.dataset.bedrooms || '1'] || 0);
+        }
+      } else {
+        const beds = customBedroomsSelect?.value || '1';
+        if (depositInput && !depositTouched) {
+          depositInput.value = depositSchedule[beds] || (depositSchedule['1'] || 0);
+        }
+      }
+
+      if (garbageInput && !garbageTouched) {
+        garbageInput.value = '';
+      }
+    }
+
+    function updateAccountRefBadge() {
+      const prop = getSelectedProperty();
+      const prefix = prop ? prop.accountPrefix : '—';
+      if (badgePrefix) badgePrefix.textContent = prefix;
+
+      let unitLabel = '';
+      if (currentMode === 'preset') {
+        const option = unitSelect?.selectedOptions[0];
+        unitLabel = option?.dataset.label || option?.textContent?.split('·')[0]?.trim() || '';
+      } else {
+        unitLabel = customLabelInput?.value.trim().toUpperCase() || 'UNIT';
+      }
+
+      if (previewAccountRef) {
+        previewAccountRef.textContent = prefix && unitLabel ? `${prefix}-${unitLabel}` : `${prefix}-—`;
+      }
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+      if (mode === 'preset') {
+        unitPresetContainer?.classList.remove('hidden');
+        unitCustomContainer?.classList.add('hidden');
+
+        unitModePresetBtn?.classList.add('bg-white', 'text-[#0D382B]', 'shadow-2xs');
+        unitModePresetBtn?.classList.remove('text-[#5A6862]');
+
+        unitModeCustomBtn?.classList.remove('bg-white', 'text-[#0D382B]', 'shadow-2xs');
+        unitModeCustomBtn?.classList.add('text-[#5A6862]');
+      } else {
+        unitPresetContainer?.classList.add('hidden');
+        unitCustomContainer?.classList.remove('hidden');
+
+        unitModeCustomBtn?.classList.add('bg-white', 'text-[#0D382B]', 'shadow-2xs');
+        unitModeCustomBtn?.classList.remove('text-[#5A6862]');
+
+        unitModePresetBtn?.classList.remove('bg-white', 'text-[#0D382B]', 'shadow-2xs');
+        unitModePresetBtn?.classList.add('text-[#5A6862]');
+        setTimeout(() => customLabelInput?.focus(), 50);
+      }
+      syncUnitFields();
+      updateAccountRefBadge();
+      updatePreview();
+    }
+
+    unitModePresetBtn?.addEventListener('click', () => setMode('preset'));
+    unitModeCustomBtn?.addEventListener('click', () => setMode('custom'));
+
+    propertySelect?.addEventListener('change', () => {
+      populateUnitsForProperty();
+      updatePreview();
+    });
+
+    unitSelect?.addEventListener('change', () => {
+      syncUnitFields();
+      updateAccountRefBadge();
+      updatePreview();
+    });
+
+    customLabelInput?.addEventListener('input', () => {
+      updateAccountRefBadge();
+    });
+
+    customBedroomsSelect?.addEventListener('change', () => {
+      syncUnitFields();
+      updatePreview();
+    });
+
+    function prorate(rent, iso) {
+      const [y, m, d] = (iso || '').split('-').map(Number);
+      if (!y || !m || !d) return { amount: rent, days: 30, of: 30 };
+      const of = new Date(Date.UTC(y, m, 0)).getUTCDate();
+      const days = of - d + 1;
+      return days >= of || !d ? { amount: rent, days: of, of } : { amount: Math.round((rent * days) / of), days, of };
+    }
+
+    function updatePreview() {
+      const rent = Number(rentInput?.value) || 0;
+      const deposit = Number(depositInput?.value) || 0;
+      const prorated = prorate(rent, moveInInput?.value ?? '');
+      const garbageVal = garbageInput?.value?.trim();
+      const garbage = garbageVal !== '' && garbageVal != null ? Math.max(0, Number(garbageVal) || 0) : 0;
+
+      const set = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text;
+      };
+
+      set('preview-deposit', rent || deposit ? kes(deposit) : '—');
+      set('preview-rent', rent ? kes(prorated.amount) : '—');
+      set('preview-rent-days', rent && prorated.days < prorated.of ? `(${prorated.days} of ${prorated.of} days)` : '');
+      set('preview-garbage', garbage > 0 ? kes(garbage) : 'KES 0');
+      set('preview-total', rent ? kes(deposit + prorated.amount + garbage) : '—');
+    }
+
+    rentInput?.addEventListener('input', updatePreview);
+    moveInInput?.addEventListener('input', updatePreview);
+    depositInput?.addEventListener('input', () => {
+      depositTouched = depositInput.value !== '';
+      updatePreview();
+    });
+    garbageInput?.addEventListener('input', () => {
+      garbageTouched = garbageInput.value !== '';
+      updatePreview();
+    });
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!form.reportValidity()) return;
+
+      const name = nameInput?.value.trim() || '';
+      const phone = phoneInput?.value.trim() || '';
+      const email = emailInput?.value.trim() || '';
+      const propertyId = propertySelect?.value || '';
+      const rent = Number(rentInput?.value) || 0;
+      const deposit = Number(depositInput?.value) || 0;
+      const moveIn = moveInInput?.value ?? '';
+      const readingVal = readingInput?.value?.trim();
+      const openingReading = readingVal !== '' && readingVal != null ? Math.max(0, Number(readingVal) || 0) : null;
+      const garbageVal = garbageInput?.value?.trim();
+      const moveInGarbage = garbageVal !== '' && garbageVal != null ? Math.max(0, Math.round(Number(garbageVal) || 0)) : 0;
+      const leaseTerm = document.getElementById('tenant-lease-term')?.value ?? '12';
+
+      let unitId = '';
+      let unitLabel = '';
+      let bedrooms = 1;
+
+      if (currentMode === 'preset') {
+        unitId = unitSelect?.value || '';
+        if (!unitId) {
+          window.makaziUi?.showToast('Select a unit', 'Please select a vacant unit preset or switch to Custom Unit.');
+          return;
+        }
+      } else {
+        unitLabel = customLabelInput?.value.trim() || '';
+        if (!unitLabel) {
+          window.makaziUi?.showToast('Enter unit label', 'Please enter an alphanumeric unit label (e.g. A1, 102).');
+          customLabelInput?.focus();
+          return;
+        }
+        bedrooms = Number(customBedroomsSelect?.value) || 1;
+      }
+
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.setAttribute('aria-busy', 'true');
+        submitBtn.classList.add('shimmer');
+      }
+
+      try {
+        const payload = {
           name,
           phone,
           email,
-          unitId,
+          propertyId,
+          unitId: unitId || undefined,
+          unitLabel: unitLabel || undefined,
+          bedrooms,
           rent,
           deposit,
           moveIn,
           openingReading,
           moveInGarbage,
           leaseTerm,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok || data.error) {
-        throw new Error(data.error || 'Failed to onboard tenant');
-      }
-
-      window.makaziUi?.hideModal('onboard-tenant-modal');
-      const resetModal = document.getElementById('reset-password-modal');
-      if (resetModal && data.temporaryPassword) {
-        const setText = (field: string, text: string) => {
-          const el = resetModal.querySelector(`[data-field="${field}"]`);
-          if (el) el.textContent = text;
         };
-        const pin = data.pin || data.temporaryPassword;
-        const msg = `${resetModal.dataset.company || 'Makazi'}: your Makazi login PIN is ${pin}. Sign in with ${phone} on the Makazi app using this 4-digit PIN.`;
-        setText('who', `${name} · signs in with ${phone}`);
-        setText('password', pin);
-        setText('message', msg);
-        window.makaziUi?.showModal('reset-password-modal');
-      } else {
-        window.makaziUi?.showToast(
-          'Tenant onboarded',
-          `${name} onboarded. PIN: ${data.pin || data.temporaryPassword || 'Ready'}`,
-        );
-        setTimeout(() => window.location.reload(), 1500);
+
+        const res = await fetch('/api/onboard-tenant', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await res.json();
+        if (!res.ok || data.error) {
+          throw new Error(data.error || 'Failed to onboard tenant');
+        }
+
+        window.makaziUi?.hideModal('onboard-tenant-modal');
+        const resetModal = document.getElementById('reset-password-modal');
+        if (resetModal && data.temporaryPassword) {
+          const setText = (field, text) => {
+            const el = resetModal.querySelector(`[data-field="${field}"]`);
+            if (el) el.textContent = text;
+          };
+          const pin = data.pin || data.temporaryPassword;
+          const msg = `${resetModal.dataset.company || 'Makazi'}: your Makazi login PIN is ${pin}. Sign in with ${phone} on the Makazi app using this 4-digit PIN.`;
+          setText('who', `${name} · signs in with ${phone}`);
+          setText('password', pin);
+          setText('message', msg);
+          window.makaziUi?.showModal('reset-password-modal');
+        } else {
+          window.makaziUi?.showToast(
+            'Tenant onboarded',
+            `${name} onboarded successfully. PIN: ${data.pin || data.temporaryPassword || 'Ready'}`,
+          );
+          setTimeout(() => window.location.reload(), 1500);
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        window.makaziUi?.showToast('Error', msg);
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.removeAttribute('aria-busy');
+          submitBtn.classList.remove('shimmer');
+        }
       }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      window.makaziUi?.showToast('Error', msg);
-      if (submitBtn) {
-        restoreSubmit();
+    });
+
+    // Initialize first property and its units
+    populateUnitsForProperty();
+    updatePreview();
+
+    // Handle URL pre-fill when directed from Enquiries CRM
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('onboard') === 'true') {
+        const nameParam = urlParams.get('name');
+        const phoneParam = urlParams.get('phone');
+        const emailParam = urlParams.get('email');
+        const unitIdParam = urlParams.get('unitId');
+
+        if (nameParam && nameInput) nameInput.value = nameParam;
+        if (phoneParam && phoneInput) phoneInput.value = phoneParam;
+        if (emailParam && emailInput) emailInput.value = emailParam;
+        if (unitIdParam && unitSelect) {
+          unitSelect.value = unitIdParam;
+          syncUnitFields();
+          updateAccountRefBadge();
+          updatePreview();
+        }
+        setTimeout(() => {
+          window.makaziUi?.showModal('onboard-tenant-modal');
+        }, 100);
       }
+    } catch (err) {
+      // Non-blocking URL parse
     }
-  });
+  }
 
-  syncUnit();
-  updatePreview();
-
-  // Handle URL pre-fill when directed from Enquiries CRM
-  try {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('onboard') === 'true') {
-      const nameParam = urlParams.get('name');
-      const phoneParam = urlParams.get('phone');
-      const emailParam = urlParams.get('email');
-      const unitIdParam = urlParams.get('unitId');
-
-      if (nameParam && nameInput) nameInput.value = nameParam;
-      if (phoneParam && phoneInput) phoneInput.value = phoneParam;
-      if (emailParam && emailInput) emailInput.value = emailParam;
-      if (unitIdParam && unitSelect) {
-        unitSelect.value = unitIdParam;
-        syncUnit();
-        updatePreview();
-      }
-      setTimeout(() => {
-        window.makaziUi?.showModal('onboard-tenant-modal');
-      }, 100);
-    }
-  } catch (err) {
-    // Non-blocking URL parse
+  document.addEventListener('astro:page-load', initOnboardModal);
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    initOnboardModal();
+  } else {
+    document.addEventListener('DOMContentLoaded', initOnboardModal);
   }
 </script>
