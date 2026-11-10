@@ -6,7 +6,10 @@ import { getPortfolio, formatDate, formatKes, monthLabel } from '../data/portfol
 import { Download, Gauge } from '@lucide/astro';
 
 // This company's data only (the signed-in user's).
-const { billMonths, billRows, portfolioSummary, propertyViews, currentMonth, dueDay, graceDay } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+const { billMonths, billRows, portfolioSummary, propertyViews, currentMonth, dueDay, graceDay, asOf } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+
+// Test-only billing clock (see api/test-billing-clock.ts). Owner sees it when enabled.
+const testBillingEnabled = process.env.MAKAZI_TEST_BILLING === 'true' && Astro.locals.user?.role === 'owner';
 
 const billedMonths = [...new Set(billRows.map((r) => r.month))].sort();
 const latestBilledMonth = billedMonths[billedMonths.length - 1];
@@ -51,6 +54,14 @@ const td = 'py-3 px-3 whitespace-nowrap';
 ---
 
 <DashboardLayout title="Makazi — Monthly bills" currentPath="/bills">
+  {testBillingEnabled && (
+    <div class="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-dashed border-[#0D382B]/30 bg-white px-4 py-3">
+      <span class="text-xs font-semibold text-[#0D382B]">Test billing date: {formatDate(asOf)}</span>
+      <button type="button" id="test-advance-btn" class="px-4 py-2 rounded-full bg-[#0D382B] text-white text-xs font-semibold hover:opacity-90">Populate next rent</button>
+      <button type="button" id="test-reset-btn" class="px-4 py-2 rounded-full bg-white border border-[#E3E6DF] text-xs font-semibold text-[#0D382B] hover:border-[#0D382B]">Reset to today</button>
+      <span id="test-billing-status" class="text-xs text-[#69847A]" role="status" aria-live="polite"></span>
+    </div>
+  )}
   <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
     <div>
       <span class="text-xs font-semibold tracking-wider text-[#69847A] uppercase">{portfolioSummary}</span>
@@ -297,6 +308,27 @@ const td = 'py-3 px-3 whitespace-nowrap';
     if (exportBtn) exportBtn.onclick = exportCsv;
     const readingsBtn = document.getElementById('open-readings-btn');
     if (readingsBtn) readingsBtn.onclick = () => window.makaziUi?.showModal('readings-modal');
+
+    async function changeTestClock(action) {
+      const status = document.getElementById('test-billing-status');
+      if (status) status.textContent = 'Working…';
+      try {
+        const res = await fetch('/api/test-billing-clock', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error ?? 'Could not change the test date.');
+        window.location.reload();
+      } catch (err) {
+        if (status) status.textContent = err instanceof Error ? err.message : 'Could not change the test date.';
+      }
+    }
+    const advanceBtn = document.getElementById('test-advance-btn');
+    if (advanceBtn) advanceBtn.onclick = () => changeTestClock('advance');
+    const resetBtn = document.getElementById('test-reset-btn');
+    if (resetBtn) resetBtn.onclick = () => changeTestClock('reset');
 
     render();
   }

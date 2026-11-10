@@ -252,8 +252,6 @@ export async function fetchSeedFromSupabase(
   supabase: SupabaseClient,
   companyId: string,
 ): Promise<Seed> {
-  const asOf = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10); // today, Nairobi
-
   const [
     companiesRes,
     propertiesRes,
@@ -280,6 +278,11 @@ export async function fetchSeedFromSupabase(
 
   const companies = assertOk(companiesRes.data, companiesRes.error, 'companies').map(mapCompany);
   const propertyImages = (companiesRes.data?.[0]?.settings?.propertyImages ?? {}) as Record<string, string>;
+  // Test billing date set by the owner's test button; unset means today.
+  const testAsOf = companiesRes.data?.[0]?.settings?.testAsOf;
+  const asOf = typeof testAsOf === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(testAsOf)
+    ? testAsOf
+    : new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10); // today, Nairobi
   const properties = assertOk(propertiesRes.data, propertiesRes.error, 'properties').map((p) => mapProperty(p, propertyImages));
   const units = assertOk(unitsRes.data, unitsRes.error, 'units').map(mapUnit);
   const tenants = assertOk(tenantsRes.data, tenantsRes.error, 'tenants').map(mapTenant);
