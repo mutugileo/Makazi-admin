@@ -173,7 +173,15 @@ const td = 'py-3 px-3 whitespace-nowrap';
                 <td class={`${td} text-right text-[#69847A]`} title={bill.water ? `Meter ${bill.water.previousReading} → ${bill.water.currentReading}` : undefined}>
                   {bill.water ? bill.water.units : '—'}
                 </td>
-                <td class={`${td} text-right`}>{bill.water ? formatKes(bill.water.amount) : '—'}</td>
+                <td class={`${td} text-right`}>
+                  {bill.water ? (
+                    formatKes(bill.water.amount)
+                  ) : bill.kind === 'monthly' ? (
+                    <span class="text-[11px] font-semibold text-[#B78103]" title="Record this cycle's meter reading to bill water">Reading due</span>
+                  ) : (
+                    '—'
+                  )}
+                </td>
                 <td class={`${td} text-right`}>{bill.garbage ? formatKes(bill.garbage) : '—'}</td>
                 <td class={`${td} text-right ${depositCell < 0 ? 'text-[#1E40AF]' : ''}`}>
                   {depositCell ? formatKes(depositCell) : '—'}
