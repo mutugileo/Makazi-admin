@@ -31,7 +31,7 @@ surfaces implement. The tenant app (Flutter, repo root) and the admin
 | File | What it is |
 | --- | --- |
 | `billing-seed.json` | Everything both apps show, for every company: companies (settings, numbering, plan), properties, units, tenants, staff, tenancies, meter readings, payments, repair tickets and messages. |
-| `billing-expected.json` | Bills computed by the TypeScript engine. The Dart engine is tested against it (`test/unit/billing_parity_test.dart`). |
+| `test/fixtures/billing-fixture-expected.json` | Bills computed by the TypeScript engine from `test/fixtures/billing-fixture.json`; regenerate with `node PropAdmin/scripts/billing-parity.ts`. The Dart engine is tested against it (`test/unit/billing_parity_test.dart`). |
 | `seed/generate.ts` | Regenerates both files plus one app slice per demo tenant (`lib/core/billing/seed/tenant_seed.g.dart`). Each company has its own random stream, so adding a company never changes another's numbers. Run `node shared/seed/generate.ts` (Node 23.6+). |
 
 Engines: `PropAdmin/src/lib/billing.ts` and `lib/core/billing/billing_engine.dart`.
@@ -62,7 +62,7 @@ Change both together, regenerate, and run `flutter test`.
 | Garbage bill | `property.garbageFee` |
 | *(new)* Balance b/f | previous month's amount outstanding (negative = credit) |
 | Total due | balance b/f + this month's lines |
-| Amount paid, Date paid | payments dated in that month (date paid = latest) |
+| Amount paid, Date paid | payments made in that billing cycle (date paid = latest) |
 | Status | `Paid` (0 left), `Partial` (paid something, still owing), `Unpaid` (nothing paid), `Credit` (overpaid) |
 | Amount outstanding | total due − amount paid, carried to next month |
 
@@ -70,13 +70,13 @@ Change both together, regenerate, and run `flutter test`.
 
 HarborRidge's values are shown; each company sets its own in `company.settings`.
 
-1. **Bills are issued on the 1st, due on the 5th, overdue after the 20th** (`dueDay`, `graceDay`). Between the 5th and the 20th a bill is in its grace period: the tenant still owes it but isn't counted as overdue. No late fee.
+1. **Billing cycles start on the 4th** (`CYCLE_START_DAY`), from the December 2026 cycle (`FIRST_CYCLE_ON_START_DAY`); earlier cycles were calendar months, so bills already issued never move. A cycle runs to the 3rd of the next month and is named after the month it starts in (`cycleOf`), and a payment counts towards the cycle it was made in. Bills are due on `dueDay` and overdue after `graceDay`; between the two a bill is in its grace period: the tenant still owes it but isn't counted as overdue. No late fee.
 2. **Water on month M's bill is the previous month's use**: the caretaker's reading for the 1st of M minus the previous reading. The rate is set per property (currently KES 150 per unit everywhere).
 3. **Garbage** is a flat monthly fee set per property (currently KES 250 everywhere).
    **Rates are effective-dated** (`property.rateHistory`): each bill uses the water and garbage rates in force for its month, so changing a rate never re-prices past bills. In the demo, Ngong Road Residences moved from KES 130 to 150 per unit of water in September 2026.
 4. **Rent, water and garbage are paid to the same account** (Paybill, account = unit code). There is no separate water deposit.
 5. **Deposit by unit size** (`depositSchedule`): KES 25,000 for 1 bedroom, KES 30,000 for 2 bedrooms.
-6. **Move-in bill**: deposit + rent for the days left in the month, counting the move-in day (`rent × days ÷ days in month`, rounded to the shilling) + garbage. No water yet; the move-in meter reading is the opening reading. Normal bills start the month after.
+6. **Move-in bill**: deposit + the move-in rent the landlord enters for the days until the next cycle (`tenancy.moveInRent`; none means a full month's rent) + garbage. No water yet; the move-in meter reading is the opening reading. Normal bills start the cycle after.
 7. **Deposits are not income.** Collections exclude the part of a payment that covered a deposit.
 8. **Carry forward**: whatever is unpaid (or overpaid) at month end becomes next month's balance b/f.
 9. **Move-out** never deletes anything. The unit shows Vacant and the tenant moves to Former tenants. The month after move-out gets a **final bill**: last water reading, deposit applied against the balance, and a refund line if the deposit was more than what was owed.

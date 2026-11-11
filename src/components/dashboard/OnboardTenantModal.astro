@@ -1,6 +1,7 @@
 ---
 import { X, UserPlus, Building, Sparkles } from '@lucide/astro';
 import { getPortfolio, bedLabel } from '../../data/portfolio';
+import { addMonths, cycleOf, CYCLE_START_DAY } from '../../lib/billing';
 import { FEATURES } from '../../config/features';
 
 // This company's data only (the signed-in user's).
@@ -25,9 +26,8 @@ const propertiesData = propertyViews.map((p) => ({
     })),
 }));
 
-// Default move-in: the 1st of next month.
-const [y, m] = asOf.split('-').map(Number);
-const nextFirst = new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10);
+// Default move-in: the first day of the next billing cycle (a full month).
+const nextCycleStart = `${addMonths(cycleOf(asOf), 1)}-${String(CYCLE_START_DAY).padStart(2, '0')}`;
 
 const inputClass =
   'w-full px-4 py-2.5 rounded-xl border border-[#DCE0D7] focus:border-[#0D382B] focus:ring-2 focus:ring-[#0D382B]/10 outline-none text-sm text-[#17231E] bg-white';
@@ -197,7 +197,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label for="tenant-move-in" class={labelClass}>Move-in date</label>
-          <input type="date" id="tenant-move-in" required value={nextFirst} class={inputClass} />
+          <input type="date" id="tenant-move-in" required value={nextCycleStart} class={inputClass} />
         </div>
         <div>
           <label for="tenant-opening-reading" class={labelClass}>Opening water reading <span class="normal-case font-normal">(optional)</span></label>
@@ -206,34 +206,40 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
         </div>
       </div>
 
-      <div class={`grid grid-cols-1 ${FEATURES.leases ? 'sm:grid-cols-2' : ''} gap-4`}>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label for="tenant-move-in-rent" class={labelClass}>Move-in rent (KES)</label>
+          <input type="number" id="tenant-move-in-rent" required min="0" step="1" inputmode="numeric" placeholder="Rent until the next cycle" class={`${inputClass} tabular-nums`} />
+          <p class="text-[11px] text-[#73827C] mt-1">Rent from move-in until the next billing cycle starts on the {CYCLE_START_DAY}th</p>
+        </div>
         <div>
           <label for="tenant-garbage" class={labelClass}>Move-in garbage (KES) <span class="normal-case font-normal">(optional)</span></label>
           <input type="number" id="tenant-garbage" min="0" step="1" inputmode="numeric" placeholder="0" class={`${inputClass} tabular-nums`} />
           <p class="text-[11px] text-[#73827C] mt-1">Leave blank or 0 if garbage collection starts next month</p>
         </div>
-        {FEATURES.leases && (
-        <div>
-          <label for="tenant-lease-term" class={labelClass}>Lease term</label>
-          <select id="tenant-lease-term" class={inputClass}>
-            <option value="12">12 months (standard)</option>
-            <option value="6">6 months</option>
-            <option value="24">24 months</option>
-          </select>
-        </div>
-        )}
       </div>
+
+      {FEATURES.leases && (
+      <div>
+        <label for="tenant-lease-term" class={labelClass}>Lease term</label>
+        <select id="tenant-lease-term" class={inputClass}>
+          <option value="12">12 months (standard)</option>
+          <option value="6">6 months</option>
+          <option value="24">24 months</option>
+        </select>
+      </div>
+      )}
 
       <!-- Move-in bill preview -->
       <div class="rounded-2xl bg-[#F8F9F7] border border-[#E7EAE4] p-4 text-sm tabular-nums">
         <p class="text-xs font-semibold uppercase tracking-wider text-[#5A6862] mb-3">Move-in bill</p>
         <div class="space-y-2">
           <div class="flex justify-between"><span class="text-[#73827C]">Deposit (held, refundable)</span><span id="preview-deposit" class="font-medium text-[#17231E]">—</span></div>
-          <div class="flex justify-between"><span class="text-[#73827C]">Rent <span id="preview-rent-days" class="text-[11px]"></span></span><span id="preview-rent" class="font-medium text-[#17231E]">—</span></div>
+          <div class="flex justify-between"><span class="text-[#73827C]">Move-in rent</span><span id="preview-rent" class="font-medium text-[#17231E]">—</span></div>
           <div class="flex justify-between"><span class="text-[#73827C]">Garbage</span><span id="preview-garbage" class="font-medium text-[#17231E]">—</span></div>
           <div class="flex justify-between pt-2 border-t border-[#E7EAE4]"><span class="font-semibold text-[#17231E]">Due on move-in</span><span id="preview-total" class="font-bold text-[#17231E]">—</span></div>
         </div>
-        <p class="text-[11px] text-[#73827C] mt-3">Initial payment is deposit plus rent for the move-in month. Water and regular garbage billing start on the next monthly bill.</p>
+        <p class="text-[11px] text-[#73827C] mt-3">Initial payment is deposit plus the move-in rent. Water and regular garbage billing start on the next cycle's bill.</p>
       </div>
 
       <!-- Action Buttons -->
@@ -278,11 +284,13 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
     const depositInput = document.getElementById('tenant-deposit');
     const readingInput = document.getElementById('tenant-opening-reading');
     const moveInInput = document.getElementById('tenant-move-in');
+    const moveInRentInput = document.getElementById('tenant-move-in-rent');
     const garbageInput = document.getElementById('tenant-garbage');
 
     let currentMode = 'preset'; // 'preset' or 'custom'
     let depositTouched = false;
     let garbageTouched = false;
+    let moveInRentTouched = false;
 
     const kes = (n) => `KES ${n.toLocaleString('en-KE')}`;
 
@@ -417,18 +425,12 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
       updatePreview();
     });
 
-    function prorate(rent, iso) {
-      const [y, m, d] = (iso || '').split('-').map(Number);
-      if (!y || !m || !d) return { amount: rent, days: 30, of: 30 };
-      const of = new Date(Date.UTC(y, m, 0)).getUTCDate();
-      const days = of - d + 1;
-      return days >= of || !d ? { amount: rent, days: of, of } : { amount: Math.round((rent * days) / of), days, of };
-    }
-
     function updatePreview() {
       const rent = Number(rentInput?.value) || 0;
       const deposit = Number(depositInput?.value) || 0;
-      const prorated = prorate(rent, moveInInput?.value ?? '');
+      // The move-in rent follows the monthly rent until the landlord sets it.
+      if (moveInRentInput && !moveInRentTouched) moveInRentInput.value = rentInput?.value ?? '';
+      const moveInRent = Number(moveInRentInput?.value) || 0;
       const garbageVal = garbageInput?.value?.trim();
       const garbage = garbageVal !== '' && garbageVal != null ? Math.max(0, Number(garbageVal) || 0) : 0;
 
@@ -438,14 +440,16 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
       };
 
       set('preview-deposit', rent || deposit ? kes(deposit) : '—');
-      set('preview-rent', rent ? kes(prorated.amount) : '—');
-      set('preview-rent-days', rent && prorated.days < prorated.of ? `(${prorated.days} of ${prorated.of} days)` : '');
+      set('preview-rent', rent ? kes(moveInRent) : '—');
       set('preview-garbage', garbage > 0 ? kes(garbage) : 'KES 0');
-      set('preview-total', rent ? kes(deposit + prorated.amount + garbage) : '—');
+      set('preview-total', rent ? kes(deposit + moveInRent + garbage) : '—');
     }
 
     rentInput?.addEventListener('input', updatePreview);
-    moveInInput?.addEventListener('input', updatePreview);
+    moveInRentInput?.addEventListener('input', () => {
+      moveInRentTouched = moveInRentInput.value !== '';
+      updatePreview();
+    });
     depositInput?.addEventListener('input', () => {
       depositTouched = depositInput.value !== '';
       updatePreview();
@@ -466,6 +470,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
       const rent = Number(rentInput?.value) || 0;
       const deposit = Number(depositInput?.value) || 0;
       const moveIn = moveInInput?.value ?? '';
+      const moveInRent = Number(moveInRentInput?.value);
       const readingVal = readingInput?.value?.trim();
       const openingReading = readingVal !== '' && readingVal != null ? Math.max(0, Number(readingVal) || 0) : null;
       const garbageVal = garbageInput?.value?.trim();
@@ -511,6 +516,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
           rent,
           deposit,
           moveIn,
+          moveInRent,
           openingReading,
           moveInGarbage,
           leaseTerm,

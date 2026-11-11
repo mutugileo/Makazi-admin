@@ -172,6 +172,7 @@ const searchText = (parts: string[]) => parts.join(' ').toLowerCase();
                     data-rent={t.tenancy.rent}
                     data-deposit={t.depositHeld}
                     data-move-in={t.tenancy.moveIn}
+                    data-move-in-rent={t.tenancy.moveInRent ?? t.tenancy.rent}
                     data-lease-end={t.tenancy.leaseEnd}
                     title="Edit and correct tenant details"
                   >
@@ -482,6 +483,7 @@ const searchText = (parts: string[]) => parts.join(' ').toLowerCase();
         setVal('edit-tenant-rent', btn.dataset.rent);
         setVal('edit-tenant-deposit', btn.dataset.deposit);
         setVal('edit-tenant-move-in', btn.dataset.moveIn);
+        setVal('edit-tenant-move-in-rent', btn.dataset.moveInRent);
         setVal('edit-tenant-lease-end', btn.dataset.leaseEnd);
 
         modal.classList.remove('opacity-0', 'pointer-events-none');

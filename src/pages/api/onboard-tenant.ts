@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { cycleOf } from '../../lib/billing';
 import { errorMessage } from '../../lib/errors';
 import { makeSupabaseClient } from '../../lib/supabase';
 import { clearLiveCache } from '../../data/portfolio';
@@ -30,6 +31,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       rent,
       deposit,
       moveIn,
+      moveInRent,
       openingReading,
       leaseTerm,
       moveInGarbage,
@@ -46,6 +48,13 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     const depositKes = Math.round(Number(deposit || 0));
     if (!(rentKes > 0) || !(depositKes >= 0)) return json({ error: 'Rent and deposit must be valid amounts' }, 400);
     if (typeof moveIn !== 'string' || !ISO_DATE.test(moveIn)) return json({ error: 'Move-in must be a valid date' }, 400);
+
+    // Rent on the move-in bill, entered by the landlord for the days until the
+    // next billing cycle.
+    const moveInRentKes = moveInRent === '' || moveInRent == null ? NaN : Math.round(Number(moveInRent));
+    if (!(moveInRentKes >= 0 && moveInRentKes <= rentKes * 2)) {
+      return json({ error: 'Enter the move-in rent: from 0 up to twice the monthly rent' }, 400);
+    }
 
     const reading = openingReading === null || openingReading === undefined || openingReading === '' ? null : Number(openingReading);
     if (reading !== null && !(Number.isFinite(reading) && reading >= 0)) return json({ error: 'Meter reading must be 0 or more' }, 400);
@@ -155,6 +164,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
         rent: rentKes,
         deposit: depositKes,
         move_in: moveIn,
+        move_in_rent: moveInRentKes,
         lease_start: moveIn,
         lease_end: leaseEnd.toISOString().slice(0, 10),
         opening_reading: reading,
@@ -195,7 +205,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       const { error: readingErr } = await supabase
         .from('meter_readings')
         .upsert(
-          { company_id: companyId, unit_id: resolvedUnitId, month: moveIn.slice(0, 7), value: reading },
+          { company_id: companyId, unit_id: resolvedUnitId, month: cycleOf(moveIn), value: reading },
           { onConflict: 'unit_id,month' },
         );
       if (readingErr) console.error('[onboard-tenant] opening reading not saved:', readingErr);

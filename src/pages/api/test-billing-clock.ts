@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { addMonths, monthOf } from '../../lib/billing';
+import { addMonths, cycleOf, CYCLE_START_DAY } from '../../lib/billing';
 import { errorMessage } from '../../lib/errors';
 import { makeSupabaseClient } from '../../lib/supabase';
 import { notifyCompany } from '../../lib/realtime';
@@ -41,7 +41,8 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     const current = typeof settings.testAsOf === 'string' ? settings.testAsOf : today;
 
     if (body.action === 'advance') {
-      settings.testAsOf = `${addMonths(monthOf(current), 1)}-01`;
+      // The first day of the next billing cycle.
+      settings.testAsOf = `${addMonths(cycleOf(current), 1)}-${String(CYCLE_START_DAY).padStart(2, '0')}`;
     } else if (body.action === 'reset') {
       delete settings.testAsOf;
     } else {

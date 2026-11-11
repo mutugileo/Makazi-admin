@@ -37,11 +37,6 @@ export interface CompanySettings {
   depositSchedule: Record<string, number>;
   /** Months a former tenant's records are kept after move-out. */
   recordRetentionMonths: number;
-  /**
-   * M-Pesa test mode: tenants' "Pay now" runs a simulated STK push that the
-   * database records as a flagged test payment. Off unless the owner turns it on.
-   */
-  mpesaSimulation?: boolean;
   theme?: CompanyTheme;
 }
 
@@ -161,6 +156,8 @@ export interface Tenancy {
   rent: number;
   deposit: number;
   moveIn: IsoDate;
+  /** Rent on the move-in bill, entered by the landlord. Null means a full month. */
+  moveInRent?: number | null;
   moveOut: IsoDate | null;
   leaseStart: IsoDate;
   leaseEnd: IsoDate;
@@ -287,20 +284,14 @@ export interface WaterUsage {
   amount: number;
 }
 
-export interface ProratedDays {
-  days: number;
-  of: number;
-}
-
 export interface MonthlyBill {
   tenancyId: string;
+  /** The billing cycle, named after the month it starts in. */
   month: Month;
   kind: BillKind;
   dueDate: IsoDate;
   /** Last day of the grace period. */
   graceDate: IsoDate;
-  /** Set when rent covers only part of the month (mid-month move-in). */
-  rentDays: ProratedDays | null;
   lines: BillLine[];
   water: WaterUsage | null;
   rent: number;
@@ -323,6 +314,22 @@ export interface MonthlyBill {
 
 export function monthOf(date: IsoDate): Month {
   return date.slice(0, 7);
+}
+
+/**
+ * Billing cycles run from the 4th to the 3rd of the next month, starting with
+ * the December 2026 cycle; earlier cycles were calendar months, so bills
+ * already issued never move. A cycle is named after the month it starts in.
+ */
+export const CYCLE_START_DAY = 4;
+export const FIRST_CYCLE_ON_START_DAY: Month = '2026-12';
+
+/** The billing cycle a date falls in. */
+export function cycleOf(date: IsoDate): Month {
+  const month = monthOf(date);
+  return month >= FIRST_CYCLE_ON_START_DAY && Number(date.slice(8, 10)) < CYCLE_START_DAY
+    ? addMonths(month, -1)
+    : month;
 }
 
 export function addMonths(month: Month, delta: number): Month {
@@ -353,17 +360,6 @@ export function addMonthsToDate(date: IsoDate, delta: number): IsoDate {
   const month = addMonths(monthOf(date), delta);
   const day = Math.min(Number(date.slice(8, 10)), daysInMonth(month));
   return `${month}-${String(day).padStart(2, '0')}`;
-}
-
-/**
- * Rent for a mid-month move-in: the days left in the month, counting the
- * move-in day. Moving in on the 1st is a full month (null).
- */
-export function proratedRent(rent: number, moveIn: IsoDate): { amount: number; days: ProratedDays | null } {
-  const of = daysInMonth(monthOf(moveIn));
-  const days = of - Number(moveIn.slice(8, 10)) + 1;
-  if (days >= of) return { amount: rent, days: null };
-  return { amount: Math.round((rent * days) / of), days: { days, of } };
 }
 
 export function daysBetween(from: IsoDate, to: IsoDate): number {
@@ -434,18 +430,18 @@ function waterFor(seed: Seed, unitId: string, month: Month, rate: number, openin
 
 /** First and last month a tenancy is billed for within the seed window. */
 export function billingWindow(seed: Seed, tenancy: Tenancy): [Month, Month] | null {
-  const asOfMonth = monthOf(seed.asOf);
+  const asOfMonth = cycleOf(seed.asOf);
   const start = companyOfTenancy(seed, tenancy).settings.ledgerStartMonth;
-  const moveInMonth = monthOf(tenancy.moveIn);
+  const moveInMonth = cycleOf(tenancy.moveIn);
   const first = moveInMonth > start ? moveInMonth : start;
 
   // Find any active future months (meter readings, payments, or the move-in itself)
   const unitReadings = Object.keys(seed.meterReadings[tenancy.unitId] ?? {});
-  const tenancyPayments = seed.payments.filter((p) => p.tenancyId === tenancy.id).map((p) => monthOf(p.date));
+  const tenancyPayments = seed.payments.filter((p) => p.tenancyId === tenancy.id).map((p) => cycleOf(p.date));
   const candidateMonths = [asOfMonth, ...unitReadings, ...tenancyPayments];
   const maxActive = candidateMonths.sort().pop()!;
 
-  const finalMonth = tenancy.moveOut ? addMonths(monthOf(tenancy.moveOut), 1) : maxActive;
+  const finalMonth = tenancy.moveOut ? addMonths(cycleOf(tenancy.moveOut), 1) : maxActive;
   let last = finalMonth < maxActive ? finalMonth : maxActive;
   // Paid before the first bill (deposit and rent ahead of moving in): issue
   // the move-in bill so the payment has a bill to count against.
@@ -462,8 +458,8 @@ export function buildLedger(seed: Seed, tenancy: Tenancy): MonthlyBill[] {
   if (!unit || !property) throw new Error(`Unknown unit for ${tenancy.id}`);
   const { settings } = companyOfTenancy(seed, tenancy);
 
-  const moveInMonth = monthOf(tenancy.moveIn);
-  const finalMonth = tenancy.moveOut ? addMonths(monthOf(tenancy.moveOut), 1) : null;
+  const moveInMonth = cycleOf(tenancy.moveIn);
+  const finalMonth = tenancy.moveOut ? addMonths(cycleOf(tenancy.moveOut), 1) : null;
   const payments = seed.payments
     .filter((p) => p.tenancyId === tenancy.id)
     .sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));
@@ -481,17 +477,14 @@ export function buildLedger(seed: Seed, tenancy: Tenancy): MonthlyBill[] {
 
     const lines: BillLine[] = [];
     let water: WaterUsage | null = null;
-    let rentDays: ProratedDays | null = null;
     const { waterRate, garbageFee } = ratesFor(property, month);
     // The first water bill after a move-in starts from the move-in reading.
     const opening =
       tenancy.openingReading !== null && addMonths(moveInMonth, 1) === month ? tenancy.openingReading : null;
 
     if (kind === 'move-in') {
-      const rent = proratedRent(tenancy.rent, tenancy.moveIn);
-      rentDays = rent.days;
       lines.push({ kind: 'deposit', amount: tenancy.deposit });
-      lines.push({ kind: 'rent', amount: rent.amount });
+      lines.push({ kind: 'rent', amount: tenancy.moveInRent ?? tenancy.rent });
       const moveInGarbage = tenancy.moveInGarbage ?? 0;
       if (moveInGarbage > 0) {
         lines.push({ kind: 'garbage', amount: moveInGarbage });
@@ -531,9 +524,10 @@ export function buildLedger(seed: Seed, tenancy: Tenancy): MonthlyBill[] {
 
     const sumOf = (k: BillLineKind) =>
       lines.filter((l) => l.kind === k).reduce((acc, l) => acc + l.amount, 0);
-    // Payments made before the first bill count towards it.
+    // A payment counts towards the cycle it was made in; payments made before
+    // the first bill count towards it.
     const monthPayments = payments.filter(
-      (p) => monthOf(p.date) === month || (month === window[0] && monthOf(p.date) < month),
+      (p) => cycleOf(p.date) === month || (month === window[0] && cycleOf(p.date) < month),
     );
     const amountPaid = monthPayments.reduce((acc, p) => acc + p.amount, 0);
     const newCharges = lines.reduce((acc, l) => acc + l.amount, 0);
@@ -546,7 +540,6 @@ export function buildLedger(seed: Seed, tenancy: Tenancy): MonthlyBill[] {
       kind,
       dueDate: dueDateOf(month, settings.dueDay),
       graceDate: dueDateOf(month, settings.graceDay),
-      rentDays,
       lines,
       water,
       rent: sumOf('rent'),

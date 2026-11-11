@@ -21,6 +21,8 @@ export interface BulkImportRow {
   tenantPhone?: string;
   tenantEmail?: string;
   moveInDate?: string;
+  /** Rent on the move-in bill; null means a full month. */
+  moveInRent?: number | null;
   openingBalance?: number;
   openingReading?: number | null;
 }
@@ -173,6 +175,7 @@ export function validateBulkCsv(csvText: string): ImportValidationResult {
     const tenantPhone = getCol(rawRow, 'Tenant Phone', 'Phone', 'Mobile');
     const tenantEmail = getCol(rawRow, 'Tenant Email', 'Email');
     const moveInRaw = getCol(rawRow, 'Move In Date', 'Move In');
+    const moveInRentRaw = getCol(rawRow, 'Move In Rent');
     const openingBalRaw = getCol(rawRow, 'Opening Balance', 'Balance', 'Arrears');
     const openingReadingRaw = getCol(rawRow, 'Opening Water Reading', 'Water Reading', 'Opening Reading');
 
@@ -238,6 +241,7 @@ export function validateBulkCsv(csvText: string): ImportValidationResult {
     // Tenant validations if provided
     let normalizedPhone: string | undefined;
     let validatedMoveIn: string | undefined;
+    let moveInRent: number | null = null;
     let openingBalance: number | undefined;
     let openingReading: number | null | undefined;
 
@@ -266,6 +270,15 @@ export function validateBulkCsv(csvText: string): ImportValidationResult {
         }
       } else {
         validatedMoveIn = new Date().toISOString().slice(0, 10);
+      }
+
+      if (moveInRentRaw) {
+        const parsed = Math.round(Number(moveInRentRaw.replace(/[^0-9.-]/g, '')));
+        if (!(parsed >= 0 && parsed <= rent * 2)) {
+          errors.push({ row: rowNum, field: 'moveInRent', message: 'Move-in rent must be from 0 up to twice the monthly rent.' });
+        } else {
+          moveInRent = parsed;
+        }
       }
 
       if (openingBalRaw) {
@@ -307,6 +320,7 @@ export function validateBulkCsv(csvText: string): ImportValidationResult {
       tenantPhone: normalizedPhone,
       tenantEmail: tenantEmail?.trim() || undefined,
       moveInDate: validatedMoveIn,
+      moveInRent,
       openingBalance: openingBalance ?? 0,
       openingReading: openingReading ?? null,
     });
@@ -563,6 +577,7 @@ export async function executeBulkImport(
               rent: row.rent,
               deposit: row.deposit,
               move_in: moveIn,
+              move_in_rent: row.moveInRent ?? null,
               lease_start: moveIn,
               lease_end: leaseEnd.toISOString().slice(0, 10),
               opening_balance: row.openingBalance ?? 0,

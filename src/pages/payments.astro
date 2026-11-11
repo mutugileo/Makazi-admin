@@ -1,16 +1,37 @@
 ---
 import DashboardLayout from '../layouts/DashboardLayout.astro';
-import { getPortfolio, formatKes } from '../data/portfolio';
+import { getPortfolio, formatDate, formatKes } from '../data/portfolio';
 import { paymentMethodLabel } from '../lib/billing';
-import { ChevronDown, Plus, X, CreditCard, Check, AlertCircle, Search } from '@lucide/astro';
+import { fetchPendingClaims, type PaymentClaim } from '../lib/payment-claims';
+import { makeSupabaseClient } from '../lib/supabase';
+import { ChevronDown, Plus, X, CreditCard, Check, AlertCircle, Search, MessageSquareText } from '@lucide/astro';
 
 // This company's data only (the signed-in user's).
-const { payments, portfolioSummary, currentPeriod, activeTenancies } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+const companyId = Astro.locals.user!.companyId;
+const { payments, portfolioSummary, currentPeriod, activeTenancies } = await getPortfolio(companyId, Astro.cookies);
 
 // Nairobi date & time defaults
 const nairobiNow = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString();
 const defaultDate = nairobiNow.slice(0, 10);
 const defaultTime = nairobiNow.slice(11, 16);
+
+// Payment messages tenants pasted in the app, waiting for review.
+const supabase = makeSupabaseClient(Astro.cookies);
+let claims: PaymentClaim[] = [];
+let claimsFailed = false;
+if (supabase) {
+  try {
+    claims = await fetchPendingClaims(supabase, companyId);
+  } catch (err) {
+    console.error('[payments] payment messages not loaded:', err);
+    claimsFailed = true;
+  }
+}
+const tenancyById = new Map(activeTenancies.map((t) => [t.tenancy.id, t]));
+const nairobiStamp = (iso: string) => {
+  const local = new Date(Date.parse(iso) + 3 * 60 * 60 * 1000).toISOString();
+  return `${formatDate(local.slice(0, 10))}, ${local.slice(11, 16)}`;
+};
 ---
 
 <DashboardLayout title="Makazi — Payments & Receipts" currentPath="/payments">
@@ -48,6 +69,99 @@ const defaultTime = nairobiNow.slice(11, 16);
       </div>
     </div>
   </div>
+
+  <!-- Payment messages from the tenant app -->
+  {supabase && (
+    <section id="payment-claims" class="mb-8 bg-white rounded-3xl border border-[#E3E6DF] overflow-hidden shadow-xs">
+      <div class="px-4 lg:px-6 py-4 border-b border-[#E3E6DF] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="flex items-start gap-3">
+          <div class="w-9 h-9 rounded-xl bg-[#0D382B] text-[#C6EE58] flex items-center justify-center shrink-0">
+            <MessageSquareText class="w-4 h-4" />
+          </div>
+          <div>
+            <h2 class="text-sm font-semibold text-[#0D382B]">Payment messages to confirm</h2>
+            <p class="text-[11px] text-[#69847A] mt-0.5 max-w-2xl">
+              Tenants paste the confirmation they got from M-Pesa or the bank. Match the reference and amount on your
+              Paybill or bank statement, then confirm to issue a receipt. Nothing counts until you confirm.
+            </p>
+          </div>
+        </div>
+        {claims.length > 0 && (
+          <span class="self-start sm:self-auto px-2.5 py-1 rounded-full bg-[#FFF8E1] text-[#B78103] text-[11px] font-semibold border border-[#FFE082] whitespace-nowrap">
+            {claims.length} waiting
+          </span>
+        )}
+      </div>
+      {claimsFailed ? (
+        <p class="px-6 py-5 text-xs font-medium text-[#991B1B]">Payment messages couldn't load. Refresh the page to try again.</p>
+      ) : claims.length === 0 ? (
+        <p class="px-6 py-5 text-xs font-medium text-[#69847A]">No payment messages waiting. New ones appear here as tenants send them from the app.</p>
+      ) : (
+        <div class="overflow-x-auto relative">
+          <table class="w-full text-left text-xs tabular-nums">
+            <thead class="bg-[#F8F9F6] border-b border-[#E3E6DF] text-[#69847A] uppercase text-[10px] font-semibold tracking-wider">
+              <tr>
+                <th scope="col" class="py-3 px-4 lg:px-6">Tenant</th>
+                <th scope="col" class="py-3 px-3 lg:px-4">Read from message</th>
+                <th scope="col" class="py-3 px-3 lg:px-4">Message</th>
+                <th scope="col" class="py-3 px-3 lg:px-4 text-right">Balance</th>
+                <th scope="col" class="py-3 px-4 lg:px-6 text-right sticky right-0 bg-[#F8F9F6] z-10">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[#E3E6DF]">
+              {claims.map((claim) => {
+                const view = tenancyById.get(claim.tenancyId);
+                const tenantLabel = view ? `${view.tenant.name} · ${view.unit.label} (${view.property.name})` : 'Former tenancy';
+                return (
+                  <tr class="group hover:bg-[#F8F9F6]/60 transition-colors">
+                    <td class="py-3.5 px-4 lg:px-6 align-top">
+                      <span class="block font-semibold text-[#0D382B]">{view?.tenant.name ?? 'Former tenancy'}</span>
+                      {view && <span class="block text-[11px] text-[#69847A]">{view.unit.label} · Ref {view.accountNumber}</span>}
+                      <span class="block text-[11px] text-[#8FA69C] mt-0.5">Sent {nairobiStamp(claim.createdAt)}</span>
+                    </td>
+                    <td class="py-3.5 px-3 lg:px-4 align-top whitespace-nowrap">
+                      {claim.reference ? (
+                        <span class="block font-mono font-semibold text-[#0D382B]">{claim.reference}</span>
+                      ) : (
+                        <span class="block font-semibold text-[#B78103]">No reference found</span>
+                      )}
+                      <span class="block text-[#0D382B]">{claim.amount !== null ? formatKes(claim.amount) : 'No amount found'}</span>
+                      {claim.paidDate && (
+                        <span class="block text-[11px] text-[#69847A]">{formatDate(claim.paidDate)}{claim.paidTime ? `, ${claim.paidTime}` : ''}</span>
+                      )}
+                      {claim.payer && <span class="block text-[11px] text-[#69847A]">From {claim.payer}</span>}
+                    </td>
+                    <td class="py-3.5 px-3 lg:px-4 align-top max-w-[320px]">
+                      <p class="line-clamp-3 text-[11px] text-[#5A6862] break-words" title={claim.message}>{claim.message}</p>
+                    </td>
+                    <td class="py-3.5 px-3 lg:px-4 align-top text-right font-semibold text-[#0D382B] whitespace-nowrap">
+                      {view ? formatKes(view.balance) : '—'}
+                    </td>
+                    <td class="py-3.5 px-4 lg:px-6 align-top text-right sticky right-0 bg-white/95 backdrop-blur-xs group-hover:bg-[#F8F9F6] shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.05)] transition-colors">
+                      <button
+                        type="button"
+                        class="review-claim-btn px-3.5 py-1.5 rounded-full bg-[#0D382B] text-white hover:bg-[#08221A] text-xs font-semibold transition-colors cursor-pointer shadow-xs whitespace-nowrap"
+                        data-claim-id={claim.id}
+                        data-tenant={tenantLabel}
+                        data-balance={view ? formatKes(view.balance) : ''}
+                        data-message={claim.message}
+                        data-reference={claim.reference ?? ''}
+                        data-amount={claim.amount ?? ''}
+                        data-date={claim.paidDate ?? defaultDate}
+                        data-time={claim.paidTime ?? defaultTime}
+                      >
+                        Review
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  )}
 
   <!-- Filter & Summary Bar -->
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -327,6 +441,82 @@ const defaultTime = nairobiNow.slice(11, 16);
       </form>
     </div>
   </div>
+
+  <!-- Review a tenant's payment message -->
+  <div id="review-claim-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs" role="dialog" aria-modal="true" aria-labelledby="review-claim-title">
+    <div class="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl border border-[#E3E6DF]">
+      <div class="flex items-center justify-between p-6 pb-3 border-b border-[#E3E6DF] shrink-0">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-10 h-10 rounded-2xl bg-[#0D382B] text-[#C6EE58] flex items-center justify-center shrink-0">
+            <MessageSquareText class="w-5 h-5" />
+          </div>
+          <div class="min-w-0">
+            <h3 id="review-claim-title" class="font-bold text-base text-[#0D382B]">Confirm payment</h3>
+            <p id="review-claim-tenant" class="text-xs text-[#5A6862] truncate"></p>
+          </div>
+        </div>
+        <button type="button" id="close-review-claim-btn" class="p-1.5 text-[#5A6862] hover:text-[#0D382B] rounded-lg transition-colors cursor-pointer" aria-label="Close">
+          <X class="w-5 h-5" />
+        </button>
+      </div>
+
+      <form id="review-claim-form" class="flex-1 min-h-0 overflow-y-auto p-6 space-y-4">
+        <div id="review-claim-error" class="hidden p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-center gap-2">
+          <AlertCircle class="w-4 h-4 shrink-0" />
+          <span id="review-claim-error-msg"></span>
+        </div>
+
+        <div>
+          <p class="text-xs font-semibold text-[#0D382B] mb-1">What the tenant pasted</p>
+          <p id="review-claim-message" class="p-3 rounded-2xl bg-[#F8F9F6] border border-[#E3E6DF] text-[11px] text-[#5A6862] whitespace-pre-wrap break-words"></p>
+          <p class="mt-1.5 text-[11px] text-[#69847A]">Balance due: <span id="review-claim-balance" class="font-semibold text-[#0D382B]"></span></p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label for="review-claim-ref" class="block text-xs font-semibold text-[#0D382B] mb-1">Transaction reference *</label>
+            <input type="text" id="review-claim-ref" required minlength="6" maxlength="20" class="w-full px-3 py-2 text-xs rounded-xl border border-[#CCD2C7] focus:outline-none focus:border-[#0D382B] font-mono uppercase" />
+          </div>
+          <div>
+            <label for="review-claim-amount" class="block text-xs font-semibold text-[#0D382B] mb-1">Amount received (KES) *</label>
+            <input type="number" id="review-claim-amount" required min="1" step="1" class="w-full px-3 py-2 text-xs rounded-xl border border-[#CCD2C7] focus:outline-none focus:border-[#0D382B] font-semibold" />
+          </div>
+          <div>
+            <label for="review-claim-date" class="block text-xs font-semibold text-[#0D382B] mb-1">Date received *</label>
+            <input type="date" id="review-claim-date" required max={defaultDate} class="w-full px-3 py-2 text-xs rounded-xl border border-[#CCD2C7] focus:outline-none focus:border-[#0D382B]" />
+          </div>
+          <div>
+            <label for="review-claim-time" class="block text-xs font-semibold text-[#0D382B] mb-1">Time *</label>
+            <input type="time" id="review-claim-time" required class="w-full px-3 py-2 text-xs rounded-xl border border-[#CCD2C7] focus:outline-none focus:border-[#0D382B]" />
+          </div>
+        </div>
+
+        <div>
+          <label for="review-claim-method" class="block text-xs font-semibold text-[#0D382B] mb-1">Received by *</label>
+          <select id="review-claim-method" required class="w-full px-3 py-2 text-xs rounded-xl border border-[#CCD2C7] focus:outline-none focus:border-[#0D382B] bg-white text-[#0D382B]">
+            <option value="M-Pesa">M-Pesa</option>
+            <option value="Bank">Bank</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="review-claim-note" class="block text-xs font-semibold text-[#0D382B] mb-1">Note to the tenant</label>
+          <textarea id="review-claim-note" rows="2" maxlength="300" placeholder="Why it can't be confirmed, or a short note" class="w-full px-3 py-2 text-xs rounded-xl border border-[#CCD2C7] focus:outline-none focus:border-[#0D382B]"></textarea>
+          <p class="mt-1 text-[11px] text-[#69847A]">Required to reject. The tenant sees it in the app.</p>
+        </div>
+      </form>
+
+      <div class="flex items-center justify-end gap-2 p-6 pt-4 border-t border-[#E3E6DF] shrink-0">
+        <button type="button" id="reject-claim-btn" class="px-4 py-2.5 text-xs font-semibold text-[#991B1B] hover:bg-red-50 rounded-xl transition-colors cursor-pointer">
+          Reject & Tell Tenant
+        </button>
+        <button type="submit" form="review-claim-form" id="confirm-claim-btn" class="px-5 py-2.5 text-xs font-bold bg-[#0D382B] text-white hover:bg-[#08221A] rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer">
+          <Check class="w-3.5 h-3.5" />
+          <span>Confirm & Issue Receipt</span>
+        </button>
+      </div>
+    </div>
+  </div>
 </DashboardLayout>
 
 <script>
@@ -594,6 +784,94 @@ const defaultTime = nairobiNow.slice(11, 16);
         }
       };
     }
+
+    // Review a tenant's payment message
+    const reviewModal = document.getElementById('review-claim-modal');
+    const reviewForm = document.getElementById('review-claim-form') as HTMLFormElement | null;
+    const reviewErrorBox = document.getElementById('review-claim-error');
+    const reviewErrorMsg = document.getElementById('review-claim-error-msg');
+    const confirmClaimBtn = document.getElementById('confirm-claim-btn') as HTMLButtonElement | null;
+    const rejectClaimBtn = document.getElementById('reject-claim-btn') as HTMLButtonElement | null;
+    const reviewInput = (id: string) => document.getElementById(id) as HTMLInputElement;
+    let reviewClaimId = '';
+
+    function showReviewError(message: string) {
+      if (reviewErrorMsg) reviewErrorMsg.textContent = message;
+      reviewErrorBox?.classList.remove('hidden');
+    }
+
+    function closeReviewModal() {
+      reviewModal?.classList.add('hidden');
+    }
+
+    document.querySelectorAll<HTMLButtonElement>('.review-claim-btn').forEach((btn) => {
+      btn.onclick = () => {
+        reviewClaimId = btn.dataset.claimId ?? '';
+        const setText = (id: string, text: string) => {
+          const el = document.getElementById(id);
+          if (el) el.textContent = text;
+        };
+        setText('review-claim-tenant', btn.dataset.tenant ?? '');
+        setText('review-claim-message', btn.dataset.message ?? '');
+        setText('review-claim-balance', btn.dataset.balance || '—');
+        reviewInput('review-claim-ref').value = btn.dataset.reference ?? '';
+        reviewInput('review-claim-amount').value = btn.dataset.amount ?? '';
+        reviewInput('review-claim-date').value = btn.dataset.date ?? '';
+        reviewInput('review-claim-time').value = btn.dataset.time ?? '';
+        reviewInput('review-claim-method').value = 'M-Pesa';
+        reviewInput('review-claim-note').value = '';
+        reviewErrorBox?.classList.add('hidden');
+        reviewModal?.classList.remove('hidden');
+      };
+    });
+
+    async function submitReview(action: 'confirm' | 'reject', button: HTMLButtonElement | null) {
+      const restore = setBusy(button, action === 'confirm' ? 'Confirming…' : 'Rejecting…');
+      try {
+        const res = await fetch('/api/review-claim', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            claimId: reviewClaimId,
+            action,
+            reference: reviewInput('review-claim-ref').value.trim(),
+            amount: reviewInput('review-claim-amount').value,
+            date: reviewInput('review-claim-date').value,
+            time: reviewInput('review-claim-time').value,
+            method: reviewInput('review-claim-method').value,
+            note: reviewInput('review-claim-note').value.trim(),
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Could not review the payment message. Try again.');
+        closeReviewModal();
+        window.location.reload();
+      } catch (err: unknown) {
+        showReviewError(err instanceof Error ? err.message : 'Could not review the payment message. Try again.');
+      } finally {
+        restore();
+      }
+    }
+
+    if (reviewForm) {
+      reviewForm.onsubmit = (e) => {
+        e.preventDefault();
+        void submitReview('confirm', confirmClaimBtn);
+      };
+    }
+    if (rejectClaimBtn) {
+      rejectClaimBtn.onclick = () => {
+        const note = reviewInput('review-claim-note');
+        if (!note.value.trim()) {
+          showReviewError('Write the reason for the tenant, then reject.');
+          note.focus();
+          return;
+        }
+        void submitReview('reject', rejectClaimBtn);
+      };
+    }
+    const closeReviewBtn = document.getElementById('close-review-claim-btn');
+    if (closeReviewBtn) closeReviewBtn.onclick = closeReviewModal;
   }
 
   document.addEventListener('astro:page-load', initPaymentsPage);

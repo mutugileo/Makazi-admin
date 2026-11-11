@@ -33,7 +33,6 @@ const exportRows = billRows.map(({ view, bill }) => ({
     MONTH: monthLabel(bill.month),
     'BILL TYPE': bill.kind,
     'MONTHLY RENT': bill.rent,
-    'RENT DAYS': bill.rentDays ? `${bill.rentDays.days}/${bill.rentDays.of}` : '',
     'WATER BILL PER UNIT': bill.water?.rate ?? '',
     'UNITS CONSUMED': bill.water?.units ?? '',
     'TOTAL WATER BILL': bill.water?.amount ?? 0,
@@ -169,7 +168,6 @@ const td = 'py-3 px-3 whitespace-nowrap';
                 </td>
                 <td class={`${td} text-right`}>
                   {bill.rent ? formatKes(bill.rent) : '—'}
-                  {bill.rentDays && <span class="block text-[10px] text-[#69847A]">{bill.rentDays.days} of {bill.rentDays.of} days</span>}
                 </td>
                 <td class={`${td} text-right text-[#69847A]`}>{bill.water ? bill.water.rate : '—'}</td>
                 <td class={`${td} text-right text-[#69847A]`} title={bill.water ? `Meter ${bill.water.previousReading} → ${bill.water.currentReading}` : undefined}>

@@ -22,8 +22,8 @@ import {
   daysBetween,
   expectedFor,
   formatDate,
+  cycleOf,
   monthLabel,
-  monthOf,
   monthsBetween,
   receiptDescription,
   shortMonthLabel,
@@ -224,7 +224,7 @@ function buildPortfolio(companyId: string, seedOverride?: Seed) {
   const baseSeed = seedOverride ?? createEmptySeed(companyId);
   const seed = scopeSeed(baseSeed, companyId);
   const asOf = seed.asOf;
-  const currentMonth: Month = monthOf(asOf);
+  const currentMonth: Month = cycleOf(asOf);
   const currentPeriod = monthLabel(currentMonth);
   const whenLabel = (iso: string) => whenLabelAt(iso, asOf);
   const company = seed.companies[0];
@@ -522,7 +522,7 @@ function buildPortfolio(companyId: string, seedOverride?: Seed) {
     const month = months.pop();
     if (!month) {
       const t = seed.tenancies.find((ten) => ten.unitId === unitId);
-      return { month: t ? monthOf(t.moveIn) : currentMonth, value: t?.openingReading ?? 0 };
+      return { month: t ? cycleOf(t.moveIn) : currentMonth, value: t?.openingReading ?? 0 };
     }
     return { month, value: readings[month] };
   }

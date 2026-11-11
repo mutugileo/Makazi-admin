@@ -60,11 +60,6 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       return json({ error: "Keep former tenants' records for 1 to 24 months." }, 400);
     }
 
-    if (typeof body.mpesaSimulation !== 'boolean') {
-      return json({ error: 'Choose whether M-Pesa test mode is on.' }, 400);
-    }
-    const mpesaSimulation = body.mpesaSimulation;
-
     const { data: current, error: readErr } = await supabase
       .from('companies')
       .select('settings')
@@ -92,7 +87,6 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       graceDay,
       depositSchedule,
       recordRetentionMonths: retention,
-      mpesaSimulation,
     };
 
     const { error } = await supabase

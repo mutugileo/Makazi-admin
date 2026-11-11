@@ -19,7 +19,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
 
   try {
     const body = await request.json();
-    const { tenancyId, tenantId, name, phone: rawPhone, email, rent, deposit, moveIn, leaseEnd } = body;
+    const { tenancyId, tenantId, name, phone: rawPhone, email, rent, deposit, moveIn, moveInRent, leaseEnd } = body;
 
     if (!tenancyId || !tenantId || !name || !rawPhone || !rent) {
       return json({ error: 'Missing required tenant or tenancy fields.' }, 400);
@@ -37,6 +37,10 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     const depositKes = deposit !== undefined && deposit !== null && deposit !== '' ? Math.round(Number(deposit)) : undefined;
     if (rentKes <= 0) {
       return json({ error: 'Monthly rent must be greater than zero.' }, 400);
+    }
+    const moveInRentKes = moveInRent === '' || moveInRent == null ? NaN : Math.round(Number(moveInRent));
+    if (!(moveInRentKes >= 0 && moveInRentKes <= rentKes * 2)) {
+      return json({ error: 'Move-in rent must be from 0 up to twice the monthly rent.' }, 400);
     }
 
     // Verify tenant and tenancy belong to this company
@@ -89,6 +93,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     // 2. Update tenancy financial & lease details
     const tenancyUpdates: Record<string, unknown> = {
       rent: rentKes,
+      move_in_rent: moveInRentKes,
     };
     if (depositKes !== undefined) tenancyUpdates.deposit = depositKes;
     if (moveIn) tenancyUpdates.move_in = moveIn;

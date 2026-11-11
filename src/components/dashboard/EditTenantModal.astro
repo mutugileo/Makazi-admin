@@ -82,6 +82,12 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
         </div>
       </div>
 
+      <div>
+        <label for="edit-tenant-move-in-rent" class={labelClass}>Move-in Rent (KES)</label>
+        <input type="number" id="edit-tenant-move-in-rent" required min="0" step="1" class={`${inputClass} tabular-nums`} />
+        <p class="text-[11px] text-[#73827C] mt-1">Rent on the move-in bill, from move-in until the next billing cycle</p>
+      </div>
+
       <p id="edit-tenant-error" class="hidden text-xs text-[#991B1B] bg-[#FEF2F2] border border-[#F8D7DA] p-3 rounded-xl font-medium"></p>
 
       <div class="pt-4 border-t border-[#F0F2EE] flex items-center justify-between">
@@ -143,6 +149,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
       const deposit = (document.getElementById('edit-tenant-deposit') as HTMLInputElement)?.value;
       const moveIn = (document.getElementById('edit-tenant-move-in') as HTMLInputElement)?.value;
       const leaseEnd = (document.getElementById('edit-tenant-lease-end') as HTMLInputElement)?.value;
+      const moveInRent = (document.getElementById('edit-tenant-move-in-rent') as HTMLInputElement)?.value;
 
       saveBtn.disabled = true;
       const originalText = saveBtn.textContent;
@@ -153,7 +160,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
         const res = await fetch('/api/update-tenant', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tenancyId, tenantId, name, phone, email, rent, deposit, moveIn, leaseEnd }),
+          body: JSON.stringify({ tenancyId, tenantId, name, phone, email, rent, deposit, moveIn, moveInRent, leaseEnd }),
         });
 
         const data = await res.json();

@@ -21,9 +21,22 @@ import {
 } from '@lucide/astro';
 import { getPortfolio } from '../../data/portfolio';
 import { FEATURES } from '../../config/features';
+import { countPendingClaims } from '../../lib/payment-claims';
+import { makeSupabaseClient } from '../../lib/supabase';
 
 // This company's data only (the signed-in user's).
 const { company, repairStats, stats, unreadThreadCount } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+
+// Payment messages waiting for review. A hint only: unreadable means no badge.
+let pendingClaimsCount = 0;
+const claimsClient = makeSupabaseClient(Astro.cookies);
+if (claimsClient) {
+  try {
+    pendingClaimsCount = await countPendingClaims(claimsClient, Astro.locals.user!.companyId);
+  } catch (err) {
+    console.error('[sidebar] payment messages count not loaded:', err);
+  }
+}
 
 interface Props {
   currentPath?: string;
@@ -50,7 +63,7 @@ const navItems = [
   { name: 'Reset tenant PIN', href: '/reset-password', icon: KeyRound, active: currentPath === '/reset-password' },
   ...(FEATURES.leases ? [{ name: 'Leases', href: '/leases', icon: FileText, active: currentPath === '/leases' }] : []),
   { name: 'Monthly bills', href: '/bills', icon: ReceiptText, active: currentPath === '/bills' },
-  { name: 'Payments & receipts', href: '/payments', icon: CreditCard, active: currentPath === '/payments' },
+  { name: 'Payments & receipts', href: '/payments', icon: CreditCard, active: currentPath === '/payments', badge: pendingClaimsCount ? pendingClaimsCount.toString() : undefined, badgeType: 'alert' },
   { name: 'Arrears', href: '/arrears', icon: AlertTriangle, active: currentPath === '/arrears', badge: stats.tenantsOverdueCount ? stats.tenantsOverdueCount.toString() : undefined, badgeType: 'alert' },
   { name: 'Maintenance', href: '/maintenance', icon: Wrench, active: currentPath === '/maintenance', badge: openRepairsCount ? openRepairsCount.toString() : undefined, badgeType: 'neutral' },
   { name: 'Messages', href: '/messages', icon: MessageSquare, active: currentPath === '/messages', badge: unreadThreadCount ? unreadThreadCount.toString() : undefined, badgeType: 'neutral' },
