@@ -419,10 +419,18 @@ function reading(seed: Seed, unitId: string, month: Month): number | null {
   return value !== undefined ? value : null;
 }
 
-function waterFor(seed: Seed, unitId: string, month: Month, rate: number, opening: number | null): WaterUsage | null {
+/**
+ * Water for a month: its reading minus the last one before it since the
+ * tenancy began (or the move-in reading). A skipped month is billed on the
+ * next reading, covering all the water used since.
+ */
+function waterFor(seed: Seed, unitId: string, month: Month, rate: number, since: Month, opening: number | null): WaterUsage | null {
   const currentReading = reading(seed, unitId, month);
   if (currentReading === null) return null;
-  const previousReading = opening ?? reading(seed, unitId, addMonths(month, -1));
+  const readings = seed.meterReadings[unitId] ?? {};
+  const earlier = Object.keys(readings).filter((m) => m >= since && m < month).sort();
+  const last = earlier[earlier.length - 1];
+  const previousReading = last !== undefined ? readings[last] : opening;
   if (previousReading === null) return null;
   const units = Math.max(0, currentReading - previousReading);
   return { previousReading, currentReading, units, rate, amount: units * rate };
@@ -478,9 +486,6 @@ export function buildLedger(seed: Seed, tenancy: Tenancy): MonthlyBill[] {
     const lines: BillLine[] = [];
     let water: WaterUsage | null = null;
     const { waterRate, garbageFee } = ratesFor(property, month);
-    // The first water bill after a move-in starts from the move-in reading.
-    const opening =
-      tenancy.openingReading !== null && addMonths(moveInMonth, 1) === month ? tenancy.openingReading : null;
 
     if (kind === 'move-in') {
       lines.push({ kind: 'deposit', amount: tenancy.deposit });
@@ -504,14 +509,14 @@ export function buildLedger(seed: Seed, tenancy: Tenancy): MonthlyBill[] {
         lines.push({ kind: 'water', amount: water.amount });
       }
     } else if (kind === 'monthly') {
-      water = waterFor(seed, unit.id, month, waterRate, opening);
+      water = waterFor(seed, unit.id, month, waterRate, moveInMonth, tenancy.openingReading);
       lines.push({ kind: 'rent', amount: tenancy.rent });
       if (water && water.units > 0) {
         lines.push({ kind: 'water', amount: water.amount });
       }
       lines.push({ kind: 'garbage', amount: garbageFee });
     } else {
-      water = waterFor(seed, unit.id, month, waterRate, opening);
+      water = waterFor(seed, unit.id, month, waterRate, moveInMonth, tenancy.openingReading);
       if (water && water.units > 0) {
         lines.push({ kind: 'water', amount: water.amount });
       }
