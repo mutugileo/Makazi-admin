@@ -205,6 +205,20 @@ const td = 'py-3 px-3 whitespace-nowrap';
       </table>
     </div>
     <p id="bills-empty" class="hidden p-12 text-center text-xs font-medium text-[#69847A]">No bills match these filters.</p>
+    <div id="bills-pagination" class="hidden px-6 py-3.5 border-t border-[#E3E6DF] flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#FAFBF9] text-xs text-[#5A6862]">
+      <div>
+        Showing <span class="font-semibold text-[#0D382B]" id="bills-page-start">0</span>–<span class="font-semibold text-[#0D382B]" id="bills-page-end">0</span> of <span class="font-semibold text-[#0D382B]" id="bills-page-total">0</span> bills
+      </div>
+      <div class="flex items-center gap-1.5">
+        <button type="button" id="bills-prev-page" class="px-3 py-1.5 rounded-xl border border-[#DCE0D7] bg-white text-xs font-semibold text-[#0D382B] hover:bg-[#F4F5F1] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors">
+          Previous
+        </button>
+        <span class="px-2 text-[11px] font-medium text-[#5A6862]" id="bills-page-label">1 / 1</span>
+        <button type="button" id="bills-next-page" class="px-3 py-1.5 rounded-xl border border-[#DCE0D7] bg-white text-xs font-semibold text-[#0D382B] hover:bg-[#F4F5F1] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors">
+          Next
+        </button>
+      </div>
+    </div>
   </div>
   )}
 
@@ -238,19 +252,51 @@ const td = 'py-3 px-3 whitespace-nowrap';
       monthSelect.value = paramMonth;
     }
 
+    const PAGE_SIZE = 6;
+    let currentPage = 1;
+
     const matches = (r: { month: string; property: string; status: string }) =>
       (monthSelect.value === 'all' || r.month === monthSelect.value) &&
       (property === 'all' || r.property === property) &&
       (status === 'All' || r.status === status);
 
     function render() {
-      let shown = 0;
+      const matchingEls: HTMLElement[] = [];
       document.querySelectorAll<HTMLElement>('.bill-row').forEach((row) => {
         const show = matches(row.dataset as { month: string; property: string; status: string });
-        row.classList.toggle('hidden', !show);
-        if (show) shown++;
+        if (show) {
+          matchingEls.push(row);
+        } else {
+          row.classList.add('hidden');
+        }
+      });
+      const shown = matchingEls.length;
+      const totalPages = Math.max(1, Math.ceil(shown / PAGE_SIZE));
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+      const start = (currentPage - 1) * PAGE_SIZE;
+      const end = start + PAGE_SIZE;
+      matchingEls.forEach((row, idx) => {
+        row.classList.toggle('hidden', idx < start || idx >= end);
       });
       document.getElementById('bills-empty')?.classList.toggle('hidden', shown > 0);
+
+      const paginationBar = document.getElementById('bills-pagination');
+      if (paginationBar) {
+        paginationBar.classList.toggle('hidden', shown <= PAGE_SIZE);
+      }
+      const pStart = document.getElementById('bills-page-start');
+      const pEnd = document.getElementById('bills-page-end');
+      const pTotal = document.getElementById('bills-page-total');
+      const pLabel = document.getElementById('bills-page-label');
+      const prevBtn = document.getElementById('bills-prev-page') as HTMLButtonElement | null;
+      const nextBtn = document.getElementById('bills-next-page') as HTMLButtonElement | null;
+      if (pStart) pStart.textContent = shown === 0 ? '0' : String(start + 1);
+      if (pEnd) pEnd.textContent = String(Math.min(shown, end));
+      if (pTotal) pTotal.textContent = String(shown);
+      if (pLabel) pLabel.textContent = `${currentPage} / ${totalPages}`;
+      if (prevBtn) prevBtn.disabled = currentPage <= 1;
+      if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
 
       const visible = rows.filter(matches);
       const sum = (key: string) => visible.reduce((acc, r) => acc + Number(r.csv[key] || 0), 0);
@@ -297,19 +343,40 @@ const td = 'py-3 px-3 whitespace-nowrap';
       URL.revokeObjectURL(url);
     }
 
-    monthSelect.onchange = render;
+    monthSelect.onchange = () => {
+      currentPage = 1;
+      render();
+    };
     document.querySelectorAll<HTMLElement>('[data-property-btn]').forEach((b) => {
       b.onclick = () => {
         property = b.dataset.propertyBtn ?? 'all';
+        currentPage = 1;
         render();
       };
     });
     document.querySelectorAll<HTMLElement>('[data-status-btn]').forEach((b) => {
       b.onclick = () => {
         status = b.dataset.statusBtn ?? 'All';
+        currentPage = 1;
         render();
       };
     });
+    const prevPageBtn = document.getElementById('bills-prev-page');
+    if (prevPageBtn) {
+      prevPageBtn.onclick = () => {
+        if (currentPage > 1) {
+          currentPage--;
+          render();
+        }
+      };
+    }
+    const nextPageBtn = document.getElementById('bills-next-page');
+    if (nextPageBtn) {
+      nextPageBtn.onclick = () => {
+        currentPage++;
+        render();
+      };
+    }
     const exportBtn = document.getElementById('export-csv-btn');
     if (exportBtn) exportBtn.onclick = exportCsv;
     const readingsBtn = document.getElementById('open-readings-btn');

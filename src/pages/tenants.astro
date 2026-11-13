@@ -466,35 +466,109 @@ const searchText = (parts: string[]) => parts.join(' ').toLowerCase();
       };
     }
 
-    // Bind Edit Tenant modal triggers
-    document.querySelectorAll<HTMLButtonElement>('.edit-tenant-btn').forEach((btn) => {
-      btn.onclick = () => {
-        const modal = document.getElementById('edit-tenant-modal');
-        if (!modal) return;
-        const setVal = (id: string, val: string | undefined) => {
-          const el = document.getElementById(id) as HTMLInputElement | null;
-          if (el) el.value = val || '';
+    function bindEditTenantButtons() {
+      document.querySelectorAll<HTMLButtonElement>('.edit-tenant-btn').forEach((btn) => {
+        btn.onclick = () => {
+          const modal = document.getElementById('edit-tenant-modal');
+          if (!modal) return;
+          const setVal = (id: string, val: string | undefined) => {
+            const el = document.getElementById(id) as HTMLInputElement | null;
+            if (el) el.value = val || '';
+          };
+          setVal('edit-tenancy-id', btn.dataset.tenancy);
+          setVal('edit-tenant-id', btn.dataset.tenantId);
+          setVal('edit-tenant-name', btn.dataset.name);
+          setVal('edit-tenant-phone', btn.dataset.phone);
+          setVal('edit-tenant-email', btn.dataset.email);
+          setVal('edit-tenant-rent', btn.dataset.rent);
+          setVal('edit-tenant-deposit', btn.dataset.deposit);
+          setVal('edit-tenant-move-in', btn.dataset.moveIn);
+          setVal('edit-tenant-move-in-rent', btn.dataset.moveInRent);
+          setVal('edit-tenant-lease-end', btn.dataset.leaseEnd);
+
+          modal.classList.remove('opacity-0', 'pointer-events-none');
+          const inner = modal.querySelector('div.transform');
+          inner?.classList.remove('scale-95');
+          inner?.classList.add('scale-100');
         };
-        setVal('edit-tenancy-id', btn.dataset.tenancy);
-        setVal('edit-tenant-id', btn.dataset.tenantId);
-        setVal('edit-tenant-name', btn.dataset.name);
-        setVal('edit-tenant-phone', btn.dataset.phone);
-        setVal('edit-tenant-email', btn.dataset.email);
-        setVal('edit-tenant-rent', btn.dataset.rent);
-        setVal('edit-tenant-deposit', btn.dataset.deposit);
-        setVal('edit-tenant-move-in', btn.dataset.moveIn);
-        setVal('edit-tenant-move-in-rent', btn.dataset.moveInRent);
-        setVal('edit-tenant-lease-end', btn.dataset.leaseEnd);
+      });
+    }
 
-        modal.classList.remove('opacity-0', 'pointer-events-none');
-        const inner = modal.querySelector('div.transform');
-        inner?.classList.remove('scale-95');
-        inner?.classList.add('scale-100');
-      };
-    });
-
+    bindEditTenantButtons();
     render();
+
+    // Auto-refresh tenant balances, bills, and statuses every 30s when idle.
+    const w = window as unknown as {
+      __tenantsRefreshTimer?: number;
+      __tenantsVisibilityHandler?: () => void;
+    };
+    if (w.__tenantsRefreshTimer) {
+      window.clearInterval(w.__tenantsRefreshTimer);
+    }
+    if (w.__tenantsVisibilityHandler) {
+      document.removeEventListener('visibilitychange', w.__tenantsVisibilityHandler);
+    }
+
+    let refreshing = false;
+    async function refreshTenantsPage() {
+      if (refreshing || document.hidden) return;
+      if (document.activeElement === searchInput) return;
+      const editModalOpen = !document.getElementById('edit-tenant-modal')?.classList.contains('pointer-events-none');
+      const otherModalOpen = !!document.querySelector('[role="dialog"]:not(.hidden)');
+      if (editModalOpen || otherModalOpen) return;
+
+      refreshing = true;
+      try {
+        const res = await fetch(window.location.href, {
+          headers: { 'X-Requested-With': 'fetch' },
+          cache: 'no-store',
+        });
+        if (!res.ok || res.redirected) return;
+        const html = await res.text();
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+
+        document.querySelectorAll<HTMLElement>('[data-tab-panel]').forEach((panel) => {
+          const key = panel.dataset.tabPanel;
+          const next = doc.querySelector<HTMLElement>(`[data-tab-panel="${key}"]`);
+          if (next) panel.innerHTML = next.innerHTML;
+        });
+
+        document.querySelectorAll<HTMLElement>('[data-tab-btn]').forEach((btn) => {
+          const key = btn.dataset.tabBtn;
+          const nextCount = doc.querySelector<HTMLElement>(`[data-tab-btn="${key}"] .tab-count`);
+          const curCount = btn.querySelector<HTMLElement>('.tab-count');
+          if (nextCount && curCount) curCount.textContent = nextCount.textContent;
+        });
+
+        bindEditTenantButtons();
+        render();
+      } catch {
+        // Silent retry on next cycle
+      } finally {
+        refreshing = false;
+      }
+    }
+
+    w.__tenantsRefreshTimer = window.setInterval(refreshTenantsPage, 30000);
+    w.__tenantsVisibilityHandler = () => {
+      if (!document.hidden) refreshTenantsPage();
+    };
+    document.addEventListener('visibilitychange', w.__tenantsVisibilityHandler);
   }
 
+  document.addEventListener('astro:before-swap', () => {
+    const w = window as unknown as {
+      __tenantsRefreshTimer?: number;
+      __tenantsVisibilityHandler?: () => void;
+    };
+    if (w.__tenantsRefreshTimer) {
+      window.clearInterval(w.__tenantsRefreshTimer);
+      w.__tenantsRefreshTimer = undefined;
+    }
+    if (w.__tenantsVisibilityHandler) {
+      document.removeEventListener('visibilitychange', w.__tenantsVisibilityHandler);
+      w.__tenantsVisibilityHandler = undefined;
+    }
+  });
   document.addEventListener('astro:page-load', initTenantsPage);
 </script>
