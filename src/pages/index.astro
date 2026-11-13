@@ -9,7 +9,7 @@ import LeasesActionCard from '../components/dashboard/LeasesActionCard.astro';
 import { FEATURES } from '../config/features';
 import GetStartedCard from '../components/dashboard/GetStartedCard.astro';
 import { getPortfolio, monthLabel, selectableMonths, viewMonthFrom } from '../data/portfolio';
-import { ChevronDown, Plus, Sparkles, FileSpreadsheet } from '@lucide/astro';
+import { ChevronDown, Plus, Sparkles, FileSpreadsheet, X } from '@lucide/astro';
 
 // This company's data only (the signed-in user's).
 const companyId = Astro.locals.user!.companyId;
@@ -67,40 +67,52 @@ const greeting = 'Habari';
     </div>
   </div>
 
-  <!-- Founding Landlord Programme Banner -->
-  <div class="mb-7 p-5 rounded-3xl bg-gradient-to-r from-[#0D382B] via-[#0A261F] to-[#124233] text-white shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 border border-[#1b4b3b]">
-    <div class="flex items-start gap-4">
-      <div class="h-10 w-10 rounded-2xl bg-[#C6EE58] text-[#0A261F] flex items-center justify-center shrink-0 font-bold">
-        <Sparkles class="w-5 h-5 text-[#0A261F]" />
+  <!-- Founding Landlord Programme Banner (slim & dismissible) -->
+  <div id="pilot-banner" class="mb-5 px-4 py-3 rounded-2xl bg-gradient-to-r from-[#0D382B] via-[#0A261F] to-[#124233] text-white shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 border border-[#1b4b3b]">
+    <div class="flex items-center gap-3 min-w-0">
+      <div class="h-8 w-8 rounded-xl bg-[#C6EE58] text-[#0A261F] flex items-center justify-center shrink-0 font-bold">
+        <Sparkles class="w-4 h-4 text-[#0A261F]" />
       </div>
-      <div>
-        <div class="flex items-center gap-2">
-          <h2 class="text-sm font-semibold text-white tracking-wide">Founding Landlord Partner Programme</h2>
+      <div class="min-w-0">
+        <div class="flex flex-wrap items-center gap-2">
+          <h2 class="text-xs font-semibold text-white tracking-wide">Founding Landlord Partner</h2>
           <span class="px-2 py-0.5 rounded-full bg-[#C6EE58]/20 border border-[#C6EE58]/40 text-[#C6EE58] text-[10px] font-bold uppercase tracking-wider">
             Active Pilot
           </span>
+          <span class="text-xs text-[#D1DCD6] hidden sm:inline">· Zero fees during pilot · Free bulk import & Ask Nyumbani listings</span>
         </div>
-        <p class="text-xs text-[#D1DCD6] mt-1 max-w-2xl leading-relaxed">
-          Zero software fees during pilot · Free bulk property onboarding · Instant vacancy listing on Ask Nyumbani · Direct pipeline CRM to convert prospective enquiries into paying tenants.
-        </p>
       </div>
     </div>
-    <div class="flex items-center gap-2.5 shrink-0 self-start md:self-auto">
+    <div class="flex items-center gap-2 shrink-0 self-start md:self-auto">
       <a
         href="/properties?action=bulk-import"
-        class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#C6EE58] text-[#0A261F] text-xs font-semibold hover:bg-[#b8e248] transition-all cursor-pointer shadow-xs"
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#C6EE58] text-[#0A261F] text-xs font-semibold hover:bg-[#b8e248] transition-all cursor-pointer shadow-xs"
       >
         <FileSpreadsheet class="w-3.5 h-3.5 text-[#0A261F]" />
-        <span>Bulk import units</span>
+        <span>Bulk import</span>
       </a>
       <a
         href="/enquiries"
-        class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/20 text-xs font-semibold transition-all cursor-pointer"
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/20 text-xs font-semibold transition-all cursor-pointer"
       >
-        <span>View leads</span>
+        <span>Leads</span>
       </a>
+      <button
+        type="button"
+        id="dismiss-pilot-banner"
+        aria-label="Dismiss pilot banner"
+        title="Dismiss"
+        class="p-1.5 rounded-lg text-[#D1DCD6] hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+      >
+        <X class="w-4 h-4" />
+      </button>
     </div>
   </div>
+  <script is:inline>
+    if (localStorage.getItem('makazi:pilot-banner-dismissed') === '1') {
+      document.getElementById('pilot-banner')?.classList.add('hidden');
+    }
+  </script>
 
   {viewing.isPastMonth && (
     <p class="mb-5 text-xs text-[#5A6862] bg-white border border-[#E2E5DF] rounded-2xl px-4 py-3">
@@ -137,12 +149,26 @@ const greeting = 'Habari';
 <script>
   import { navigate } from 'astro:transitions/client';
 
-  function initPeriodSelect() {
+  function initOverviewPage() {
     const select = document.getElementById('period-select') as HTMLSelectElement | null;
-    if (!select || select.dataset.bound) return;
-    select.dataset.bound = 'true';
-    select.addEventListener('change', () => navigate(select.value ? `/?month=${select.value}` : '/'));
+    if (select && !select.dataset.bound) {
+      select.dataset.bound = 'true';
+      select.addEventListener('change', () => navigate(select.value ? `/?month=${select.value}` : '/'));
+    }
+
+    const banner = document.getElementById('pilot-banner');
+    const dismissBtn = document.getElementById('dismiss-pilot-banner');
+    if (banner && localStorage.getItem('makazi:pilot-banner-dismissed') === '1') {
+      banner.classList.add('hidden');
+    }
+    if (dismissBtn && !dismissBtn.dataset.bound) {
+      dismissBtn.dataset.bound = 'true';
+      dismissBtn.addEventListener('click', () => {
+        localStorage.setItem('makazi:pilot-banner-dismissed', '1');
+        banner?.classList.add('hidden');
+      });
+    }
   }
 
-  document.addEventListener('astro:page-load', initPeriodSelect);
+  document.addEventListener('astro:page-load', initOverviewPage);
 </script>
