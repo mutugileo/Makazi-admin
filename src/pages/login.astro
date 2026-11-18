@@ -2,7 +2,7 @@
 import '../styles/global.css';
 import { verifyPassword } from '../lib/auth/password';
 import { clearFailures, isLockedOut, recordFailure } from '../lib/auth/rate-limit';
-import { adminAccount, adminConfigured, createSession, safeNext } from '../lib/auth/session';
+import { adminAccount, adminConfigured, createSession, safeNext, type StaffRole } from '../lib/auth/session';
 import { makeSupabaseClient } from '../lib/supabase';
 import { ADMIN_FAQ } from '../data/login-faq';
 
@@ -26,7 +26,7 @@ if (Astro.request.method === 'POST') {
   if (lockout.locked) {
     error = `Too many attempts. Try again in ${lockout.retryInMinutes} minute${lockout.retryInMinutes === 1 ? '' : 's'}.`;
   } else {
-    let authenticatedUser: { email: string; name: string; companyId: string; role: 'owner' } | null = null;
+    let authenticatedUser: { email: string; name: string; companyId: string; role: StaffRole } | null = null;
 
     // 1. Supabase Auth check: the signed-in user must exist and have a staff row.
     const supabase = makeSupabaseClient();
@@ -43,13 +43,15 @@ if (Astro.request.method === 'POST') {
             .eq('user_id', authData.user.id)
             .maybeSingle();
 
-          if (staffRow) {
+          if (staffRow && (staffRow.role === 'owner' || staffRow.role === 'manager')) {
             authenticatedUser = {
               email: authData.user.email || email,
               name: staffRow.name || 'Admin',
               companyId: staffRow.company_id,
-              role: 'owner',
+              role: staffRow.role,
             };
+          } else if (staffRow) {
+            error = 'Caretaker accounts cannot sign in to the admin portal.';
           } else {
             error = 'This account does not have staff permissions.';
           }

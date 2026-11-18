@@ -55,23 +55,22 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       throw uploadErr;
     }
 
-    const { data: urlData } = supabase.storage
-      .from('repair-photos')
-      .getPublicUrl(storagePath);
-
-    const photoUrl = urlData.publicUrl;
-
-    // Update ticket in database
+    // Store the storage path in repair_tickets.photo_url and return a signed URL for preview.
     const { error: updateErr } = await supabase
       .from('repair_tickets')
       .update({
-        photo_url: photoUrl,
+        photo_url: storagePath,
         has_photo: true,
       })
       .eq('company_id', user.companyId)
       .eq('id', ticketId);
 
     if (updateErr) throw updateErr;
+
+    const { data: signedData } = await supabase.storage
+      .from('repair-photos')
+      .createSignedUrl(storagePath, 3600);
+    const photoUrl = signedData?.signedUrl ?? null;
 
     clearLiveCache(user.companyId);
     await notifyTenancy(supabase, ticket.tenancy_id, 'data_updated', { action: 'ticket_updated' });

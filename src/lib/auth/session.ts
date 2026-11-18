@@ -9,10 +9,13 @@ import { ADMIN_COMPANY_ID, ADMIN_EMAIL, ADMIN_NAME, ADMIN_PASSWORD_HASH, SESSION
 export const SESSION_COOKIE = 'makazi_admin_session';
 export const SESSION_HOURS = 12;
 
+export type StaffRole = 'owner' | 'manager' | 'caretaker';
+const VALID_ROLES = new Set<StaffRole>(['owner', 'manager', 'caretaker']);
+
 export interface AdminUser {
   email: string;
   name: string;
-  role: 'owner';
+  role: StaffRole;
   /** Every page shows this company's data only. */
   companyId: string;
 }
@@ -21,7 +24,7 @@ interface SessionPayload {
   sub: string;
   name: string;
   companyId: string;
-  role: 'owner';
+  role: StaffRole;
   exp: number; // unix seconds
 }
 
@@ -52,7 +55,7 @@ function sign(body: string): string {
 
 export function createSession(
   cookies: AstroCookies,
-  user: { email: string; name: string; companyId?: string; role?: 'owner' },
+  user: { email: string; name: string; companyId?: string; role?: StaffRole },
   secure: boolean
 ) {
   const companyId = user.companyId || adminAccount()?.companyId;
@@ -61,7 +64,7 @@ export function createSession(
     sub: user.email.toLowerCase(),
     name: user.name,
     companyId,
-    role: user.role || 'owner',
+    role: user.role && VALID_ROLES.has(user.role) ? user.role : 'manager',
     exp: Math.floor(Date.now() / 1000) + SESSION_HOURS * 3600,
   };
   const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
@@ -87,12 +90,12 @@ export function readSession(cookies: AstroCookies): AdminUser | null {
   try {
     const payload = JSON.parse(Buffer.from(body, 'base64url').toString()) as SessionPayload;
     if (payload.exp * 1000 < Date.now()) return null;
-    // A session without a company is not a session: every page is scoped by it.
-    if (!payload.companyId) return null;
+    // A session without a company or valid role is not a session.
+    if (!payload.companyId || !VALID_ROLES.has(payload.role)) return null;
     return {
       email: payload.sub,
       name: payload.name || 'Admin',
-      role: payload.role || 'owner',
+      role: payload.role,
       companyId: payload.companyId,
     };
   } catch {

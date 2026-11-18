@@ -147,27 +147,29 @@ const mapStaff = (r: StaffRow): StaffMember => ({
   phone: r.phone, propertyIds: r.property_ids ?? [],
 });
 
-const repairPhotoUrl = (
+const PUBLIC_REPAIR_PREFIX = '/storage/v1/object/public/repair-photos/';
+
+const repairPhotoPath = (
   path: string | null | undefined,
   companyId?: string,
   tenancyId?: string,
   ticketId?: string,
   hasPhoto?: boolean,
 ): string | null => {
-  const base = import.meta.env.PUBLIC_SUPABASE_URL || 'https://gdapdyvgppatnjksbdco.supabase.co';
   if (path) {
-    if (path.startsWith('http://') || path.startsWith('https://')) return path;
-    const clean = path.replace(/^\/+/, '');
-    return `${base}/storage/v1/object/public/repair-photos/${clean}`;
+    const idx = path.indexOf(PUBLIC_REPAIR_PREFIX);
+    if (idx >= 0) return path.slice(idx + PUBLIC_REPAIR_PREFIX.length);
+    if (path.startsWith('http://') || path.startsWith('https://')) return null;
+    return path.replace(/^\/+/, '');
   }
   if (hasPhoto && companyId && tenancyId && ticketId) {
-    return `${base}/storage/v1/object/public/repair-photos/${companyId}/${tenancyId}/${ticketId}.jpg`;
+    return `${companyId}/${tenancyId}/${ticketId}.jpg`;
   }
   return null;
 };
 
 const mapTicket = (r: RepairTicketRow): RepairTicket => {
-  const photo = repairPhotoUrl(r.photo_url, r.company_id, r.tenancy_id, r.id, r.has_photo);
+  const storagePath = repairPhotoPath(r.photo_url, r.company_id, r.tenancy_id, r.id, r.has_photo);
   return {
     id: r.id,
     companyId: r.company_id,
@@ -178,8 +180,8 @@ const mapTicket = (r: RepairTicketRow): RepairTicket => {
     status: r.status,
     title: r.title,
     description: r.description,
-    hasPhoto: Boolean(r.has_photo || photo),
-    photoUrl: photo,
+    hasPhoto: Boolean(r.has_photo || storagePath || r.photo_url),
+    photoUrl: storagePath ?? (r.photo_url?.startsWith('http') ? r.photo_url : null),
     createdAt: nairobiIso(r.created_at),
     resolvedAt: r.resolved_at ? nairobiIso(r.resolved_at) : null,
     assignedTo: r.assigned_to,
@@ -290,6 +292,22 @@ export async function fetchSeedFromSupabase(
   const payments = assertOk(paymentsRes.data, paymentsRes.error, 'payments').map(mapPayment);
   const staff = assertOk(staffRes.data, staffRes.error, 'staff').map(mapStaff);
   const repairTickets = assertOk(ticketsRes.data, ticketsRes.error, 'repair_tickets').map(mapTicket);
+  const pathsToSign = repairTickets
+    .map((t) => t.photoUrl)
+    .filter((p): p is string => Boolean(p && !p.startsWith('http')));
+  if (pathsToSign.length > 0) {
+    const { data: signed } = await supabase.storage
+      .from('repair-photos')
+      .createSignedUrls(pathsToSign, 3600);
+    if (signed) {
+      const byPath = new Map(signed.map((s) => [s.path, s.signedUrl]));
+      for (const t of repairTickets) {
+        if (t.photoUrl && !t.photoUrl.startsWith('http')) {
+          t.photoUrl = byPath.get(t.photoUrl) ?? null;
+        }
+      }
+    }
+  }
   const messages = assertOk(messagesRes.data, messagesRes.error, 'messages').map(mapMessage);
 
   // meter_readings: flatten rows → nested Record<unitId, Record<month, value>>
