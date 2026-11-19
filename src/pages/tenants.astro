@@ -510,8 +510,10 @@ const searchText = (parts: string[]) => parts.join(' ').toLowerCase();
     }
 
     let refreshing = false;
+    let lastRefreshAt = Date.now();
     async function refreshTenantsPage() {
       if (refreshing || document.hidden) return;
+      if (Date.now() - lastRefreshAt < 60000) return;
       if (document.activeElement === searchInput) return;
       const editModalOpen = !document.getElementById('edit-tenant-modal')?.classList.contains('pointer-events-none');
       const otherModalOpen = !!document.querySelector('[role="dialog"]:not(.hidden)');
@@ -542,6 +544,7 @@ const searchText = (parts: string[]) => parts.join(' ').toLowerCase();
 
         bindEditTenantButtons();
         render();
+        lastRefreshAt = Date.now();
       } catch {
         // Silent retry on next cycle
       } finally {
@@ -549,7 +552,7 @@ const searchText = (parts: string[]) => parts.join(' ').toLowerCase();
       }
     }
 
-    w.__tenantsRefreshTimer = window.setInterval(refreshTenantsPage, 30000);
+    w.__tenantsRefreshTimer = window.setInterval(refreshTenantsPage, 120000);
     w.__tenantsVisibilityHandler = () => {
       if (!document.hidden) refreshTenantsPage();
     };

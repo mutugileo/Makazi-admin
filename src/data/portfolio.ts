@@ -648,6 +648,8 @@ export type Portfolio = ReturnType<typeof buildPortfolio>;
 let demoWarned = false;
 const seedCache = new Map<string, Portfolio>();
 
+const LIVE_CACHE_TTL_MS = 30_000;
+const liveCache = new Map<string, { portfolio: Portfolio; expiresAt: number }>();
 // Live Supabase inflight request deduplication for SSR components
 const liveInflight = new Map<string, Promise<Portfolio>>();
 // Bumped on every write, so a fetch that started before the write can't put
@@ -655,8 +657,11 @@ const liveInflight = new Map<string, Promise<Portfolio>>();
 const liveGeneration = new Map<string, number>();
 
 export function clearLiveCache(companyId?: string) {
-  const ids = companyId ? [companyId] : [...new Set([...liveInflight.keys()])];
+  const ids = companyId
+    ? [companyId]
+    : [...new Set([...liveCache.keys(), ...liveInflight.keys()])];
   for (const id of ids) {
+    liveCache.delete(id);
     liveInflight.delete(id);
     liveGeneration.set(id, (liveGeneration.get(id) ?? 0) + 1);
     if (isDistributedCacheEnabled()) {
@@ -752,9 +757,17 @@ async function getCurrentPortfolio(
 ): Promise<Portfolio> {
   // Phase 2: Supabase is configured → fetch live data.
   if (supabaseConfigured()) {
+    const cachedMem = liveCache.get(companyId);
+    if (cachedMem && cachedMem.expiresAt > Date.now()) {
+      return cachedMem.portfolio;
+    }
+
     if (isDistributedCacheEnabled()) {
       const cached = await getFromDistributedCache<Portfolio>(`portfolio:${companyId}`);
-      if (cached) return cached;
+      if (cached) {
+        liveCache.set(companyId, { portfolio: cached, expiresAt: Date.now() + LIVE_CACHE_TTL_MS });
+        return cached;
+      }
     }
 
     const inflight = liveInflight.get(companyId);
@@ -769,8 +782,11 @@ async function getCurrentPortfolio(
         try {
           const liveSeed = await fetchSeedFromSupabase(supabase, companyId);
           const portfolio = buildPortfolio(companyId, liveSeed);
-          if (isDistributedCacheEnabled() && (liveGeneration.get(companyId) ?? 0) === generation) {
-            void setInDistributedCache(`portfolio:${companyId}`, portfolio, 5);
+          if ((liveGeneration.get(companyId) ?? 0) === generation) {
+            liveCache.set(companyId, { portfolio, expiresAt: Date.now() + LIVE_CACHE_TTL_MS });
+            if (isDistributedCacheEnabled()) {
+              void setInDistributedCache(`portfolio:${companyId}`, portfolio, 30);
+            }
           }
           return portfolio;
         } finally {

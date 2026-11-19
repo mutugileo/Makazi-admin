@@ -229,23 +229,17 @@ async function allRows(
 ): Promise<{ data: any[] | null; error: { message: string } | null }> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rows: any[] = [];
-  let total: number | null = null;
-  // Advance by the rows actually received: a server cap below PAGE_SIZE
-  // must not skip any.
-  for (let from = 0; total === null || rows.length < total; from = rows.length) {
+  for (let from = 0; ; from = rows.length) {
     let query = supabase
       .from(table)
-      .select('*', from === 0 ? { count: 'exact' } : undefined)
+      .select('*')
       .eq(companyColumn, companyId);
     for (const column of orderBy) query = query.order(column, { ascending: true });
-    const { data, error, count } = await query.range(from, from + PAGE_SIZE - 1);
+    const { data, error } = await query.range(from, from + PAGE_SIZE - 1);
     if (error) return { data: null, error };
-    if (from === 0) total = count ?? 0;
-    rows.push(...(data ?? []));
     if (!data?.length) break;
-  }
-  if (rows.length !== total) {
-    return { data: null, error: { message: `read ${rows.length} of ${total} rows; try again` } };
+    rows.push(...data);
+    if (data.length < PAGE_SIZE) break;
   }
   return { data: rows, error: null };
 }
