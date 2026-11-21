@@ -50,7 +50,7 @@ interface TenantRow {
 interface TenancyRow {
   id: string; tenant_id: string; unit_id: string; rent: number; deposit: number;
   move_in: string; move_in_rent: number | null; move_out: string | null; lease_start: string; lease_end: string;
-  opening_balance: number; opening_reading: number | null;
+  opening_balance: number; opening_balance_month: string | null; opening_reading: number | null;
   move_in_garbage?: number | null;
   renewal: Tenancy['renewal']; move_out_note: string | null;
   deposit_refund: Tenancy['depositRefund'];
@@ -131,7 +131,7 @@ const mapTenancy = (r: TenancyRow): Tenancy => ({
   id: r.id, tenantId: r.tenant_id, unitId: r.unit_id,
   rent: r.rent, deposit: r.deposit,
   moveIn: r.move_in, moveInRent: r.move_in_rent, moveOut: r.move_out, leaseStart: r.lease_start, leaseEnd: r.lease_end,
-  openingBalance: r.opening_balance, openingReading: r.opening_reading,
+  openingBalance: r.opening_balance, openingBalanceMonth: r.opening_balance_month ?? null, openingReading: r.opening_reading,
   moveInGarbage: r.move_in_garbage ?? null,
   renewal: r.renewal, moveOutNote: r.move_out_note, depositRefund: r.deposit_refund,
 });

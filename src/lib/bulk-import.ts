@@ -2,6 +2,7 @@
 // Designed for property management companies onboarding 50-500+ units in seconds.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { cycleOf } from './billing';
 import { parseKenyanPhone, phoneSpellings, issueOneTimePassword, generateOneTimePassword } from './tenant-auth';
 
 export interface BulkImportRow {
@@ -421,6 +422,8 @@ export async function executeBulkImport(
     return result;
   }
 
+  const importCycle = cycleOf(new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10)); // today, Nairobi
+
   // 1. Resolve manager for properties
   let managerId = defaultManagerId;
   if (!managerId) {
@@ -638,6 +641,9 @@ export async function executeBulkImport(
               lease_start: moveIn,
               lease_end: leaseEnd.toISOString().slice(0, 10),
               opening_balance: row.openingBalance ?? 0,
+              // The sheet's balance is what is owed today: bill from this cycle on,
+              // never the months before the import again.
+              opening_balance_month: importCycle,
               opening_reading: row.openingReading ?? null,
               move_in_garbage: row.garbageFee,
             });

@@ -161,8 +161,10 @@ export interface Tenancy {
   moveOut: IsoDate | null;
   leaseStart: IsoDate;
   leaseEnd: IsoDate;
-  /** Balance carried in from the owner's spreadsheet at the company's ledgerStartMonth. */
+  /** Balance carried in from the owner's spreadsheet, owed before the first billed cycle. */
   openingBalance: number;
+  /** Cycle the opening balance was taken at (a spreadsheet import); billing starts here. Null: the company's ledgerStartMonth. */
+  openingBalanceMonth?: Month | null;
   /** Water meter at move-in. Null for tenancies older than the ledger. */
   openingReading: number | null;
   /** Move-in garbage fee override. If null, falls back to property rate. */
@@ -436,10 +438,20 @@ function waterFor(seed: Seed, unitId: string, month: Month, rate: number, since:
   return { previousReading, currentReading, units, rate, amount: units * rate };
 }
 
+/**
+ * First cycle this tenancy is billed on Makazi. The opening balance covers
+ * everything before it, so earlier cycles are never charged again.
+ */
+export function ledgerStartFor(seed: Seed, tenancy: Tenancy): Month {
+  const companyStart = companyOfTenancy(seed, tenancy).settings.ledgerStartMonth;
+  const own = tenancy.openingBalanceMonth;
+  return own && own > companyStart ? own : companyStart;
+}
+
 /** First and last month a tenancy is billed for within the seed window. */
 export function billingWindow(seed: Seed, tenancy: Tenancy): [Month, Month] | null {
   const asOfMonth = cycleOf(seed.asOf);
-  const start = companyOfTenancy(seed, tenancy).settings.ledgerStartMonth;
+  const start = ledgerStartFor(seed, tenancy);
   const moveInMonth = cycleOf(tenancy.moveIn);
   const first = moveInMonth > start ? moveInMonth : start;
 
@@ -467,6 +479,7 @@ export function buildLedger(seed: Seed, tenancy: Tenancy): MonthlyBill[] {
   const { settings } = companyOfTenancy(seed, tenancy);
 
   const moveInMonth = cycleOf(tenancy.moveIn);
+  const ledgerStart = ledgerStartFor(seed, tenancy);
   const finalMonth = tenancy.moveOut ? addMonths(cycleOf(tenancy.moveOut), 1) : null;
   const payments = seed.payments
     .filter((p) => p.tenancyId === tenancy.id)
@@ -479,7 +492,7 @@ export function buildLedger(seed: Seed, tenancy: Tenancy): MonthlyBill[] {
     const kind: BillKind =
       month === finalMonth
         ? 'final'
-        : month === moveInMonth && moveInMonth >= settings.ledgerStartMonth
+        : month === moveInMonth && moveInMonth >= ledgerStart
           ? 'move-in'
           : 'monthly';
 
@@ -614,8 +627,8 @@ export function arrearsSlices(seed: Seed, tenancy: Tenancy, bills: MonthlyBill[]
     remaining -= amount;
   }
   if (remaining > 0) {
-    // Whatever is left was carried in from the spreadsheet before startMonth.
-    slices.push(slice(seed, settings, addMonths(settings.ledgerStartMonth, -1), remaining));
+    // Whatever is left was carried in from the spreadsheet before the ledger start.
+    slices.push(slice(seed, settings, addMonths(ledgerStartFor(seed, tenancy), -1), remaining));
   }
   return slices.reverse();
 }
