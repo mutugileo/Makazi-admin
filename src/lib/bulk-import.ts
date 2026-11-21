@@ -119,6 +119,31 @@ const REQUIRED_COLUMNS = [
   { name: 'Monthly Rent (KES)', aliases: RENT_COLUMNS },
 ];
 
+/**
+ * Opening balance in shillings: positive is arrears (owed), negative is
+ * credit. Reads the ways spreadsheets write a negative: -5,000, the
+ * typographic minus −5,000, accounting brackets (5,000) and a CR suffix;
+ * DR marks arrears. Null when it isn't a number.
+ */
+export function parseOpeningBalance(raw: string): number | null {
+  let text = raw.trim().replace(/\u2212/g, '-').replace(/kes|ksh/gi, '').trim();
+  let negative = false;
+  if (/^\(.*\)$/.test(text)) {
+    negative = true;
+    text = text.slice(1, -1).trim();
+  }
+  if (/\bcr\.?$/i.test(text)) {
+    negative = true;
+    text = text.replace(/\bcr\.?$/i, '').trim();
+  } else if (/\bdr\.?$/i.test(text)) {
+    text = text.replace(/\bdr\.?$/i, '').trim();
+  }
+  text = text.replace(/,/g, '').replace(/\s+/g, '');
+  if (!/^-?\d+(\.\d+)?$/.test(text)) return null;
+  const value = Math.round(Number(text));
+  return negative ? -Math.abs(value) : value;
+}
+
 function normalizeHeader(h: string): string {
   return h.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
@@ -308,8 +333,14 @@ export function validateBulkCsv(csvText: string): ImportValidationResult {
       }
 
       if (openingBalRaw) {
-        const balParsed = Math.round(Number(openingBalRaw.replace(/[^0-9.-]/g, '')));
-        if (!isNaN(balParsed)) {
+        const balParsed = parseOpeningBalance(openingBalRaw);
+        if (balParsed === null) {
+          errors.push({
+            row: rowNum,
+            field: 'openingBalance',
+            message: `Opening balance '${openingBalRaw}' isn't a number. Use a positive amount for arrears and a negative one for credit.`,
+          });
+        } else {
           openingBalance = balParsed;
         }
       }
