@@ -352,6 +352,11 @@ const managers = seed.staff
         if (statTenants) statTenants.textContent = String(data.summary.tenanciesCount);
         if (statRent) statRent.textContent = `KES ${data.summary.totalMonthlyRent.toLocaleString()}`;
 
+        // Everything below comes from the uploaded file: escape it before it
+        // goes into HTML, or a crafted cell could run script in this page.
+        const esc = (value: unknown) =>
+          String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string);
+
         // Render property chips
         if (propertiesChips) {
           propertiesChips.innerHTML = data.summary.propertiesList
@@ -359,7 +364,7 @@ const managers = seed.staff
               (p: string) => `
               <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#EBF0EC] text-[11px] font-semibold text-[#0D382B]">
                 <span class="w-1.5 h-1.5 rounded-full bg-[#0D382B]"></span>
-                ${p}
+                ${esc(p)}
               </span>
             `
             )
@@ -371,7 +376,7 @@ const managers = seed.staff
           validationErrors?.classList.remove('hidden');
           if (errorsList) {
             errorsList.innerHTML = data.errors
-              .map((err: { row: number; message: string }) => `<li>Row ${err.row}: ${err.message}</li>`)
+              .map((err: { row: number; message: string }) => `<li>Row ${esc(err.row)}: ${esc(err.message)}</li>`)
               .join('');
           }
           submitBtn.disabled = true;
@@ -388,12 +393,12 @@ const managers = seed.staff
             .map(
               (r: any) => `
               <tr class="hover:bg-[#F8F9F6]">
-                <td class="px-3 py-2 font-semibold">${r.propertyName}</td>
-                <td class="px-3 py-2 font-mono">${r.unitLabel}</td>
-                <td class="px-3 py-2">${r.bedrooms} bd</td>
-                <td class="px-3 py-2 font-semibold">KES ${r.rent.toLocaleString()}</td>
-                <td class="px-3 py-2 text-[#5A6862]">${r.tenantName || '—'}</td>
-                <td class="px-3 py-2 text-[#5A6862] font-mono">${r.tenantPhone || '—'}</td>
+                <td class="px-3 py-2 font-semibold">${esc(r.propertyName)}</td>
+                <td class="px-3 py-2 font-mono">${esc(r.unitLabel)}</td>
+                <td class="px-3 py-2">${esc(r.bedrooms)} bd</td>
+                <td class="px-3 py-2 font-semibold">KES ${esc(Number(r.rent).toLocaleString())}</td>
+                <td class="px-3 py-2 text-[#5A6862]">${esc(r.tenantName || '—')}</td>
+                <td class="px-3 py-2 text-[#5A6862] font-mono">${esc(r.tenantPhone || '—')}</td>
                 <td class="px-3 py-2">
                   <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold ${r.tenantName ? 'bg-[#EBF0EC] text-[#0D382B]' : 'bg-[#FEF3F2] text-[#991B1B]'}">
                     ${r.tenantName ? 'Occupied' : 'Vacant'}
