@@ -111,6 +111,14 @@ export function parseCsvRows(csvText: string): string[][] {
 }
 
 /** Normalizes header names for flexible Excel/CSV import */
+// The template's own headers come first.
+const RENT_COLUMNS = ['Monthly Rent (KES)', 'Monthly Rent', 'Rent (KES)', 'Rent'];
+const REQUIRED_COLUMNS = [
+  { name: 'Property Name', aliases: ['Property Name', 'Property', 'Building', 'Estate'] },
+  { name: 'Unit Label', aliases: ['Unit Label', 'Unit', 'Door', 'House No'] },
+  { name: 'Monthly Rent (KES)', aliases: RENT_COLUMNS },
+];
+
 function normalizeHeader(h: string): string {
   return h.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
@@ -137,6 +145,24 @@ export function validateBulkCsv(csvText: string): ImportValidationResult {
   rawHeaders.forEach((h, idx) => {
     headerMap.set(normalizeHeader(h), idx);
   });
+
+  // Columns every file needs; one clear message instead of an error per row.
+  const missing = REQUIRED_COLUMNS.filter(
+    ({ aliases }) => !aliases.some((alias) => headerMap.has(normalizeHeader(alias))),
+  ).map(({ name }) => name);
+  if (missing.length > 0) {
+    return {
+      valid: false,
+      rows: [],
+      errors: [{
+        row: 1,
+        field: 'csv',
+        message: `Missing column${missing.length > 1 ? 's' : ''}: ${missing.join(', ')}. Use the headers from the template.`,
+      }],
+      warnings: [],
+      summary: { propertiesCount: 0, propertiesList: [], unitsCount: 0, tenanciesCount: 0, totalMonthlyRent: 0 },
+    };
+  }
 
   const getCol = (row: string[], ...aliases: string[]): string => {
     for (const alias of aliases) {
@@ -167,7 +193,7 @@ export function validateBulkCsv(csvText: string): ImportValidationResult {
 
     const unitLabel = getCol(rawRow, 'Unit Label', 'Unit', 'Door', 'House No');
     const bedroomsRaw = getCol(rawRow, 'Bedrooms', 'Beds', 'Rooms');
-    const rentRaw = getCol(rawRow, 'Rent', 'Monthly Rent', 'Rent (KES)');
+    const rentRaw = getCol(rawRow, ...RENT_COLUMNS);
     const depositRaw = getCol(rawRow, 'Deposit', 'Deposit (KES)');
     const isListedRaw = getCol(rawRow, 'Is Listed', 'Listed', 'Listing Status').toLowerCase();
 
@@ -272,7 +298,7 @@ export function validateBulkCsv(csvText: string): ImportValidationResult {
         validatedMoveIn = new Date().toISOString().slice(0, 10);
       }
 
-      if (moveInRentRaw) {
+      if (moveInRentRaw && rent > 0) {
         const parsed = Math.round(Number(moveInRentRaw.replace(/[^0-9.-]/g, '')));
         if (!(parsed >= 0 && parsed <= rent * 2)) {
           errors.push({ row: rowNum, field: 'moveInRent', message: 'Move-in rent must be from 0 up to twice the monthly rent.' });
