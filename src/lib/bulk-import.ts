@@ -347,8 +347,14 @@ export function validateBulkCsv(csvText: string): ImportValidationResult {
       }
 
       if (openingReadingRaw) {
-        const readingParsed = Math.round(Number(openingReadingRaw.replace(/[^0-9.-]/g, '')));
-        if (!isNaN(readingParsed) && readingParsed >= 0) {
+        const readingParsed = Math.round(Number(openingReadingRaw.replace(/[^0-9.]/g, '')));
+        if (!/\d/.test(openingReadingRaw) || isNaN(readingParsed) || readingParsed < 0) {
+          errors.push({
+            row: rowNum,
+            field: 'openingReading',
+            message: `Opening meter reading '${openingReadingRaw}' isn't a number. Leave it blank if there's no water meter.`,
+          });
+        } else {
           openingReading = readingParsed;
         }
       }
@@ -653,6 +659,10 @@ export async function executeBulkImport(
             } else {
               result.errors.push(`Failed to create tenancy for unit '${row.unitLabel}': ${tenancyErr.message}`);
             }
+          } else {
+            result.errors.push(
+              `Row ${row.rowNumber}: unit '${row.unitLabel}' already has an active tenant, so ${row.tenantName ?? 'this tenant'} and their opening balance were not imported. Move the current tenant out first.`,
+            );
           }
         } catch (err: unknown) {
           result.errors.push(`Error onboarding tenant for row ${row.rowNumber}: ${err instanceof Error ? err.message : String(err)}`);

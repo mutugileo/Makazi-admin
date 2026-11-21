@@ -438,12 +438,39 @@ const managers = seed.staff
         });
 
         const data = await res.json();
+        const rowProblems: string[] = [
+          ...(data.errors ?? []).map((e: { row: number; message: string }) => `Row ${e.row}: ${e.message}`),
+          ...(data.result?.errors ?? []),
+        ];
         if (!res.ok) {
-          throw new Error(data.error || 'Import failed');
+          throw new Error([data.error || 'Import failed. Nothing was imported.', ...rowProblems].join('\n'));
+        }
+
+        if (rowProblems.length > 0) {
+          // Some rows were not imported: keep them on screen instead of reloading
+          // past them. textContent only, the messages quote cell values.
+          if (executionStatusText) {
+            executionStatusText.textContent = `Imported ${data.result.unitsCreated} units and ${data.result.tenanciesCreated} tenancies. ${rowProblems.length} row${rowProblems.length > 1 ? 's were' : ' was'} not imported:`;
+          }
+          executionPanel?.querySelectorAll('.shimmer').forEach((el) => el.parentElement?.classList.add('hidden'));
+          const list = document.createElement('ul');
+          list.className = 'text-left text-xs text-[#C04A26] space-y-1 max-w-md mx-auto list-disc pl-5';
+          for (const problem of rowProblems) {
+            const li = document.createElement('li');
+            li.textContent = problem;
+            list.appendChild(li);
+          }
+          const done = document.createElement('button');
+          done.type = 'button';
+          done.className = 'px-5 py-2 rounded-full bg-[#0D382B] text-white text-xs font-semibold';
+          done.textContent = 'Done, refresh portfolio';
+          done.addEventListener('click', () => window.location.reload());
+          executionPanel?.append(list, done);
+          return;
         }
 
         if (executionStatusText) {
-          executionStatusText.textContent = `Successfully imported ${data.result.unitsCreated} units and ${data.result.tenanciesCreated} tenancies! Refreshing portfolio...`;
+          executionStatusText.textContent = `Imported ${data.result.unitsCreated} units and ${data.result.tenanciesCreated} tenancies. Refreshing portfolio...`;
         }
 
         setTimeout(() => {

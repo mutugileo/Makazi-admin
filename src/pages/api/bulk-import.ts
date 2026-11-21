@@ -40,9 +40,11 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     }
 
     if (mode === 'commit') {
-      if (!validation.valid && validation.rows.length === 0) {
+      // All or nothing: a row with an error must never be saved with a
+      // default (0 balance, today's move-in) standing in for what the sheet said.
+      if (!validation.valid || validation.rows.length === 0) {
         return new Response(JSON.stringify({
-          error: 'Cannot import invalid CSV file. Please fix errors first.',
+          error: 'Fix the rows listed below, then upload the file again. Nothing was imported.',
           errors: validation.errors,
         }), { status: 400 });
       }
