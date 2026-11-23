@@ -14,7 +14,8 @@
     "astro": "astro",
     "admin:create": "node scripts/create-admin.mjs",
     "e2e:live": "node --env-file=.env scripts/e2e-live.mjs",
-    "start": "node --env-file=.env ./dist/server/entry.mjs"
+    "start": "node --env-file=.env ./dist/server/entry.mjs",
+    "test": "node scripts/run-tests.mjs"
   },
   "dependencies": {
     "@astrojs/node": "^11.1.6",
