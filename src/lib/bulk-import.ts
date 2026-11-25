@@ -574,6 +574,26 @@ export async function executeBulkImport(
           const parsedPhone = parseKenyanPhone(row.tenantPhone);
           if (!parsedPhone) continue;
 
+          // An occupied unit is checked first: creating the tenant and their
+          // app login before finding out left people with a login and no unit.
+          const { data: currentTenancy, error: occupancyErr } = await supabase
+            .from('tenancies')
+            .select('id')
+            .eq('company_id', companyId)
+            .eq('unit_id', unitId)
+            .is('move_out', null)
+            .maybeSingle();
+          if (occupancyErr) {
+            result.errors.push(`Row ${row.rowNumber}: couldn't check whether unit '${row.unitLabel}' is free, so ${row.tenantName} was not imported. Try the upload again.`);
+            continue;
+          }
+          if (currentTenancy) {
+            result.errors.push(
+              `Row ${row.rowNumber}: unit '${row.unitLabel}' already has an active tenant, so ${row.tenantName} and their opening balance were not imported. Move the current tenant out first.`,
+            );
+            continue;
+          }
+
           // Check if tenant already exists in company
           const { data: existingTenant } = await supabase
             .from('tenants')
@@ -621,16 +641,7 @@ export async function executeBulkImport(
             }
           }
 
-          // Check if unit already has an active tenancy
-          const { data: currentTenancy } = await supabase
-            .from('tenancies')
-            .select('id')
-            .eq('company_id', companyId)
-            .eq('unit_id', unitId)
-            .is('move_out', null)
-            .maybeSingle();
-
-          if (!currentTenancy) {
+          {
             const moveIn = row.moveInDate || new Date().toISOString().slice(0, 10);
             const leaseEnd = new Date(`${moveIn}T00:00:00Z`);
             leaseEnd.setUTCFullYear(leaseEnd.getUTCFullYear() + 1);
@@ -659,10 +670,6 @@ export async function executeBulkImport(
             } else {
               result.errors.push(`Failed to create tenancy for unit '${row.unitLabel}': ${tenancyErr.message}`);
             }
-          } else {
-            result.errors.push(
-              `Row ${row.rowNumber}: unit '${row.unitLabel}' already has an active tenant, so ${row.tenantName ?? 'this tenant'} and their opening balance were not imported. Move the current tenant out first.`,
-            );
           }
         } catch (err: unknown) {
           result.errors.push(`Error onboarding tenant for row ${row.rowNumber}: ${err instanceof Error ? err.message : String(err)}`);

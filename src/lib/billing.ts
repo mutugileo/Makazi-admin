@@ -8,7 +8,7 @@ export type IsoDate = string; // 'YYYY-MM-DD'
 
 export type PropertyType = 'apartments' | 'houses';
 export type PaymentMethod = 'M-Pesa' | 'Bank';
-export type BillKind = 'move-in' | 'monthly' | 'final';
+export type BillKind = 'opening' | 'move-in' | 'monthly' | 'final';
 export type BillStatus = 'Paid' | 'Partial' | 'Unpaid' | 'Credit';
 export type BillLineKind =
   | 'rent'
@@ -489,12 +489,18 @@ export function buildLedger(seed: Seed, tenancy: Tenancy): MonthlyBill[] {
   let balanceBf = tenancy.openingBalance;
 
   for (const month of monthsBetween(window[0], window[1])) {
+    // An uploaded tenancy's first cycle carries only the sheet's balance: it is
+    // what the tenant owed that day, so this cycle's rent, deposit and move-in
+    // rent are already in it. Charges start the next cycle; no move-in bill.
+    const imported = Boolean(tenancy.openingBalanceMonth);
     const kind: BillKind =
       month === finalMonth
         ? 'final'
-        : month === moveInMonth && moveInMonth >= ledgerStart
-          ? 'move-in'
-          : 'monthly';
+        : imported && month === ledgerStart
+          ? 'opening'
+          : !imported && month === moveInMonth && moveInMonth >= ledgerStart
+            ? 'move-in'
+            : 'monthly';
 
     const lines: BillLine[] = [];
     let water: WaterUsage | null = null;
@@ -528,7 +534,7 @@ export function buildLedger(seed: Seed, tenancy: Tenancy): MonthlyBill[] {
         lines.push({ kind: 'water', amount: water.amount });
       }
       lines.push({ kind: 'garbage', amount: garbageFee });
-    } else {
+    } else if (kind === 'final') {
       water = waterFor(seed, unit.id, month, waterRate, moveInMonth, tenancy.openingReading);
       if (water && water.units > 0) {
         lines.push({ kind: 'water', amount: water.amount });
@@ -638,7 +644,9 @@ export function receiptDescription(bill: MonthlyBill, payment: Payment): string 
   const base =
     bill.kind === 'move-in'
       ? `Move-in bill, ${label}`
-      : bill.kind === 'final'
+      : bill.kind === 'opening'
+        ? `Opening balance, ${label}`
+        : bill.kind === 'final'
         ? `Final bill, ${label}`
         : `Bill, ${label}`;
   let paidSoFar = 0;

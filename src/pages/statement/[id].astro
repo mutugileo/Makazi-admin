@@ -127,7 +127,7 @@ const td = 'py-2 px-3 whitespace-nowrap';
                   <tr>
                     <td class={td}>
                       {monthLabel(b.month)}
-                      {b.kind !== 'monthly' && <span class="ml-1 text-[10px] text-[#69847A]">({b.kind === 'move-in' ? 'move-in' : 'final'})</span>}
+                      {b.kind !== 'monthly' && <span class="ml-1 text-[10px] text-[#69847A]">({b.kind === 'move-in' ? 'move-in' : b.kind === 'opening' ? 'opening balance' : 'final'})</span>}
                     </td>
                     <td class={`${td} text-right`}>
                       {b.rent ? formatKes(b.rent) : '—'}

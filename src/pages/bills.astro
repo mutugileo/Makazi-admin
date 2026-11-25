@@ -14,7 +14,7 @@ const defaultMonth = billedMonths.includes(currentMonth)
   ? currentMonth
   : (latestBilledMonth ?? currentMonth);
 
-const kindLabel = { 'move-in': 'Move-in', final: 'Final', monthly: '' } as const;
+const kindLabel = { opening: 'Opening balance', 'move-in': 'Move-in', final: 'Final', monthly: '' } as const;
 
 // Flat rows for CSV export and the totals bar. Column names follow the
 // owner's spreadsheet, plus Deposit and Balance b/f.
