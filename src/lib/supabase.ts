@@ -19,7 +19,7 @@ let _key: string | undefined;
 
 try {
   const env = await import('astro:env/server');
-  const envMap = env as Record<string, string | undefined>;
+  const envMap = env as unknown as Record<string, string | undefined>;
   _url = envMap['SUPABASE_URL'] || envMap['PUBLIC_SUPABASE_URL'];
   _key = envMap['SUPABASE_SERVICE_ROLE_KEY'] || envMap['SUPABASE_ANON_KEY'] || envMap['PUBLIC_SUPABASE_ANON_KEY'];
 } catch {

@@ -38,6 +38,18 @@ export interface CompanySettings {
   /** Months a former tenant's records are kept after move-out. */
   recordRetentionMonths: number;
   theme?: CompanyTheme;
+  /** Company-wide PesaLink phone or alias, the default for every property. */
+  pesalinkPhone?: string;
+  /** Per-property payment details that override the company's, by property id. */
+  propertyPayments?: Record<string, PropertyPaymentDetails>;
+}
+
+export interface PropertyPaymentDetails {
+  mpesaPaybill: string | null;
+  bankName: string | null;
+  bankAccount: string | null;
+  pesalinkPhone: string | null;
+  updatedAt: string;
 }
 
 /** Last numbers issued; each company has its own series. */
@@ -183,6 +195,8 @@ export interface Payment {
   time: string;
   method: PaymentMethod;
   reference: string;
+  /** Recorded in test mode; shown as "(test)" wherever a payment appears. */
+  simulated?: boolean;
 }
 
 export type StaffRole = 'owner' | 'manager' | 'caretaker';

@@ -94,12 +94,16 @@ const endOfMonth = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
   import { setBusy } from '../../lib/busy';
 
   function initMoveOutModal() {
-    const modal = document.getElementById('move-out-modal');
-    if (!modal) return;
-    const form = document.getElementById('move-out-form') as HTMLFormElement | null;
-    const readingInput = document.getElementById('move-out-reading') as HTMLInputElement | null;
-    const dateInput = document.getElementById('move-out-date') as HTMLInputElement | null;
-    if (!form || !readingInput || !dateInput) return;
+    const modalEl = document.getElementById('move-out-modal');
+    const formEl = document.getElementById('move-out-form') as HTMLFormElement | null;
+    const readingEl = document.getElementById('move-out-reading') as HTMLInputElement | null;
+    const dateEl = document.getElementById('move-out-date') as HTMLInputElement | null;
+    if (!modalEl || !formEl || !readingEl || !dateEl) return;
+    // Narrowed once so the nested handlers below keep the non-null types.
+    const modal: HTMLElement = modalEl;
+    const form: HTMLFormElement = formEl;
+    const readingInput: HTMLInputElement = readingEl;
+    const dateInput: HTMLInputElement = dateEl;
 
     const kes = (n: number) => `${n < 0 ? '−' : ''}KES ${Math.abs(n).toLocaleString('en-KE')}`;
     const setText = (field: string, text: string) =>

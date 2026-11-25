@@ -104,13 +104,15 @@ const { company, stats, currentPeriod } = await getPortfolio(Astro.locals.user!.
 
 <script>
   function initAssistant() {
-    const modal = document.getElementById('makazi-assistant-modal');
+    const modalEl = document.getElementById('makazi-assistant-modal');
     const form = document.getElementById('assistant-chat-form') as HTMLFormElement | null;
     const input = document.getElementById('assistant-chat-input') as HTMLInputElement | null;
     const messages = document.getElementById('assistant-chat-messages');
     const closeBtn = document.getElementById('close-assistant-modal-btn');
     const chips = document.querySelectorAll<HTMLElement>('.assistant-chip');
-    if (!modal || !form || !input || !messages) return;
+    if (!modalEl || !form || !input || !messages) return;
+    // Narrowed once so the nested handlers below keep the non-null type.
+    const modal: HTMLElement = modalEl;
 
     if (closeBtn) {
       closeBtn.onclick = () => window.makaziUi?.hideModal('makazi-assistant-modal');

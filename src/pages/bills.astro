@@ -225,8 +225,10 @@ const td = 'py-3 px-3 whitespace-nowrap';
 
   function initBillsPage() {
     const exportScript = document.getElementById('bill-export-data');
-    const monthSelect = document.getElementById('bill-month') as HTMLSelectElement | null;
-    if (!exportScript || !monthSelect) return;
+    const monthSelectEl = document.getElementById('bill-month') as HTMLSelectElement | null;
+    if (!exportScript || !monthSelectEl) return;
+    // Narrowed once so the nested handlers below keep the non-null type.
+    const monthSelect: HTMLSelectElement = monthSelectEl;
 
     const rows: ExportRow[] = JSON.parse(exportScript.textContent ?? '[]');
     const ON = ['bg-[#0D382B]', 'text-white', 'border-[#0D382B]'];

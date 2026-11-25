@@ -784,7 +784,9 @@ async function getCurrentPortfolio(
     const supabase = makeSupabaseClient(cookies);
     if (supabase) {
       const generation = liveGeneration.get(companyId) ?? 0;
-      const fetchPromise = (async () => {
+      // Assigned below; the finally block only runs after the assignment.
+      let fetchPromise!: Promise<ReturnType<typeof buildPortfolio>>;
+      fetchPromise = (async () => {
         try {
           const liveSeed = await fetchSeedFromSupabase(supabase, companyId);
           const portfolio = buildPortfolio(companyId, liveSeed);

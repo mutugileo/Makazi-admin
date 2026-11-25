@@ -513,8 +513,8 @@ export async function executeBulkImport(
         continue;
       }
 
-      propertyId = newProp.id;
-      propertyMapByName.set(propKey, propertyId);
+      propertyId = newProp.id as string;
+      propertyMapByName.set(propKey, newProp.id as string);
       usedPrefixes.add(desiredPrefix);
       result.propertiesCreated++;
     } else {
@@ -563,8 +563,8 @@ export async function executeBulkImport(
           continue;
         }
 
-        unitId = newUnit.id;
-        existingUnitMap.set(unitKey, unitId);
+        unitId = newUnit.id as string;
+        existingUnitMap.set(unitKey, newUnit.id as string);
         result.unitsCreated++;
       }
 
@@ -631,7 +631,6 @@ export async function executeBulkImport(
                 password: tempPin,
                 name: row.tenantName,
                 companyId,
-                knownUserId: existingTenant?.auth_user_id,
               });
               await supabase.from('tenants').update({ auth_user_id: authUserId }).eq('id', tenantId);
             } catch (authErr: unknown) {
