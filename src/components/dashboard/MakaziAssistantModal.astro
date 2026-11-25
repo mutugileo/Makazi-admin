@@ -136,13 +136,16 @@ const { company, stats, currentPeriod } = await getPortfolio(Astro.locals.user!.
     }
 
     function formatMarkdown(md: string): string {
-      // Clean, simple markdown formatter for assistant responses
-      let html = md
+      // Escape first: replies quote tenant-typed text (repair titles), so any
+      // markup in it must render as text, never run in the landlord's session.
+      const escaped = md.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string);
+      let html = escaped
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\*(.*?)\*/g, '<em>$1</em>')
         .replace(/### (.*?)\n/g, '<h4 class="font-bold text-[#0D382B] mt-2 mb-1">$1</h4>')
         .replace(/• (.*?)(?=(\n|$))/g, '<li class="ml-4 list-disc text-[#33463E]">$1</li>')
-        .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" class="font-semibold text-[#0D382B] underline hover:text-[#174637]">$1</a>')
+        // Only in-app links: an href like javascript: stays as plain text.
+        .replace(/\[(.*?)\]\((\/[^)\s]*)\)/g, '<a href="$2" class="font-semibold text-[#0D382B] underline hover:text-[#174637]">$1</a>')
         .replace(/\n\n/g, '<p class="my-1.5"></p>')
         .replace(/\n/g, '<br/>');
       return html;

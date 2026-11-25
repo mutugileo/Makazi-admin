@@ -25,6 +25,26 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
 
     const companyId = user.companyId;
 
+    if (typeof moveOutDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(moveOutDate)) {
+      return new Response(JSON.stringify({ error: 'Pick a move-out date.' }), { status: 400 });
+    }
+    const { data: tenancy, error: readErr } = await supabase
+      .from('tenancies')
+      .select('id, move_in, move_out')
+      .eq('company_id', companyId)
+      .eq('id', tenancyId)
+      .maybeSingle();
+    if (readErr) throw readErr;
+    if (!tenancy) {
+      return new Response(JSON.stringify({ error: 'Tenancy not found' }), { status: 404 });
+    }
+    if (tenancy.move_out) {
+      return new Response(JSON.stringify({ error: 'This tenant has already moved out.' }), { status: 409 });
+    }
+    if (moveOutDate < tenancy.move_in) {
+      return new Response(JSON.stringify({ error: 'The move-out date can\'t be before the move-in date.' }), { status: 400 });
+    }
+
     const { data: updated, error } = await supabase
       .from('tenancies')
       .update({
@@ -33,6 +53,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       })
       .eq('company_id', companyId)
       .eq('id', tenancyId)
+      .is('move_out', null)
       .select('id');
 
     if (error) throw error;

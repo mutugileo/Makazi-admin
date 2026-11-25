@@ -20,12 +20,14 @@ import {
   buildLedger,
   ledgerStartFor,
   collectedFor,
+  collectedByPayment,
   daysBetween,
   expectedFor,
   formatDate,
   cycleOf,
   monthLabel,
   monthsBetween,
+  ordinal,
   receiptDescription,
   shortMonthLabel,
   type ArrearsSlice,
@@ -369,14 +371,11 @@ function buildPortfolio(companyId: string, seedOverride?: Seed) {
   const depositsThisMonth = currentBills.reduce((acc, b) => acc + (b.amountPaid - collectedFor(b)), 0);
 
   const methodTotal = (method: Payment['method']) => {
-    // Same deposit exclusion as collectedFor, applied per payment in order.
+    // Same deposit exclusion as collectedFor, per payment.
     let total = 0;
     for (const bill of currentBills) {
-      let operatingLeft = expectedFor(bill);
-      for (const p of bill.payments) {
-        const toOperating = Math.min(operatingLeft, p.amount);
-        operatingLeft -= toOperating;
-        if (p.method === method) total += toOperating;
+      for (const { payment, amount } of collectedByPayment(bill)) {
+        if (payment.method === method) total += amount;
       }
     }
     return total;
@@ -431,7 +430,7 @@ function buildPortfolio(companyId: string, seedOverride?: Seed) {
 
   const AGEING_BUCKETS: Array<{ label: string; test: (s: ArrearsSlice) => boolean }> = [
     { label: 'Not yet due', test: (s) => s.stage === 'upcoming' },
-    { label: `In grace period (to the ${settings.graceDay}th)`, test: (s) => s.stage === 'grace' },
+    { label: `In grace period (to the ${ordinal(settings.graceDay)})`, test: (s) => s.stage === 'grace' },
     { label: '1–30 days overdue', test: (s) => s.stage === 'overdue' && s.daysOverdue <= 30 },
     { label: '31–60 days overdue', test: (s) => s.stage === 'overdue' && s.daysOverdue > 30 && s.daysOverdue <= 60 },
     { label: '60+ days overdue', test: (s) => s.stage === 'overdue' && s.daysOverdue > 60 },

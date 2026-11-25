@@ -1,4 +1,5 @@
 ---
+import { ordinal } from '../../lib/billing';
 import { X, UserPlus, Building, Sparkles } from '@lucide/astro';
 import { getPortfolio, bedLabel } from '../../data/portfolio';
 import { addMonths, cycleOf, CYCLE_START_DAY } from '../../lib/billing';
@@ -142,7 +143,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
             <input
               type="text"
               id="tenant-custom-label"
-              placeholder="e.g. A1, 102, B-4, Villa 1"
+              placeholder="Door or house number"
               maxlength="40"
               class={inputClass}
             />
@@ -210,13 +211,19 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
         <div>
           <label for="tenant-move-in-rent" class={labelClass}>Move-in rent (KES)</label>
           <input type="number" id="tenant-move-in-rent" required min="0" step="1" inputmode="numeric" placeholder="Rent until the next cycle" class={`${inputClass} tabular-nums`} />
-          <p class="text-[11px] text-[#73827C] mt-1">Rent from move-in until the next billing cycle starts on the {CYCLE_START_DAY}th</p>
+          <p class="text-[11px] text-[#73827C] mt-1">Rent from move-in until the next billing cycle starts on the {ordinal(CYCLE_START_DAY)}</p>
         </div>
         <div>
           <label for="tenant-garbage" class={labelClass}>Move-in garbage (KES) <span class="normal-case font-normal">(optional)</span></label>
           <input type="number" id="tenant-garbage" min="0" step="1" inputmode="numeric" placeholder="0" class={`${inputClass} tabular-nums`} />
           <p class="text-[11px] text-[#73827C] mt-1">Leave blank or 0 if garbage collection starts next month</p>
         </div>
+      </div>
+
+      <div>
+        <label for="tenant-opening-balance" class={labelClass}>Balance owed today (KES) <span class="normal-case font-normal">(already living here)</span></label>
+        <input type="text" id="tenant-opening-balance" inputmode="numeric" placeholder="0" class={`${inputClass} tabular-nums`} />
+        <p class="text-[11px] text-[#73827C] mt-1">Only used when the move-in date is before this billing cycle. Positive for arrears, negative for credit. Billing starts from this cycle; no deposit or move-in rent is charged.</p>
       </div>
 
       {FEATURES.leases && (
@@ -473,6 +480,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
       const moveInRent = Number(moveInRentInput?.value);
       const readingVal = readingInput?.value?.trim();
       const openingReading = readingVal !== '' && readingVal != null ? Math.max(0, Number(readingVal) || 0) : null;
+      const openingBalance = document.getElementById('tenant-opening-balance')?.value.trim() ?? '';
       const garbageVal = garbageInput?.value?.trim();
       const moveInGarbage = garbageVal !== '' && garbageVal != null ? Math.max(0, Math.round(Number(garbageVal) || 0)) : 0;
       const leaseTerm = document.getElementById('tenant-lease-term')?.value ?? '12';
@@ -490,7 +498,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
       } else {
         unitLabel = customLabelInput?.value.trim() || '';
         if (!unitLabel) {
-          window.makaziUi?.showToast('Enter unit label', 'Please enter an alphanumeric unit label (e.g. A1, 102).');
+          window.makaziUi?.showToast('Enter unit label', 'Use letters, numbers and dashes only, like A1 or B-4.');
           customLabelInput?.focus();
           return;
         }
@@ -518,6 +526,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
           moveIn,
           moveInRent,
           openingReading,
+          openingBalance,
           moveInGarbage,
           leaseTerm,
         };

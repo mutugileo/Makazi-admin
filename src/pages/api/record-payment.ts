@@ -42,13 +42,20 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     const paymentDate = date || nairobiNow.slice(0, 10);
     const paymentTime = time || nairobiNow.slice(11, 16);
     const paymentMethod = method === 'Bank' ? 'Bank' : 'M-Pesa';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(paymentDate) || paymentDate > nairobiNow.slice(0, 10)) {
+      return new Response(JSON.stringify({ error: "A payment can't be dated in the future." }), { status: 400 });
+    }
+    const amountKes = Math.round(Number(amount));
+    if (!(amountKes > 0)) {
+      return new Response(JSON.stringify({ error: 'Enter an amount above zero.' }), { status: 400 });
+    }
 
     const { data: newPayment, error } = await supabase
       .from('payments')
       .insert({
         company_id: companyId,
         tenancy_id: tenancyId,
-        amount: Math.round(Number(amount)),
+        amount: amountKes,
         date: paymentDate,
         time: paymentTime,
         method: paymentMethod,

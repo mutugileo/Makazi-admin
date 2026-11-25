@@ -1,4 +1,6 @@
 import type { APIRoute } from 'astro';
+import { cycleOf } from '../../lib/billing';
+import { errorMessage } from '../../lib/errors';
 import { makeSupabaseClient } from '../../lib/supabase';
 import { clearLiveCache } from '../../data/portfolio';
 import { notifyTenancy, notifyCompany } from '../../lib/realtime';
@@ -46,13 +48,35 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     // Verify tenant and tenancy belong to this company
     const { data: currentTenancy, error: tenancySearchErr } = await supabase
       .from('tenancies')
-      .select('id, tenant_id')
+      .select('id, tenant_id, rent, deposit, move_in, opening_balance_month, companies(settings)')
       .eq('company_id', companyId)
       .eq('id', tenancyId)
       .single();
 
     if (tenancySearchErr || !currentTenancy) {
       return json({ error: 'Tenancy record not found for your company.' }, 404);
+    }
+
+    // One rent figure prices every bill of the tenancy (there is no rent
+    // history yet), so changing rent, deposit or move-in once earlier cycles
+    // are billed would silently rewrite them. Corrections are allowed only
+    // while the current cycle is the first one billed.
+    const moneyChanged =
+      rentKes !== currentTenancy.rent ||
+      (depositKes !== undefined && depositKes !== currentTenancy.deposit) ||
+      (Boolean(moveIn) && moveIn !== currentTenancy.move_in);
+    if (moneyChanged) {
+      const companySettings = (currentTenancy as { companies?: { settings?: { ledgerStartMonth?: string } } }).companies?.settings;
+      const companyStart = companySettings?.ledgerStartMonth ?? '0000-00';
+      const own = currentTenancy.opening_balance_month as string | null;
+      const moveInCycle = cycleOf(currentTenancy.move_in as string);
+      const firstBilled = [companyStart, own ?? '', moveInCycle].sort().pop()!;
+      const currentCycle = cycleOf(new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10));
+      if (firstBilled < currentCycle) {
+        return json({
+          error: 'Rent, deposit and move-in date can\'t be changed once earlier months are billed: it would rewrite those bills. Name, phone, email and lease end can still be edited.',
+        }, 409);
+      }
     }
 
     // 1. Update tenant personal info
@@ -72,7 +96,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       if (tenantErr.code === '23505') {
         return json({ error: 'Another tenant already has this phone number in your company.' }, 409);
       }
-      return json({ error: tenantErr.message }, 500);
+      return json({ error: errorMessage(tenantErr, 'Couldn\'t save the tenant. Try again.') }, 500);
     }
 
     // If tenant has an auth user, update their phone metadata
@@ -106,7 +130,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       .eq('id', tenancyId);
 
     if (tenancyUpdateErr) {
-      return json({ error: tenancyUpdateErr.message }, 500);
+      return json({ error: errorMessage(tenancyUpdateErr, 'Couldn\'t save the tenancy. Try again.') }, 500);
     }
 
     // 3. Clear live cache & broadcast realtime update
@@ -116,7 +140,6 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
 
     return json({ ok: true, message: 'Tenant details successfully updated.' });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    return json({ error: message }, 500);
+    return json({ error: errorMessage(err) }, 500);
   }
 };

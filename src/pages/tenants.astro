@@ -235,6 +235,7 @@ const searchText = (parts: string[]) => parts.join(' ').toLowerCase();
             <th scope="col" class="py-3.5 px-3 lg:px-4">Final balance</th>
             <th scope="col" class="py-3.5 px-3 lg:px-4">Records kept until</th>
             <th scope="col" class="py-3.5 px-4 lg:px-6">Note</th>
+            <th scope="col" class="py-3.5 px-4 lg:px-6 text-right sticky right-0 bg-[#F8F9F6]/95 backdrop-blur-xs shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.05)]">Action</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-[#E3E6DF]">
@@ -268,8 +269,10 @@ const searchText = (parts: string[]) => parts.join(' ').toLowerCase();
                 <td class="py-3.5 px-3 lg:px-4">
                   {t.balance > 0 ? (
                     <span class="font-semibold text-[#C04A26]">Owes {formatKes(t.balance)}</span>
+                  ) : t.balance < 0 ? (
+                    <span class="font-semibold text-[#1E40AF]">Credit {formatKes(-t.balance)}</span>
                   ) : (
-                    <span class="font-semibold text-[#2E7D32]">Settled</span>
+                    <span class="font-semibold text-[#2E7D32]">Paid</span>
                   )}
                 </td>
                 <td class="py-3.5 px-3 lg:px-4">
@@ -277,12 +280,14 @@ const searchText = (parts: string[]) => parts.join(' ').toLowerCase();
                   <span class="block text-[11px] text-[#69847A]">
                     {t.recordsKeptUntil! < asOf ? 'Due for archiving' : '6 months after move-out'}
                   </span>
-                  <a href={`/statement/${t.tenancy.id}`} class="inline-flex items-center gap-1 mt-1.5 text-[11px] font-semibold text-[#0D382B] hover:underline">
-                    <FileText class="w-3 h-3" /> Payment statement
-                  </a>
                 </td>
                 <td class="py-3.5 px-4 lg:px-6 min-w-56 whitespace-normal! text-[#69847A] leading-relaxed">
                   {t.tenancy.moveOutNote ?? '—'}
+                </td>
+                <td class="py-3.5 px-4 lg:px-6 text-right sticky right-0 bg-white/95 backdrop-blur-xs shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.05)]">
+                  <a href={`/statement/${t.tenancy.id}`} class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold text-[#0D382B] hover:bg-[#F1F3ED] transition-colors" title="Statement of payments">
+                    <FileText class="w-3.5 h-3.5" /> Statement
+                  </a>
                 </td>
               </tr>
             );

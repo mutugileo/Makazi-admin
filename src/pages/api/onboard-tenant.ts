@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { cycleOf } from '../../lib/billing';
+import { parseOpeningBalance } from '../../lib/bulk-import';
 import { errorMessage } from '../../lib/errors';
 import { makeSupabaseClient } from '../../lib/supabase';
 import { clearLiveCache } from '../../data/portfolio';
@@ -33,6 +34,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       moveIn,
       moveInRent,
       openingReading,
+      openingBalance,
       leaseTerm,
       moveInGarbage,
     } = body;
@@ -62,6 +64,20 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     const garbageKes = moveInGarbage === null || moveInGarbage === undefined || moveInGarbage === '' ? 0 : Math.round(Number(moveInGarbage));
     if (garbageKes !== null && !(Number.isFinite(garbageKes) && garbageKes >= 0)) return json({ error: 'Move-in garbage must be 0 or more' }, 400);
 
+    // A move-in before this cycle means the tenant already lives here: like an
+    // upload, they start on an opening-balance bill this cycle, with no deposit
+    // or move-in rent charged and no months before this one billed.
+    const currentCycle = cycleOf(new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10));
+    const alreadyLivingHere = cycleOf(moveIn) < currentCycle;
+    const balanceRaw = typeof openingBalance === 'string' ? openingBalance.trim() : openingBalance == null ? '' : String(openingBalance);
+    const openingBalanceKes = balanceRaw === '' ? 0 : parseOpeningBalance(balanceRaw);
+    if (openingBalanceKes === null) {
+      return json({ error: 'Balance owed today must be a number: positive for arrears, negative for credit.' }, 400);
+    }
+    if (!alreadyLivingHere && openingBalanceKes !== 0) {
+      return json({ error: 'A balance owed today only applies to a tenant already living here (move-in before this billing cycle).' }, 400);
+    }
+
     const companyId = user.companyId;
 
     // Resolve or create the admin's alphanumeric unit preset
@@ -74,7 +90,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
         return json({ error: 'Alphanumeric unit label is required' }, 400);
       }
       if (!ALPHANUMERIC_UNIT.test(cleanLabel)) {
-        return json({ error: 'Unit label must be alphanumeric (e.g. A1, 102, B-4, Villa 1)' }, 400);
+        return json({ error: 'Use letters, numbers and dashes only, like A1 or B-4.' }, 400);
       }
       if (cleanLabel.length > 40) {
         return json({ error: 'Unit label cannot exceed 40 characters' }, 400);
@@ -168,7 +184,8 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
         lease_start: moveIn,
         lease_end: leaseEnd.toISOString().slice(0, 10),
         opening_reading: reading,
-        opening_balance: 0,
+        opening_balance: alreadyLivingHere ? openingBalanceKes : 0,
+        opening_balance_month: alreadyLivingHere ? currentCycle : null,
         move_in_garbage: garbageKes,
       })
       .select('id')
@@ -205,8 +222,11 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       const { error: readingErr } = await supabase
         .from('meter_readings')
         .upsert(
-          { company_id: companyId, unit_id: resolvedUnitId, month: cycleOf(moveIn), value: reading },
-          { onConflict: 'unit_id,month' },
+          // An existing tenant's reading is today's meter, so it belongs to this cycle.
+          { company_id: companyId, unit_id: resolvedUnitId, month: alreadyLivingHere ? currentCycle : cycleOf(moveIn), value: reading },
+          // Never overwrite a reading already saved for this cycle: it may be the
+          // previous tenant's final reading. The tenancy keeps its own opening reading.
+          { onConflict: 'unit_id,month', ignoreDuplicates: true },
         );
       if (readingErr) console.error('[onboard-tenant] opening reading not saved:', readingErr);
     }

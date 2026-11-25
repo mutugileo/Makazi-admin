@@ -5,6 +5,7 @@
 import {
   addMonths,
   collectedFor,
+  collectedByPayment,
   expectedFor,
   monthLabel,
   REPAIR_CATEGORY_LABELS,
@@ -38,14 +39,11 @@ const percent = (part: number, whole: number) => (whole > 0 ? Math.round((part /
 
 /** Collected in a bill by method, leaving out what paid the deposit (as collectedFor). */
 function collectedByMethod(bill: MonthlyBill) {
-  let operatingLeft = expectedFor(bill);
   let mpesa = 0;
   let bank = 0;
-  for (const p of bill.payments) {
-    const toOperating = Math.min(operatingLeft, p.amount);
-    operatingLeft -= toOperating;
-    if (p.method === 'M-Pesa') mpesa += toOperating;
-    else bank += toOperating;
+  for (const { payment, amount } of collectedByPayment(bill)) {
+    if (payment.method === 'M-Pesa') mpesa += amount;
+    else bank += amount;
   }
   return { mpesa, bank };
 }

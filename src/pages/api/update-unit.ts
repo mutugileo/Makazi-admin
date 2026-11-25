@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { errorMessage } from '../../lib/errors';
 import { makeSupabaseClient } from '../../lib/supabase';
 import { clearLiveCache } from '../../data/portfolio';
 import { notifyCompany } from '../../lib/realtime';
@@ -76,7 +77,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       if (updateErr.code === '23505') {
         return json({ error: 'A unit with this label already exists in this property.' }, 409);
       }
-      return json({ error: updateErr.message }, 500);
+      return json({ error: errorMessage(updateErr) }, 500);
     }
 
     clearLiveCache(companyId);
@@ -84,7 +85,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
 
     return json({ ok: true, unit: updated, message: 'Unit updated successfully.' });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = errorMessage(err);
     return json({ error: message }, 500);
   }
 };

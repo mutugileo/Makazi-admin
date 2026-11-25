@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { errorMessage } from '../../lib/errors';
 import { makeSupabaseClient } from '../../lib/supabase';
 import { validateBulkCsv, executeBulkImport } from '../../lib/bulk-import';
 import { clearLiveCache } from '../../data/portfolio';
@@ -67,7 +68,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
 
     return new Response(JSON.stringify({ error: "Invalid mode. Use 'validate' or 'commit'." }), { status: 400 });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = errorMessage(err);
     return new Response(JSON.stringify({ error: message }), { status: 500 });
   }
 };

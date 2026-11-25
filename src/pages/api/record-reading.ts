@@ -3,6 +3,10 @@ import { errorMessage } from '../../lib/errors';
 import { makeSupabaseClient } from '../../lib/supabase';
 import { notifyCompany } from '../../lib/realtime';
 import { clearLiveCache } from '../../data/portfolio';
+import { addMonths, cycleOf } from '../../lib/billing';
+
+const json = (body: unknown, status: number) =>
+  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
 export const POST: APIRoute = async ({ request, locals, cookies }) => {
   const user = locals.user;
@@ -38,11 +42,44 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       return new Response(JSON.stringify({ error: 'Unit not found' }), { status: 404 });
     }
 
+    // Only this cycle or a late reading for the last one: a future month would
+    // bill water for a cycle that hasn't started.
+    const currentCycle = cycleOf(new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10));
+    const allowedMonths = new Set([currentCycle, addMonths(currentCycle, -1)]);
+    for (const r of readings) {
+      if (!allowedMonths.has(r.month)) {
+        return json({ error: 'Readings can only be saved for this billing cycle or the one before it.' }, 400);
+      }
+      if (!Number.isInteger(Number(r.value)) || Number(r.value) < 0) {
+        return json({ error: 'A meter reading must be a whole number, 0 or more.' }, 400);
+      }
+    }
+
+    // A meter only counts up: each reading must sit between its neighbours.
+    const { data: existing, error: existingError } = await supabase
+      .from('meter_readings')
+      .select('unit_id, month, value')
+      .eq('company_id', companyId)
+      .in('unit_id', unitIds);
+    if (existingError) throw existingError;
+    for (const r of readings) {
+      const others = (existing ?? []).filter((e) => e.unit_id === r.unitId && e.month !== r.month);
+      const before = others.filter((e) => e.month < r.month).sort((a, b) => b.month.localeCompare(a.month))[0];
+      const after = others.filter((e) => e.month > r.month).sort((a, b) => a.month.localeCompare(b.month))[0];
+      const value = Number(r.value);
+      if (before && value < before.value) {
+        return json({ error: `A reading of ${value} is below the last one (${before.value}). Check the meter and try again.` }, 400);
+      }
+      if (after && value > after.value) {
+        return json({ error: `A reading of ${value} is above the next saved one (${after.value}). Check the meter and try again.` }, 400);
+      }
+    }
+
     const rows = readings.map((r) => ({
       company_id: companyId,
       unit_id: r.unitId,
       month: r.month,
-      value: Math.round(Number(r.value)),
+      value: Number(r.value),
     }));
 
     const { error } = await supabase

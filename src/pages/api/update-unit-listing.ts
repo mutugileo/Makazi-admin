@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { errorMessage } from '../../lib/errors';
 import { makeSupabaseClient } from '../../lib/supabase';
 import { clearLiveCache } from '../../data/portfolio';
 import { notifyCompany } from '../../lib/realtime';
@@ -31,7 +32,8 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       .update({
         is_listed: isListed,
         listed_rent: rentValue,
-        listing_notes: typeof listingNotes === 'string' ? listingNotes.trim() : '',
+        // The list/unlist toggle sends no notes: keep the saved ones.
+        ...(typeof listingNotes === 'string' ? { listing_notes: listingNotes.trim() } : {}),
       })
       .eq('company_id', user.companyId)
       .eq('id', unitId)
@@ -39,7 +41,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       .single();
 
     if (error) {
-      return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+      return new Response(JSON.stringify({ error: errorMessage(error) }), { status: 500 });
     }
 
     clearLiveCache(user.companyId);
@@ -50,7 +52,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = errorMessage(err);
     return new Response(JSON.stringify({ error: message }), { status: 500 });
   }
 };

@@ -13,10 +13,10 @@ const rows = activeTenancies
       a.view.unit.label.localeCompare(b.view.unit.label, undefined, { numeric: true }),
   );
 
-// Billing cycle the reading is for: this cycle by default (read at its
-// start), or the next one when reading a few days early.
-const nextMonthCode = addMonths(currentMonth, 1);
-const nextMonth = addMonthsLabel(currentMonth, 1);
+// Billing cycle the reading is for: this cycle by default, or the one before
+// for a reading taken late. Future cycles can't be billed yet.
+const previousMonthCode = addMonths(currentMonth, -1);
+const previousMonth = addMonthsLabel(currentMonth, -1);
 const currentMonthLbl = monthLabel(currentMonth);
 ---
 
@@ -38,7 +38,7 @@ const currentMonthLbl = monthLabel(currentMonth);
             <h3 id="readings-title" class="font-editorial text-2xl font-normal text-[#17231E]">Meter readings for</h3>
             <select id="readings-month-select" class="px-2.5 py-1 bg-[#F4F5F1] rounded-xl text-xs font-semibold text-[#0D382B] border border-[#DCE0D7] outline-none cursor-pointer">
               <option value={currentMonth} selected>{currentMonthLbl}</option>
-              <option value={nextMonthCode}>{nextMonth}</option>
+              <option value={previousMonthCode}>{previousMonth}</option>
             </select>
           </div>
           <p class="text-xs text-[#73827C]">Units used × each property's water rate will be applied to the bill.</p>

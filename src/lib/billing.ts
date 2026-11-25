@@ -403,6 +403,13 @@ export function formatDate(date: IsoDate): string {
   return `${String(d).padStart(2, '0')} ${MONTH_NAMES[m - 1].slice(0, 3)} ${y}`;
 }
 
+/** 1st, 2nd, 3rd, 4th … 11th, 12th, 13th … 21st, 22nd. */
+export function ordinal(n: number): string {
+  const teen = n % 100 >= 11 && n % 100 <= 13;
+  const suffix = teen ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[n % 10] ?? 'th';
+  return `${n}${suffix}`;
+}
+
 export function formatKes(amount: number): string {
   const sign = amount < 0 ? '−' : '';
   return `${sign}KES ${Math.abs(amount).toLocaleString('en-KE')}`;
@@ -469,11 +476,10 @@ export function billingWindow(seed: Seed, tenancy: Tenancy): [Month, Month] | nu
   const moveInMonth = cycleOf(tenancy.moveIn);
   const first = moveInMonth > start ? moveInMonth : start;
 
-  // Find any active future months (meter readings, payments, or the move-in itself)
-  const unitReadings = Object.keys(seed.meterReadings[tenancy.unitId] ?? {});
+  // Billing never runs ahead of today's cycle: a reading or payment dated in a
+  // future month must not charge rent for months that haven't started.
   const tenancyPayments = seed.payments.filter((p) => p.tenancyId === tenancy.id).map((p) => cycleOf(p.date));
-  const candidateMonths = [asOfMonth, ...unitReadings, ...tenancyPayments];
-  const maxActive = candidateMonths.sort().pop()!;
+  const maxActive = asOfMonth;
 
   const finalMonth = tenancy.moveOut ? addMonths(cycleOf(tenancy.moveOut), 1) : maxActive;
   let last = finalMonth < maxActive ? finalMonth : maxActive;
@@ -516,6 +522,16 @@ export function buildLedger(seed: Seed, tenancy: Tenancy): MonthlyBill[] {
             ? 'move-in'
             : 'monthly';
 
+    // A payment counts towards the cycle it was made in; payments made before
+    // the first bill count towards it, and payments after a former tenant's
+    // last bill count towards that last bill.
+    const isLastOfFormer = tenancy.moveOut !== null && month === window[1];
+    const monthPayments = payments.filter((p) => {
+      const cycle = cycleOf(p.date);
+      return cycle === month || (month === window[0] && cycle < month) || (isLastOfFormer && cycle > month);
+    });
+    const amountPaid = monthPayments.reduce((acc, p) => acc + p.amount, 0);
+
     const lines: BillLine[] = [];
     let water: WaterUsage | null = null;
     const { waterRate, garbageFee } = ratesFor(property, month);
@@ -554,7 +570,8 @@ export function buildLedger(seed: Seed, tenancy: Tenancy): MonthlyBill[] {
         lines.push({ kind: 'water', amount: water.amount });
       }
       lines.push({ kind: 'deposit_applied', amount: -tenancy.deposit });
-      const afterDeposit = balanceBf + (water?.amount ?? 0) - tenancy.deposit;
+      // Payments in the final cycle count too: the refund is whatever is over.
+      const afterDeposit = balanceBf + (water?.amount ?? 0) - tenancy.deposit - amountPaid;
       if (afterDeposit < 0) {
         lines.push({ kind: 'deposit_refund', amount: -afterDeposit });
       }
@@ -562,12 +579,6 @@ export function buildLedger(seed: Seed, tenancy: Tenancy): MonthlyBill[] {
 
     const sumOf = (k: BillLineKind) =>
       lines.filter((l) => l.kind === k).reduce((acc, l) => acc + l.amount, 0);
-    // A payment counts towards the cycle it was made in; payments made before
-    // the first bill count towards it.
-    const monthPayments = payments.filter(
-      (p) => cycleOf(p.date) === month || (month === window[0] && cycleOf(p.date) < month),
-    );
-    const amountPaid = monthPayments.reduce((acc, p) => acc + p.amount, 0);
     const newCharges = lines.reduce((acc, l) => acc + l.amount, 0);
     const totalDue = balanceBf + newCharges;
     const outstanding = totalDue - amountPaid;
@@ -607,8 +618,23 @@ export function expectedFor(bill: MonthlyBill): number {
 }
 
 /** Payments received in the month, excluding the part that paid a deposit. */
+/**
+ * Money paid on a bill that counts as collections: everything except what
+ * paid the deposit. Payments towards arrears and opening balances count;
+ * capping at this month's charges filed them under deposits instead.
+ */
 export function collectedFor(bill: MonthlyBill): number {
-  return Math.min(bill.amountPaid, expectedFor(bill));
+  return collectedByPayment(bill).reduce((acc, c) => acc + c.amount, 0);
+}
+
+/** Each payment's collected part, the deposit being paid first. */
+export function collectedByPayment(bill: MonthlyBill): { payment: Payment; amount: number }[] {
+  let depositLeft = Math.max(0, bill.deposit);
+  return bill.payments.map((payment) => {
+    const toDeposit = Math.min(depositLeft, payment.amount);
+    depositLeft -= toDeposit;
+    return { payment, amount: payment.amount - toDeposit };
+  });
 }
 
 export type ArrearsStage = 'upcoming' | 'grace' | 'overdue';
@@ -647,8 +673,11 @@ export function arrearsSlices(seed: Seed, tenancy: Tenancy, bills: MonthlyBill[]
     remaining -= amount;
   }
   if (remaining > 0) {
-    // Whatever is left was carried in from the spreadsheet before the ledger start.
-    slices.push(slice(seed, settings, addMonths(ledgerStartFor(seed, tenancy), -1), remaining));
+    // Whatever is left was carried in. An uploaded balance is what was owed on
+    // upload day, including that cycle's rent, so it ages from the opening
+    // cycle; an older company opening balance ages from the month before.
+    const start = ledgerStartFor(seed, tenancy);
+    slices.push(slice(seed, settings, tenancy.openingBalanceMonth ? start : addMonths(start, -1), remaining));
   }
   return slices.reverse();
 }

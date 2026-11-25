@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { errorMessage } from '../../lib/errors';
 import { Buffer } from 'node:buffer';
 import { makeSupabaseClient } from '../../lib/supabase';
 import { notifyTenancy } from '../../lib/realtime';
@@ -77,7 +78,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
 
     return json({ success: true, photoUrl });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = errorMessage(err);
     return json({ error: message }, 500);
   }
 };

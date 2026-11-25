@@ -119,7 +119,7 @@ const td = 'py-2 px-3 whitespace-nowrap';
                   <th class={`${th} text-right`}>Bal. b/f</th>
                   <th class={`${th} text-right`}>Total due</th>
                   <th class={`${th} text-right`}>Paid</th>
-                  <th class={`${th} text-right`}>Outstanding</th>
+                  <th class={`${th} text-right sticky right-0 bg-white/95 backdrop-blur-xs shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.05)] print:static print:shadow-none`}>Outstanding</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-[#EEF0EB]">
@@ -144,7 +144,7 @@ const td = 'py-2 px-3 whitespace-nowrap';
                     <td class={`${td} text-right`}>{b.balanceBf ? formatKes(b.balanceBf) : '—'}</td>
                     <td class={`${td} text-right font-semibold`}>{formatKes(b.totalDue)}</td>
                     <td class={`${td} text-right`}>{formatKes(b.amountPaid)}</td>
-                    <td class={`${td} text-right font-semibold`}>{formatKes(b.outstanding)}</td>
+                    <td class={`${td} text-right font-semibold sticky right-0 bg-white/95 backdrop-blur-xs shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.05)] print:static print:shadow-none`}>{formatKes(b.outstanding)}</td>
                   </tr>
                 ))}
               </tbody>

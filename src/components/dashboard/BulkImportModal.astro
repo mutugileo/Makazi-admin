@@ -83,18 +83,18 @@ const managers = seed.staff
         </summary>
         <div class="mt-3 pt-3 border-t border-[#E3E6DF] grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px] text-[#5A6862]">
           <div class="space-y-1.5">
-            <p><strong class="text-[#17231E]">Property Name*</strong>: Name of building or estate (e.g. Kilimani Heights)</p>
+            <p><strong class="text-[#17231E]">Property Name*</strong>: Name of the building or estate</p>
             <p><strong class="text-[#17231E]">Property Type</strong>: <code class="font-mono bg-white px-1 py-0.5 rounded border border-[#E3E6DF]">apartments</code> or <code class="font-mono bg-white px-1 py-0.5 rounded border border-[#E3E6DF]">houses</code></p>
-            <p><strong class="text-[#17231E]">Unit Label*</strong>: Door / house / apt number (e.g. A1, 104, Villa 2)</p>
+            <p><strong class="text-[#17231E]">Unit Label*</strong>: Door or house number</p>
             <p><strong class="text-[#17231E]">Bedrooms</strong>: 0 for bedsitter/studio, 1, 2, 3, 4</p>
             <p><strong class="text-[#17231E]">Monthly Rent (KES)*</strong>: Positive monthly rent figure</p>
-            <p><strong class="text-[#17231E]">Deposit (KES)</strong>: Security deposit (defaults to 1 month rent if empty)</p>
+            <p><strong class="text-[#17231E]">Deposit (KES)</strong>: Recorded for move-out, not billed. One month's rent is recorded if blank</p>
           </div>
           <div class="space-y-1.5">
             <p><strong class="text-[#17231E]">Listed</strong>: <code class="font-mono bg-white px-1 py-0.5 rounded border border-[#E3E6DF]">yes</code> to publish vacancy, <code class="font-mono bg-white px-1 py-0.5 rounded border border-[#E3E6DF]">no</code> if occupied</p>
             <p><strong class="text-[#17231E]">Tenant Name & Phone</strong>: Required for occupied units. Kenyan phone format: 07XXXXXXXX or 01XXXXXXXX</p>
             <p><strong class="text-[#17231E]">Move In Date</strong>: Tenancy start in <code class="font-mono bg-white px-1 py-0.5 rounded border border-[#E3E6DF]">YYYY-MM-DD</code> format</p>
-            <p><strong class="text-[#17231E]">Move In Rent</strong>: Rent from move-in until the next billing cycle on the 4th. Leave blank for a full month</p>
+            <p><strong class="text-[#17231E]">Move In Rent</strong>: Recorded only. Uploaded tenants start on their opening balance; rent bills from the next cycle</p>
             <p><strong class="text-[#17231E]">Opening Balance</strong>: Positive for arrears owed, negative for credit (-5000, (5,000) or 5,000 CR). 0 or blank if settled</p>
             <p><strong class="text-[#17231E]">Opening Water Reading</strong>: Current water meter reading in m³</p>
           </div>

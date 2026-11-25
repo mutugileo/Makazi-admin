@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { errorMessage } from '../../lib/errors';
 import { makeSupabaseClient } from '../../lib/supabase';
 import { parseKenyanPhone } from '../../lib/tenant-auth';
 
@@ -28,7 +29,7 @@ export const GET: APIRoute = async ({ url, locals, cookies }) => {
   if (status) query = query.eq('status', status);
 
   const { data, error } = await query;
-  if (error) return json({ error: error.message }, 500);
+  if (error) return json({ error: errorMessage(error) }, 500);
 
   return json({ ok: true, enquiries: data });
 };
@@ -68,10 +69,10 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       .select('*, properties:property_id(name), units:unit_id(label)')
       .single();
 
-    if (error) return json({ error: error.message }, 500);
+    if (error) return json({ error: errorMessage(error) }, 500);
     return json({ ok: true, enquiry: newEnquiry }, 201);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = errorMessage(err);
     return json({ error: message }, 500);
   }
 };
@@ -106,10 +107,10 @@ export const PATCH: APIRoute = async ({ request, locals, cookies }) => {
       .select('*, properties:property_id(name), units:unit_id(label)')
       .single();
 
-    if (error) return json({ error: error.message }, 500);
+    if (error) return json({ error: errorMessage(error) }, 500);
     return json({ ok: true, enquiry: updated });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = errorMessage(err);
     return json({ error: message }, 500);
   }
 };

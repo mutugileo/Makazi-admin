@@ -1,4 +1,5 @@
 ---
+import { ordinal } from '../lib/billing';
 import DashboardLayout from '../layouts/DashboardLayout.astro';
 import ReadingsModal from '../components/dashboard/ReadingsModal.astro';
 import StatusBadge from '../components/ui/StatusBadge.astro';
@@ -28,7 +29,7 @@ const exportRows = billRows.map(({ view, bill }) => ({
     UNIT: view.unit.label,
     'PHONE NUMBER': view.tenant.phone,
     MONTH: monthLabel(bill.month),
-    'BILL TYPE': bill.kind,
+    'BILL TYPE': kindLabel[bill.kind] || 'Monthly',
     'MONTHLY RENT': bill.rent,
     'WATER BILL PER UNIT': bill.water?.rate ?? '',
     'UNITS CONSUMED': bill.water?.units ?? '',
@@ -55,7 +56,7 @@ const td = 'py-3 px-3 whitespace-nowrap';
       <span class="text-xs font-semibold tracking-wider text-[#69847A] uppercase">{portfolioSummary}</span>
       <h1 class="text-3xl sm:text-4xl font-normal font-editorial text-[#0D382B] tracking-tight mt-1">Monthly bills</h1>
       <p class="text-xs text-[#69847A] mt-2 max-w-xl">
-        One row per tenant per month: rent, water, garbage and anything carried forward. Due on the {dueDay}th, overdue after the {graceDay}th. Rent auto-generates every month leaving water units blank for reading entry. Unpaid amounts carry forward automatically.
+        One row per tenant per month: rent, water, garbage and anything carried forward. Due on the {ordinal(dueDay)}, overdue after the {ordinal(graceDay)}. Rent auto-generates every month leaving water units blank for reading entry. Unpaid amounts carry forward automatically.
       </p>
     </div>
 

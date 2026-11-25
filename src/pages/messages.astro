@@ -492,10 +492,10 @@ const supabaseAnonKey = process.env.PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_
           </div>
           <div class="flex items-center gap-1.5 mt-1 px-1">
             <span class="text-[10px] text-[#69847A]">You · ${timeStr}</span>
-            <span class="chat-msg-ticks inline-flex items-center text-[#69847A]" title="Delivered">
+            <span class="chat-msg-ticks inline-flex items-center text-[#69847A]" title="Sending">
               <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M18 6L7 17l-5-5"></path>
-                <path d="m22 10-7.5 7.5L13 16"></path>
+                <circle cx="12" cy="12" r="9"></circle>
+                <path d="M12 7v5l3 2"></path>
               </svg>
             </span>
           </div>
@@ -504,15 +504,6 @@ const supabaseAnonKey = process.env.PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_
         requestAnimationFrame(() => {
           pane.scrollTop = pane.scrollHeight;
         });
-      }
-
-      // Update snippet on left sidebar
-      const navItem = document.querySelector(`[data-thread-link="${currentTenancyId}"]`);
-      if (navItem) {
-        const lastBody = navItem.querySelector('.thread-last-body');
-        if (lastBody) lastBody.textContent = `You: ${body}`;
-        const lastTime = navItem.querySelector('.thread-last-time');
-        if (lastTime) lastTime.textContent = 'Today, ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
       }
 
       if (input) input.value = '';
@@ -525,10 +516,26 @@ const supabaseAnonKey = process.env.PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_
         });
         const data = await res.json();
         if (!res.ok || data.error) throw new Error(data.error || 'Failed to send message');
+
+        // Confirmed by the server: only now show it as delivered and in the list.
+        const ticks = tempBubble?.querySelector('.chat-msg-ticks');
+        if (ticks) {
+          ticks.setAttribute('title', 'Delivered');
+          ticks.innerHTML = '<svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L7 17l-5-5"></path><path d="m22 10-7.5 7.5L13 16"></path></svg>';
+        }
+        const navItem = document.querySelector(`[data-thread-link="${currentTenancyId}"]`);
+        if (navItem) {
+          const lastBody = navItem.querySelector('.thread-last-body');
+          if (lastBody) lastBody.textContent = `You: ${body}`;
+          const lastTime = navItem.querySelector('.thread-last-time');
+          if (lastTime) lastTime.textContent = 'Today, ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        }
       } catch (err: unknown) {
         if (tempBubble) tempBubble.remove();
+        // Give the text back so nothing typed is lost.
+        if (input && !input.value) input.value = body;
         const msg = err instanceof Error ? err.message : String(err);
-        window.makaziUi?.showToast('Error', msg);
+        window.makaziUi?.showToast('Message not sent', msg || 'Check your connection and try again.');
       } finally {
         restoreSend();
       }

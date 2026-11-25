@@ -62,7 +62,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
     </div>
 
     <form id="add-property-form" class="flex flex-col flex-1 min-h-0 overflow-hidden" novalidate>
-    <div class="flex-1 overflow-y-auto p-6 space-y-5">
+    <div class="flex-1 min-h-0 overflow-y-auto p-6 space-y-5">
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label for="property-name" class={labelClass}>Property name</label>
@@ -332,7 +332,17 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
     const updateImagePreview = (url: string) => {
       if (!imagePreview) return;
       if (url) {
-        imagePreview.innerHTML = `<img src="${url}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<span class=\\'text-[9px] text-[#C04A26]\\'>Invalid</span>'" />`;
+        // Built as elements, not HTML: the URL is typed text.
+        const img = document.createElement('img');
+        img.className = 'w-full h-full object-cover';
+        img.src = url;
+        img.onerror = () => {
+          const invalid = document.createElement('span');
+          invalid.className = 'text-[9px] text-[#C04A26]';
+          invalid.textContent = 'Invalid';
+          imagePreview.replaceChildren(invalid);
+        };
+        imagePreview.replaceChildren(img);
       } else {
         imagePreview.innerHTML = '<span class="text-[9px] text-[#73827C]">No image</span>';
       }
