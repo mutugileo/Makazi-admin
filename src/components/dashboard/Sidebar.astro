@@ -1,6 +1,7 @@
 ---
 import { 
   LayoutGrid, 
+  UserCog,
   Building2, 
   Users, 
   FileText, 
@@ -68,6 +69,7 @@ const navItems = [
   { name: 'Maintenance', href: '/maintenance', icon: Wrench, active: currentPath === '/maintenance', badge: openRepairsCount ? openRepairsCount.toString() : undefined, badgeType: 'neutral' },
   { name: 'Messages', href: '/messages', icon: MessageSquare, active: currentPath === '/messages', badge: unreadThreadCount ? unreadThreadCount.toString() : undefined, badgeType: 'neutral' },
   { name: 'Reports', href: '/reports', icon: BarChart2, active: currentPath === '/reports' },
+  { name: 'Users', href: '/users', icon: UserCog, active: currentPath === '/users' },
   { name: 'Settings', href: '/settings', icon: Settings, active: currentPath === '/settings' },
 ];
 function darkenColor(hexColor: string, factor = 0.2): string {

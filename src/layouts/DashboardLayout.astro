@@ -52,6 +52,14 @@ const {
   title = `Makazi — ${companyName}`,
   currentPath = "/"
 } = Astro.props;
+
+// The next page slides in from the side it was reached from (back goes the other way).
+const fadeOut = { name: 'makaziFadeOut', duration: '120ms', easing: 'ease-in', fillMode: 'both' };
+const slideIn = (name: string) => ({ name, duration: '220ms', easing: 'cubic-bezier(0.2, 0, 0, 1)', fillMode: 'both' });
+const pageSlide = {
+  forwards: { old: fadeOut, new: slideIn('makaziSlideInFromRight') },
+  backwards: { old: fadeOut, new: slideIn('makaziSlideInFromLeft') },
+};
 ---
 
 <!doctype html>
@@ -115,8 +123,8 @@ const {
       <!-- Top Sticky Header -->
       <Header />
 
-      <!-- Page View Slot with smooth native crossfade -->
-      <main id="main-content" class="flex-1 p-3 sm:p-5 lg:p-6 xl:p-8 max-w-7xl w-full mx-auto" transition:animate="fade">
+      <!-- Page view: slides out the moment a link is clicked, the next page slides in -->
+      <main id="main-content" class="flex-1 p-3 sm:p-5 lg:p-6 xl:p-8 max-w-7xl w-full mx-auto" transition:animate={pageSlide}>
         <slot />
       </main>
 
@@ -217,8 +225,14 @@ const {
 
       // Top navigation progress bar and modal cleanup
       let navProgressTimer: any;
-      document.addEventListener('astro:before-preparation', () => {
+      document.addEventListener('astro:before-preparation', (event) => {
         hideAllModals();
+        // Respond on click, not when the server answers: slide the page away now.
+        const main = document.getElementById('main-content');
+        if (main) {
+          main.dataset.navDirection = (event as Event & { direction?: string }).direction === 'back' ? 'back' : 'forward';
+          main.classList.add('is-leaving');
+        }
         const bar = document.getElementById('nav-progress-bar');
         if (bar) {
           bar.style.opacity = '1';
@@ -493,6 +507,11 @@ const {
           shimmer.style.opacity = '1';
         }
       });
+
+      // The swapped-in page starts clean; also covers a cancelled navigation.
+      const clearLeaving = () => document.getElementById('main-content')?.classList.remove('is-leaving');
+      document.addEventListener('astro:after-swap', clearLeaving);
+      document.addEventListener('astro:page-load', clearLeaving);
 
       document.addEventListener('astro:after-preparation', () => {
         const bar = document.getElementById('nav-progress-bar');

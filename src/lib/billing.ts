@@ -637,6 +637,35 @@ export function collectedByPayment(bill: MonthlyBill): { payment: Payment; amoun
   });
 }
 
+/** How one bill's money splits across arrears brought forward and this cycle's charges. */
+export interface BillAllocation {
+  billed: { rent: number; water: number; garbage: number };
+  paid: { rent: number; water: number; garbage: number };
+  arrearsBf: number;
+  arrearsPaid: number;
+}
+
+/**
+ * Splits what covered a bill (this cycle's payments, deposit excluded, plus
+ * any credit carried in) the way arrears are aged: the oldest debt first, so
+ * arrears brought forward are cleared before this cycle's charges. What is
+ * left is shared across rent, water and garbage in proportion to each.
+ */
+export function allocateBill(bill: MonthlyBill): BillAllocation {
+  const billed = { rent: bill.rent, water: bill.water?.amount ?? 0, garbage: bill.garbage };
+  const arrearsBf = Math.max(0, bill.balanceBf);
+  const available = collectedFor(bill) + Math.max(0, -bill.balanceBf);
+  const arrearsPaid = Math.min(available, arrearsBf);
+  const charges = billed.rent + billed.water + billed.garbage;
+  const covered = Math.min(available - arrearsPaid, charges);
+  const share = (amount: number) => (charges > 0 ? Math.floor((covered * amount) / charges) : 0);
+  const paid = { rent: share(billed.rent), water: share(billed.water), garbage: share(billed.garbage) };
+  // The largest charge takes the rounding shillings so the parts add up to what was covered.
+  const largest = (['rent', 'water', 'garbage'] as const).reduce<'rent' | 'water' | 'garbage'>((a, k) => (billed[k] > billed[a] ? k : a), 'rent');
+  paid[largest] += covered - paid.rent - paid.water - paid.garbage;
+  return { billed, paid, arrearsBf, arrearsPaid };
+}
+
 export type ArrearsStage = 'upcoming' | 'grace' | 'overdue';
 
 export interface ArrearsSlice {

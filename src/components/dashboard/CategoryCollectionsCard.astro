@@ -1,0 +1,67 @@
+---
+import { getPortfolio, viewMonthFrom, formatKes } from '../../data/portfolio';
+
+// This company's data only (the signed-in user's).
+const { categoryCollections: c, currentPeriod, currentMonth } = await getPortfolio(
+  Astro.locals.user!.companyId,
+  Astro.cookies,
+  viewMonthFrom(Astro.url),
+);
+
+const rows = [
+  { label: 'Rent', ...c.lines.rent },
+  { label: 'Water', ...c.lines.water },
+  { label: 'Garbage', ...c.lines.garbage },
+].map((r) => ({ ...r, pending: r.billed - r.paid, rate: r.billed > 0 ? Math.round((r.paid / r.billed) * 100) : 0 }));
+const arrearsPending = c.arrears.broughtForward - c.arrears.paid;
+---
+
+<div data-animate-bars class="bg-white rounded-3xl p-6 sm:p-7 border border-[#E7EAE4] shadow-sm">
+  <div class="flex flex-wrap items-start justify-between gap-3 mb-6 pb-3 border-b border-[#F0F2EE]">
+    <div>
+      <h3 class="font-editorial text-2xl sm:text-3xl font-normal text-[#17231E] tracking-tight">Rent, water and garbage</h3>
+      <p class="text-xs sm:text-sm text-[#73827C] mt-1">
+        {currentPeriod} · <span class="font-semibold text-[#17231E] tabular-nums">{formatKes(c.paid)}</span> paid of {formatKes(c.billed)} billed
+      </p>
+    </div>
+    {c.billed > 0 && (
+      <span class={`px-3 py-1 rounded-full text-xs font-semibold tabular-nums ${c.rate >= 100 ? 'bg-[#C6EE58] text-[#0A261F]' : 'bg-[#F3F4F0] text-[#0D382B]'}`}>
+        {c.rate}% paid
+      </span>
+    )}
+  </div>
+
+  {c.billed === 0 ? (
+    <p class="py-4 text-xs font-medium text-[#73827C]">
+      Nothing billed for rent, water or garbage in {currentPeriod}.
+      {c.arrears.broughtForward > 0 && ' This cycle carries opening balances only; charges start on the 4th.'}
+    </p>
+  ) : (
+    <div class="space-y-6">
+      {rows.map((r, i) => (
+        <a href={`/bills?month=${currentMonth}`} class="group block" title="See this month's bills">
+          <div class="flex items-baseline justify-between text-sm mb-2.5 gap-3">
+            <span class="font-medium text-[#1E2E27]">{r.label}</span>
+            <span class="text-xs sm:text-sm text-[#73827C] tabular-nums">{r.billed > 0 ? `${r.rate}%` : 'Not billed'}</span>
+          </div>
+          <div class="w-full bg-[#EAECE6] h-2.5 rounded-full overflow-hidden p-0.5" role="img" aria-label={`${r.label}: ${formatKes(r.paid)} paid of ${formatKes(r.billed)}`}>
+            <div class="bar-x bg-[#124B3A] h-full rounded-full group-hover:bg-[#0D382B]" style={`width: ${Math.min(r.rate, 100)}%; --bar-delay: ${i * 120}ms`}></div>
+          </div>
+          <div class="flex flex-wrap justify-between gap-x-3 mt-2 text-[11px] sm:text-xs tabular-nums">
+            <span class="text-[#0D382B]">Paid {formatKes(r.paid)}</span>
+            <span class={r.pending > 0 ? 'text-[#C04A26] font-medium' : 'text-[#73827C]'}>Pending {formatKes(r.pending)}</span>
+            <span class="text-[#73827C]">Billed {formatKes(r.billed)}</span>
+          </div>
+        </a>
+      ))}
+    </div>
+  )}
+
+  <div class="mt-6 pt-4 border-t border-[#F0F2EE] flex flex-wrap justify-between gap-2 text-xs text-[#5A6862] tabular-nums">
+    <span>
+      Arrears brought forward: {formatKes(c.arrears.broughtForward)}
+      {arrearsPending > 0 && <span class="text-[#C04A26] font-medium"> · {formatKes(arrearsPending)} pending</span>}
+    </span>
+    <span class="text-[#73827C]">Payments clear arrears first, then are shared across rent, water and garbage.</span>
+  </div>
+</div>

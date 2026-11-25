@@ -308,3 +308,39 @@ body {
   }
 }
 
+
+/* Page navigation: the current page slides away the moment a link is clicked
+   (before the server answers), the next one slides in when it arrives. */
+@keyframes makaziFadeOut {
+  to { opacity: 0; }
+}
+@keyframes makaziSlideInFromRight {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes makaziSlideInFromLeft {
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: none; }
+}
+#main-content {
+  transition: opacity 160ms ease-out, transform 200ms cubic-bezier(0.2, 0, 0, 1);
+}
+#main-content.is-leaving {
+  opacity: 0.35;
+  transform: translateX(-20px);
+  pointer-events: none;
+}
+#main-content.is-leaving[data-nav-direction='back'] {
+  transform: translateX(20px);
+}
+@media (prefers-reduced-motion: reduce) {
+  #main-content,
+  #main-content.is-leaving {
+    transition: opacity 120ms linear;
+    transform: none;
+  }
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

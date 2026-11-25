@@ -1,0 +1,204 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+import { makeSupabaseClient } from '../lib/supabase';
+import { formatDate } from '../data/portfolio';
+import { UserCog, UserPlus, ShieldCheck } from '@lucide/astro';
+
+// People who can sign in to this company's admin: staff rows with a login.
+const user = Astro.locals.user!;
+const isOwner = user.role === 'owner';
+const supabase = makeSupabaseClient(Astro.cookies);
+
+interface StaffUser {
+  id: string;
+  name: string;
+  role: string;
+  email: string | null;
+  lastSignIn: string | null;
+}
+
+let staffUsers: StaffUser[] = [];
+let loadError = '';
+if (supabase) {
+  const { data, error } = await supabase
+    .from('staff')
+    .select('id, name, role, user_id')
+    .eq('company_id', user.companyId)
+    .order('role')
+    .order('name');
+  if (error) {
+    loadError = "Couldn't load users. Refresh to try again.";
+  } else {
+    // A handful of people per company: one auth lookup each is fine.
+    staffUsers = await Promise.all(
+      (data ?? []).map(async (s) => {
+        if (!s.user_id) return { id: s.id, name: s.name, role: s.role, email: null, lastSignIn: null };
+        const { data: authUser } = await supabase.auth.admin.getUserById(s.user_id);
+        return {
+          id: s.id,
+          name: s.name,
+          role: s.role,
+          email: authUser?.user?.email ?? null,
+          lastSignIn: authUser?.user?.last_sign_in_at ?? null,
+        };
+      }),
+    );
+  }
+}
+
+const roleLabel: Record<string, string> = { owner: 'Owner', manager: 'Manager', caretaker: 'Caretaker' };
+const label = 'block text-[11px] font-semibold uppercase tracking-wider text-[#69847A] mb-1.5';
+const input =
+  'w-full px-3.5 py-2.5 rounded-xl border border-[#E2E5DF] bg-[#FAFBF9] text-sm font-semibold text-[#0D382B] focus:outline-none focus:border-[#0D382B]';
+const hint = 'text-[11px] text-[#73827C] mt-1';
+const th = 'py-3.5 px-4 lg:px-6 text-left';
+const td = 'py-3.5 px-4 lg:px-6 whitespace-nowrap';
+---
+
+<DashboardLayout title="Makazi — Users" currentPath="/users">
+  <div class="mb-6">
+    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#EBF0EC] text-[#0D382B] text-xs font-semibold mb-2">
+      <ShieldCheck class="w-3.5 h-3.5" />
+      <span>Security & Access</span>
+    </span>
+    <h1 class="text-3xl sm:text-4xl font-normal font-editorial text-[#0D382B] tracking-tight">Users</h1>
+    <p class="text-sm text-[#69847A] mt-1.5 max-w-2xl">
+      People who can sign in to this admin. Owners can add users and change settings; managers run properties, bills and payments.
+    </p>
+  </div>
+
+  <section class="bg-white rounded-3xl border border-[#E3E6DF] shadow-xs overflow-hidden mb-6">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-[#F8F9F6] border-b border-[#E3E6DF] text-[#69847A] uppercase text-[10px] font-semibold tracking-wider">
+          <tr>
+            <th scope="col" class={th}>Name</th>
+            <th scope="col" class={th}>Email</th>
+            <th scope="col" class={th}>Role</th>
+            <th scope="col" class={`${th} text-right sticky right-0 bg-[#F8F9F6]/95 backdrop-blur-xs shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.05)]`}>Last signed in</th>
+          </tr>
+        </thead>
+        <tbody id="users-table-body" class="divide-y divide-[#E3E6DF]">
+          {staffUsers.map((s) => (
+            <tr>
+              <td class={`${td} font-semibold text-[#0D382B]`}>
+                {s.name}
+                {s.email && s.email.toLowerCase() === user.email.toLowerCase() && (
+                  <span class="ml-1.5 text-[10px] uppercase tracking-wider text-[#69847A]">you</span>
+                )}
+              </td>
+              <td class={`${td} text-[#5A6862]`}>{s.email ?? 'No login'}</td>
+              <td class={td}>
+                <span class="px-2 py-0.5 rounded-md bg-[#EBF0EC] text-[#0D382B] text-[11px] font-semibold">{roleLabel[s.role] ?? s.role}</span>
+              </td>
+              <td class={`${td} text-right text-[#5A6862] sticky right-0 bg-white/95 backdrop-blur-xs shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.05)]`}>
+                {s.lastSignIn ? formatDate(s.lastSignIn.slice(0, 10)) : 'Not yet'}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    {loadError && <p class="p-6 text-xs font-medium text-[#C04A26]">{loadError}</p>}
+    {!loadError && staffUsers.length === 0 && (
+      <p class="p-12 text-center text-xs font-medium text-[#69847A]">No users yet. Add the first one below.</p>
+    )}
+  </section>
+
+  {isOwner ? (
+    <section class="bg-white rounded-3xl border border-[#E3E6DF] p-6 shadow-xs max-w-2xl">
+      <div class="flex items-center gap-3 mb-5">
+        <div class="w-10 h-10 rounded-2xl bg-[#0D382B] text-[#C6EE58] flex items-center justify-center">
+          <UserPlus class="w-5 h-5" />
+        </div>
+        <div>
+          <h2 class="font-bold text-base text-[#0D382B]">Add a user</h2>
+          <p class="text-xs text-[#5A6862]">They sign in at this page's address with the email and password you set here.</p>
+        </div>
+      </div>
+      <form id="add-user-form" class="space-y-4" novalidate>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="user-name" class={label}>Name</label>
+            <input id="user-name" type="text" required maxlength="120" autocomplete="off" placeholder="Their full name" class={input} />
+          </div>
+          <div>
+            <label for="user-email" class={label}>Email</label>
+            <input id="user-email" type="email" required autocomplete="off" placeholder="Their work email" class={input} />
+          </div>
+          <div>
+            <label for="user-role" class={label}>Role</label>
+            <select id="user-role" class={input}>
+              <option value="manager" selected>Manager</option>
+              <option value="owner">Owner</option>
+            </select>
+            <p class={hint}>Owners can also add users and change settings.</p>
+          </div>
+          <div>
+            <label for="user-password" class={label}>Password</label>
+            <input id="user-password" type="password" required minlength="12" autocomplete="new-password" placeholder="At least 12 characters" class={input} />
+            <p class={hint}>Share it with them privately.</p>
+          </div>
+        </div>
+        <p id="add-user-error" class="hidden text-xs font-medium text-[#C04A26]" role="alert"></p>
+        <div class="flex justify-end">
+          <button type="submit" id="add-user-btn" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0D382B] text-white text-xs font-bold hover:bg-[#08221A] transition-colors cursor-pointer disabled:opacity-50">
+            <UserCog class="w-3.5 h-3.5" />
+            <span>Add user</span>
+          </button>
+        </div>
+      </form>
+    </section>
+  ) : (
+    <p class="text-xs text-[#69847A]">Only an owner can add users.</p>
+  )}
+</DashboardLayout>
+
+<script>
+  function initUsersPage() {
+    const formEl = document.getElementById('add-user-form') as HTMLFormElement | null;
+    if (!formEl || formEl.dataset.bound === 'true') return;
+    formEl.dataset.bound = 'true';
+    const form: HTMLFormElement = formEl;
+    const errorEl = document.getElementById('add-user-error');
+    const button = document.getElementById('add-user-btn') as HTMLButtonElement | null;
+    const value = (id: string) => (document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null)?.value ?? '';
+
+    const showError = (message: string) => {
+      if (!errorEl) return;
+      errorEl.textContent = message;
+      errorEl.classList.toggle('hidden', !message);
+    };
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      showError('');
+      const name = value('user-name').trim();
+      const email = value('user-email').trim();
+      const role = value('user-role');
+      const password = value('user-password');
+      if (!name || !email) return showError('Enter their name and email.');
+      if (password.length < 12) return showError('Use a password of at least 12 characters.');
+
+      if (button) button.disabled = true;
+      try {
+        const res = await fetch('/api/create-staff-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, role, password }),
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) throw new Error(data.error || "Couldn't add the user. Try again.");
+        // Saved: reload so the list comes from the server, never from the form.
+        window.makaziUi?.showToast('User added', `${name} can now sign in.`);
+        form.reset();
+        setTimeout(() => window.location.reload(), 900);
+      } catch (err) {
+        showError(err instanceof Error ? err.message : String(err));
+        if (button) button.disabled = false;
+      }
+    });
+  }
+
+  document.addEventListener('astro:page-load', initUsersPage);
+</script>

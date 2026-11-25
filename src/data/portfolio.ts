@@ -19,6 +19,7 @@ import {
   arrearsSlices,
   buildLedger,
   ledgerStartFor,
+  allocateBill,
   collectedFor,
   collectedByPayment,
   daysBetween,
@@ -381,6 +382,26 @@ function buildPortfolio(companyId: string, seedOverride?: Seed) {
     return total;
   };
 
+  // Rent, water and garbage billed this cycle against what covered them
+  // (allocateBill: arrears brought forward first, then shared proportionally).
+  const categoryCollections = (() => {
+    const zero = () => ({ billed: 0, paid: 0 });
+    const lines = { rent: zero(), water: zero(), garbage: zero() };
+    const arrears = { broughtForward: 0, paid: 0 };
+    for (const bill of currentBills) {
+      const a = allocateBill(bill);
+      for (const k of ['rent', 'water', 'garbage'] as const) {
+        lines[k].billed += a.billed[k];
+        lines[k].paid += a.paid[k];
+      }
+      arrears.broughtForward += a.arrearsBf;
+      arrears.paid += a.arrearsPaid;
+    }
+    const billed = lines.rent.billed + lines.water.billed + lines.garbage.billed;
+    const paid = lines.rent.paid + lines.water.paid + lines.garbage.paid;
+    return { lines, arrears, billed, paid, rate: percent(paid, billed) };
+  })();
+
   const inArrears = activeTenancies.filter((t) => t.balance > 0);
   const overdueTenancies = activeTenancies.filter((t) => t.overdueAmount > 0);
   const occupiedUnits = propertyViews.reduce((acc, p) => acc + p.occupied, 0);
@@ -625,6 +646,7 @@ function buildPortfolio(companyId: string, seedOverride?: Seed) {
     portfolioSummary,
     payments,
     stats,
+    categoryCollections,
     sixMonthsHistory,
     arrears,
     arrearsAgeing,
