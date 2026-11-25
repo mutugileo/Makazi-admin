@@ -241,7 +241,12 @@ function buildPortfolio(companyId: string, seedOverride?: Seed) {
     const bills = buildLedger(seed, tenancy);
     const last = bills[bills.length - 1] ?? null;
     const isActive = tenancy.moveOut === null;
-    const balance = last ? last.outstanding : tenancy.openingBalance;
+    const ledgerStart = ledgerStartFor(seed, tenancy);
+    const balance = last
+      ? last.outstanding
+      : cycleOf(seed.asOf) >= ledgerStart
+        ? tenancy.openingBalance
+        : 0;
     const arrears = arrearsSlices(seed, tenancy, bills);
     const overdue = arrears.filter((a) => a.stage === 'overdue');
     const stage: ArrearsStage | null = overdue.length
