@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { errorMessage } from '../../lib/errors';
 import { makeSupabaseClient } from '../../lib/supabase';
 import { notifyTenancy } from '../../lib/realtime';
-import { clearLiveCache } from '../../data/portfolio';
+import { clearLiveCache, markFresh } from '../../data/portfolio';
 
 export const POST: APIRoute = async ({ request, locals, cookies }) => {
   const user = locals.user;
@@ -66,7 +66,19 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
 
     if (error) throw error;
 
+    // The tenant's inbox, worded like a confirmed payment message
+    // (review_payment_claim). The payment is saved either way: log only.
+    const { error: notifErr } = await supabase.from('notifications').insert({
+      company_id: companyId,
+      tenancy_id: tenancyId,
+      kind: 'general',
+      title: 'Payment confirmed',
+      body: `KES ${amountKes.toLocaleString('en-US')} (${newPayment.reference}) confirmed. Receipt ${newPayment.receipt_number} is ready in Payments.`,
+    });
+    if (notifErr) console.error('[record-payment] tenant notification not saved:', notifErr);
+
     clearLiveCache(companyId);
+    markFresh(cookies);
     await notifyTenancy(supabase, tenancyId, 'data_updated', { action: 'payment_recorded' });
 
     return new Response(

@@ -3,6 +3,7 @@ import { errorMessage } from '../../lib/errors';
 import { makeSupabaseClient } from '../../lib/supabase';
 import { notifyTenancy } from '../../lib/realtime';
 import { parseKenyanPhone, phoneSpellings } from '../../lib/tenant-auth';
+import { allowAction } from '../../lib/auth/rate-limit';
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -15,6 +16,7 @@ const json = (body: unknown, status = 200) =>
 export const POST: APIRoute = async ({ request, locals, cookies }) => {
   const user = locals.user;
   if (!user) return json({ error: 'Unauthorized' }, 401);
+  if (!allowAction('send-pin-notice', `${user.companyId}:${user.email}`)) return json({ error: 'Too many sends. Wait a minute, then try again.' }, 429);
 
   const supabase = makeSupabaseClient(cookies);
   if (!supabase) return json({ error: 'Database not configured' }, 500);

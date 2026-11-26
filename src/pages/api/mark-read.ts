@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { errorMessage } from '../../lib/errors';
 import { makeSupabaseClient } from '../../lib/supabase';
 import { notifyTenancy } from '../../lib/realtime';
-import { clearLiveCache } from '../../data/portfolio';
+import { clearLiveCache, markFresh } from '../../data/portfolio';
 
 export const POST: APIRoute = async ({ request, locals, cookies }) => {
   const user = locals.user;
@@ -35,6 +35,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     if (error) throw error;
 
     clearLiveCache(companyId);
+    markFresh(cookies);
 
     // Notify the tenant app over realtime so its double ticks turn green!
     await notifyTenancy(supabase, tenancyId, 'data_updated');

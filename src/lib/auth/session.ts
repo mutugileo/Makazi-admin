@@ -18,6 +18,8 @@ export interface AdminUser {
   role: StaffRole;
   /** Every page shows this company's data only. */
   companyId: string;
+  /** staff.id of the signed-in person; absent in sessions started before it was stored. */
+  staffId?: string;
 }
 
 interface SessionPayload {
@@ -25,6 +27,7 @@ interface SessionPayload {
   name: string;
   companyId: string;
   role: StaffRole;
+  staffId?: string;
   exp: number; // unix seconds
 }
 
@@ -55,7 +58,7 @@ function sign(body: string): string {
 
 export function createSession(
   cookies: AstroCookies,
-  user: { email: string; name: string; companyId?: string; role?: StaffRole },
+  user: { email: string; name: string; companyId?: string; role?: StaffRole; staffId?: string },
   secure: boolean
 ) {
   const companyId = user.companyId || adminAccount()?.companyId;
@@ -65,6 +68,7 @@ export function createSession(
     name: user.name,
     companyId,
     role: user.role && VALID_ROLES.has(user.role) ? user.role : 'manager',
+    ...(user.staffId ? { staffId: user.staffId } : {}),
     exp: Math.floor(Date.now() / 1000) + SESSION_HOURS * 3600,
   };
   const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
@@ -97,6 +101,7 @@ export function readSession(cookies: AstroCookies): AdminUser | null {
       name: payload.name || 'Admin',
       role: payload.role,
       companyId: payload.companyId,
+      ...(typeof payload.staffId === 'string' && payload.staffId ? { staffId: payload.staffId } : {}),
     };
   } catch {
     return null;
@@ -107,8 +112,28 @@ export function clearSession(cookies: AstroCookies) {
   cookies.delete(SESSION_COOKIE, { path: '/' });
 }
 
-/** Only allow redirects back into this site (no open redirects). */
+/**
+ * Only allow redirects back into this site (no open redirects). Browsers
+ * strip tabs/newlines and read '\\' as '/', so '/%09/evil' or '/\\evil' can
+ * become '//evil'; anything with control characters, backslashes or a
+ * different origin goes to '/'.
+ */
 export function safeNext(next: string | null): string {
-  if (!next || !next.startsWith('/') || next.startsWith('//') || next.startsWith('/\\')) return '/';
-  return next;
+  if (!next || !next.startsWith('/') || next.startsWith('//')) return '/';
+  let decoded = next;
+  try {
+    decoded = decodeURIComponent(next);
+  } catch {
+    return '/';
+  }
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0000-\u001F\u007F\\]/.test(next) || /[\u0000-\u001F\u007F\\]/.test(decoded) || decoded.startsWith('//')) return '/';
+  try {
+    const base = 'http://x';
+    const url = new URL(next, base);
+    if (url.origin !== base) return '/';
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return '/';
+  }
 }

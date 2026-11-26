@@ -3,7 +3,13 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { cycleOf } from './billing';
-import { parseKenyanPhone, phoneSpellings, issueOneTimePassword, generateOneTimePassword } from './tenant-auth';
+import {
+  parseKenyanPhone,
+  phoneSpellings,
+  issueOneTimePassword,
+  generateOneTimePassword,
+  tenantAuthUserIds,
+} from './tenant-auth';
 
 export interface BulkImportRow {
   rowNumber: number;
@@ -60,6 +66,8 @@ export interface ImportExecutionResult {
   unitsCreated: number;
   tenanciesCreated: number;
   errors: string[];
+  /** True when any row was written, even if the run as a whole failed. */
+  wroteAnything: boolean;
 }
 
 /** Parses CSV text handling RFC-4180 quotes, escaped quotes, newlines, and BOM. */
@@ -133,11 +141,12 @@ export function parseOpeningBalance(raw: string): number | null {
     negative = true;
     text = text.slice(1, -1).trim();
   }
-  if (/\bcr\.?$/i.test(text)) {
+  // The suffix may follow the number directly ("1500cr") or after a space.
+  if (/cr\.?$/i.test(text)) {
     negative = true;
-    text = text.replace(/\bcr\.?$/i, '').trim();
-  } else if (/\bdr\.?$/i.test(text)) {
-    text = text.replace(/\bdr\.?$/i, '').trim();
+    text = text.replace(/cr\.?$/i, '').trim();
+  } else if (/dr\.?$/i.test(text)) {
+    text = text.replace(/dr\.?$/i, '').trim();
   }
   text = text.replace(/,/g, '').replace(/\s+/g, '');
   if (!/^-?\d+(\.\d+)?$/.test(text)) return null;
@@ -314,7 +323,10 @@ export function validateBulkCsv(csvText: string): ImportValidationResult {
       }
 
       if (moveInRaw) {
-        const isoMatch = /^\d{4}-\d{2}-\d{2}$/.test(moveInRaw.trim());
+        const d = moveInRaw.trim();
+        // The shape alone lets 2026-13-45 through: the date must exist.
+        const isoMatch = /^\d{4}-\d{2}-\d{2}$/.test(d) && !isNaN(Date.parse(`${d}T00:00:00Z`)) &&
+          new Date(`${d}T00:00:00Z`).toISOString().slice(0, 10) === d;
         if (!isoMatch) {
           errors.push({ row: rowNum, field: 'moveInDate', message: 'Move-in date must be in YYYY-MM-DD format.' });
         } else {
@@ -347,8 +359,10 @@ export function validateBulkCsv(csvText: string): ImportValidationResult {
       }
 
       if (openingReadingRaw) {
-        const readingParsed = Math.round(Number(openingReadingRaw.replace(/[^0-9.]/g, '')));
-        if (!/\d/.test(openingReadingRaw) || isNaN(readingParsed) || readingParsed < 0) {
+        // Digits only (commas allowed): a '-' must not be stripped into a positive reading.
+        const readingText = openingReadingRaw.trim().replace(/,/g, '');
+        const readingParsed = Math.round(Number(readingText));
+        if (!/^\d+(\.\d+)?$/.test(readingText) || isNaN(readingParsed) || readingParsed < 0) {
           errors.push({
             row: rowNum,
             field: 'openingReading',
@@ -421,6 +435,7 @@ export async function executeBulkImport(
     unitsCreated: 0,
     tenanciesCreated: 0,
     errors: [],
+    wroteAnything: false,
   };
 
   if (rows.length === 0) {
@@ -464,6 +479,9 @@ export async function executeBulkImport(
     propertyMapByName.set(p.name.trim().toLowerCase(), p.id);
     usedPrefixes.add(p.account_prefix.trim().toUpperCase());
   }
+
+  // Tenant logins, read once for the whole run (null until first needed).
+  let authIds: Map<string, string> | null = null;
 
   // Group import rows by property
   const rowsByProperty = new Map<string, BulkImportRow[]>();
@@ -517,6 +535,7 @@ export async function executeBulkImport(
       propertyMapByName.set(propKey, newProp.id as string);
       usedPrefixes.add(desiredPrefix);
       result.propertiesCreated++;
+      result.wroteAnything = true;
     } else {
       result.propertiesReused++;
     }
@@ -566,6 +585,7 @@ export async function executeBulkImport(
         unitId = newUnit.id as string;
         existingUnitMap.set(unitKey, newUnit.id as string);
         result.unitsCreated++;
+        result.wroteAnything = true;
       }
 
       // 6. Onboard tenant if present
@@ -595,14 +615,21 @@ export async function executeBulkImport(
           }
 
           // Check if tenant already exists in company
-          const { data: existingTenant } = await supabase
+          const { data: existingTenant, error: existingErr } = await supabase
             .from('tenants')
             .select('id, auth_user_id')
             .eq('company_id', companyId)
             .in('phone', phoneSpellings(parsedPhone))
             .maybeSingle();
+          if (existingErr) {
+            result.errors.push(`Row ${row.rowNumber}: couldn't check whether ${row.tenantName} is already a tenant, so they were not imported. Try the upload again.`);
+            continue;
+          }
 
           let tenantId: string;
+          // Rows this run created for a new tenant, undone if their tenancy fails.
+          let createdTenantId: string | null = null;
+          let createdAuthUserId: string | null = null;
           if (existingTenant) {
             tenantId = existingTenant.id;
           } else {
@@ -622,21 +649,36 @@ export async function executeBulkImport(
               continue;
             }
             tenantId = newTenant.id;
+            createdTenantId = newTenant.id;
+            result.wroteAnything = true;
 
             // Generate temporary PIN credentials for tenant mobile app
             const tempPin = generateOneTimePassword();
             try {
+              authIds ??= await tenantAuthUserIds(supabase);
+              const knownUserId = authIds.get(parsedPhone.authEmail) ?? null;
               const authUserId = await issueOneTimePassword(supabase, {
                 phone: parsedPhone,
                 password: tempPin,
                 name: row.tenantName,
                 companyId,
+                knownUserId,
+                knownAbsent: !knownUserId,
               });
-              await supabase.from('tenants').update({ auth_user_id: authUserId }).eq('id', tenantId);
+              if (!knownUserId) {
+                createdAuthUserId = authUserId;
+                authIds.set(parsedPhone.authEmail, authUserId);
+              }
+              const { error: linkErr } = await supabase
+                .from('tenants')
+                .update({ auth_user_id: authUserId })
+                .eq('company_id', companyId)
+                .eq('id', tenantId);
+              if (linkErr) throw linkErr;
             } catch (authErr: unknown) {
               // Non-blocking credential creation: report in result errors so the admin is informed
-              const authMsg = authErr instanceof Error ? authErr.message : String(authErr);
-              result.errors.push(`Tenant '${row.tenantName}' onboarded, but app login creation failed: ${authMsg}`);
+              console.error('[bulk-import] tenant login not created:', authErr);
+              result.errors.push(`Tenant '${row.tenantName}' onboarded, but their app login wasn't created. Reset their PIN from the tenant's page.`);
             }
           }
 
@@ -666,8 +708,23 @@ export async function executeBulkImport(
 
             if (!tenancyErr) {
               result.tenanciesCreated++;
+              result.wroteAnything = true;
             } else {
               result.errors.push(`Failed to create tenancy for unit '${row.unitLabel}': ${tenancyErr.message}`);
+              // No tenant with a login and no unit: undo only what this run created.
+              if (createdTenantId) {
+                const { error: undoTenantErr } = await supabase
+                  .from('tenants')
+                  .delete()
+                  .eq('company_id', companyId)
+                  .eq('id', createdTenantId);
+                if (undoTenantErr) console.error('[bulk-import] tenant rollback failed:', undoTenantErr);
+              }
+              if (createdAuthUserId) {
+                const { error: undoAuthErr } = await supabase.auth.admin.deleteUser(createdAuthUserId);
+                if (undoAuthErr) console.error('[bulk-import] login rollback failed:', undoAuthErr);
+                else authIds?.delete(parsedPhone.authEmail);
+              }
             }
           }
         } catch (err: unknown) {

@@ -1,8 +1,9 @@
 import type { APIRoute } from 'astro';
+import { addMonths, cycleOf } from '../../lib/billing';
 import { errorMessage } from '../../lib/errors';
 import { makeSupabaseClient } from '../../lib/supabase';
 import { notifyCompany } from '../../lib/realtime';
-import { clearLiveCache } from '../../data/portfolio';
+import { clearLiveCache, markFresh } from '../../data/portfolio';
 
 export const POST: APIRoute = async ({ request, locals, cookies }) => {
   const user = locals.user;
@@ -41,12 +42,11 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       return new Response(JSON.stringify({ error: 'Property not found' }), { status: 404 });
     }
 
-    // The billing engine prices each month from rate_history, so new rates go
-    // in as an entry from next month (Nairobi time); issued bills keep theirs.
-    const now = new Date(Date.now() + 3 * 60 * 60 * 1000);
-    now.setUTCDate(1);
-    now.setUTCMonth(now.getUTCMonth() + 1);
-    const from = now.toISOString().slice(0, 7);
+    // The billing engine prices each cycle from rate_history, so new rates go
+    // in as an entry from the next billing cycle (today in Nairobi; cycles
+    // start on the 4th from December 2026); issued bills keep theirs.
+    const todayNairobi = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const from = addMonths(cycleOf(todayNairobi), 1);
     const history = ((property.rate_history ?? []) as Array<{ from: string; waterRate: number; garbageFee: number }>)
       .filter((r) => r.from !== from)
       .concat({ from, waterRate: water, garbageFee: garbage })
@@ -61,6 +61,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     if (error) throw error;
 
     clearLiveCache(companyId);
+    markFresh(cookies);
     await notifyCompany(supabase, companyId, 'data_updated', { action: 'rates_updated' });
 
     return new Response(JSON.stringify({ success: true }), {

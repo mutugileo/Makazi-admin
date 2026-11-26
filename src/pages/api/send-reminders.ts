@@ -3,7 +3,7 @@ import { errorMessage } from '../../lib/errors';
 import { makeSupabaseClient } from '../../lib/supabase';
 import { notifyTenancy } from '../../lib/realtime';
 import { paymentReminder } from '../../lib/reminders';
-import { clearLiveCache, getPortfolio } from '../../data/portfolio';
+import { clearLiveCache, getPortfolio, markFresh } from '../../data/portfolio';
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -33,6 +33,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
 
     // Fresh numbers, not a cached page's.
     clearLiveCache(user.companyId);
+    markFresh(cookies);
     const { arrears, company, asOf } = await getPortfolio(user.companyId, cookies);
     const owing = arrears.filter((t) => t.balance > 0 && (!only || only.has(t.tenancy.id)));
     if (!owing.length) return json({ sent: 0, skipped: 0 });

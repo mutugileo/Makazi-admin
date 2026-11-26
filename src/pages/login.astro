@@ -20,13 +20,13 @@ if (Astro.request.method === 'POST') {
   const form = await Astro.request.formData();
   email = String(form.get('email') ?? '').trim().toLowerCase();
   const password = String(form.get('password') ?? '');
-  const key = `${email}|${Astro.clientAddress}`;
-  const lockout = isLockedOut(key);
+  const ip = Astro.clientAddress;
+  const lockout = isLockedOut(email, ip);
 
   if (lockout.locked) {
     error = `Too many attempts. Try again in ${lockout.retryInMinutes} minute${lockout.retryInMinutes === 1 ? '' : 's'}.`;
   } else {
-    let authenticatedUser: { email: string; name: string; companyId: string; role: StaffRole } | null = null;
+    let authenticatedUser: { email: string; name: string; companyId: string; role: StaffRole; staffId?: string } | null = null;
 
     // 1. Supabase Auth check: the signed-in user must exist and have a staff row.
     const supabase = makeSupabaseClient();
@@ -39,7 +39,7 @@ if (Astro.request.method === 'POST') {
         if (!authErr && authData?.user) {
           const { data: staffRow } = await supabase
             .from('staff')
-            .select('company_id, name, role')
+            .select('id, company_id, name, role')
             .eq('user_id', authData.user.id)
             .maybeSingle();
 
@@ -49,6 +49,7 @@ if (Astro.request.method === 'POST') {
               name: staffRow.name || 'Admin',
               companyId: staffRow.company_id,
               role: staffRow.role,
+              staffId: staffRow.id,
             };
           } else if (staffRow) {
             error = 'Caretaker accounts cannot sign in to the admin portal.';
@@ -78,13 +79,19 @@ if (Astro.request.method === 'POST') {
     }
 
     if (authenticatedUser) {
-      clearFailures(key);
-      createSession(Astro.cookies, authenticatedUser, Astro.url.protocol === 'https:');
+      clearFailures(email);
+      // Production is always served over HTTPS (behind Vercel's proxy the
+      // request URL may still read http:), so the cookie is always Secure there.
+      createSession(Astro.cookies, authenticatedUser, import.meta.env.PROD || Astro.url.protocol === 'https:');
       return Astro.redirect(next, 303);
     }
 
-    recordFailure(key);
-    error = 'Email or password is incorrect.';
+    // A caretaker or non-staff account keeps its own message: the password
+    // was right, so it is not counted as a guess.
+    if (!error) {
+      recordFailure(email, ip);
+      error = 'Email or password is incorrect.';
+    }
   }
 }
 ---

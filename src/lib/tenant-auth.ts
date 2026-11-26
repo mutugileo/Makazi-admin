@@ -61,6 +61,23 @@ async function findAuthUserIdByEmail(supabase: SupabaseClient, email: string): P
 }
 
 /**
+ * Every tenant login (auth email -> user id), read once. Batch jobs use this
+ * instead of paging through all auth users for every row.
+ */
+export async function tenantAuthUserIds(supabase: SupabaseClient): Promise<Map<string, string>> {
+  const ids = new Map<string, string>();
+  for (let page = 1; ; page++) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) throw error;
+    for (const u of data.users) {
+      const email = u.email?.toLowerCase();
+      if (email?.endsWith('@tenant.makazi.app')) ids.set(email, u.id);
+    }
+    if (data.users.length < 1000) return ids;
+  }
+}
+
+/**
  * Creates the tenant's login, or resets it, with a 4-digit PIN.
  * Returns the auth user id.
  */
@@ -72,6 +89,8 @@ export async function issueOneTimePassword(
     name: string;
     companyId: string;
     knownUserId?: string | null;
+    /** The caller already looked the login up and found none: skip the lookup. */
+    knownAbsent?: boolean;
     isTemporary?: boolean;
     validityHours?: number;
   },
@@ -87,7 +106,8 @@ export async function issueOneTimePassword(
     is_temporary: isTemporary,
     pin_expires_at: isTemporary ? expiresAt : null,
   };
-  let userId = opts.knownUserId ?? (await findAuthUserIdByEmail(supabase, opts.phone.authEmail));
+  let userId =
+    opts.knownUserId ?? (opts.knownAbsent ? null : await findAuthUserIdByEmail(supabase, opts.phone.authEmail));
   const supabasePassword = pinToSupabasePassword(opts.password);
 
   if (userId) {

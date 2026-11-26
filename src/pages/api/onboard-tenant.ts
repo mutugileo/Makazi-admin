@@ -3,7 +3,7 @@ import { cycleOf } from '../../lib/billing';
 import { parseOpeningBalance } from '../../lib/bulk-import';
 import { errorMessage } from '../../lib/errors';
 import { makeSupabaseClient } from '../../lib/supabase';
-import { clearLiveCache } from '../../data/portfolio';
+import { clearLiveCache, markFresh } from '../../data/portfolio';
 import { generateOneTimePassword, issueOneTimePassword, parseKenyanPhone, phoneSpellings } from '../../lib/tenant-auth';
 
 const json = (body: unknown, status = 200) =>
@@ -231,17 +231,10 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       if (readingErr) console.error('[onboard-tenant] opening reading not saved:', readingErr);
     }
 
-    // Send in-app notification for the newly generated 4-digit PIN (72h validity)
-    const { error: notifErr } = await supabase.from('notifications').insert({
-      company_id: companyId,
-      tenancy_id: newTenancy.id,
-      kind: 'payment_reminder',
-      title: 'Security: New 4-digit PIN generated',
-      body: `Your Makazi login PIN is ${temporaryPassword}. Valid for 72 hours. You can change your PIN anytime in the app under Account settings.`,
-    });
-    if (notifErr) console.warn('[onboard-tenant] notification warning:', notifErr);
-
+    // The PIN is never written to notifications here: the manager hands it
+    // over from the PIN window ("Send to app").
     clearLiveCache(companyId);
+    markFresh(cookies);
 
     return json({
       success: true,

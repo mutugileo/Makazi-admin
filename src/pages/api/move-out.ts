@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { errorMessage } from '../../lib/errors';
 import { makeSupabaseClient } from '../../lib/supabase';
 import { notifyTenancy } from '../../lib/realtime';
-import { clearLiveCache } from '../../data/portfolio';
+import { clearLiveCache, markFresh } from '../../data/portfolio';
 
 export const POST: APIRoute = async ({ request, locals, cookies }) => {
   const user = locals.user;
@@ -62,6 +62,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     }
 
     clearLiveCache(companyId);
+    markFresh(cookies);
     await notifyTenancy(supabase, tenancyId, 'data_updated', { action: 'move_out' });
 
     return new Response(JSON.stringify({ success: true }), {

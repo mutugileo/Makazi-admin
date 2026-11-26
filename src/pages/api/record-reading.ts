@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { errorMessage } from '../../lib/errors';
 import { makeSupabaseClient } from '../../lib/supabase';
 import { notifyCompany } from '../../lib/realtime';
-import { clearLiveCache } from '../../data/portfolio';
+import { clearLiveCache, markFresh } from '../../data/portfolio';
 import { addMonths, cycleOf } from '../../lib/billing';
 
 const json = (body: unknown, status: number) =>
@@ -89,6 +89,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     if (error) throw error;
 
     clearLiveCache(companyId);
+    markFresh(cookies);
 
     await notifyCompany(supabase, companyId, 'data_updated', { action: 'meter_reading' });
 

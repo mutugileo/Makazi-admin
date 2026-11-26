@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { errorMessage } from '../../lib/errors';
 import { makeSupabaseClient } from '../../lib/supabase';
-import { clearLiveCache } from '../../data/portfolio';
+import { clearLiveCache, markFresh } from '../../data/portfolio';
 import { notifyCompany } from '../../lib/realtime';
 
 export const POST: APIRoute = async ({ request, locals, cookies }) => {
@@ -45,6 +45,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     }
 
     clearLiveCache(user.companyId);
+    markFresh(cookies);
     notifyCompany(supabase, user.companyId, 'unit_updated');
 
     return new Response(JSON.stringify({ ok: true, unit: updated }), {

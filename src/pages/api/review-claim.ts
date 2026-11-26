@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { errorMessage } from '../../lib/errors';
 import { makeSupabaseClient } from '../../lib/supabase';
 import { notifyTenancy } from '../../lib/realtime';
-import { clearLiveCache } from '../../data/portfolio';
+import { clearLiveCache, markFresh } from '../../data/portfolio';
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -48,6 +48,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     }
 
     clearLiveCache(user.companyId);
+    markFresh(cookies);
     await notifyTenancy(supabase, data.tenancyId, 'data_updated', { action: 'payment_claim_reviewed' });
 
     return json({ status: data.status, receiptNumber: data.receiptNumber ?? null });

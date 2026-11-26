@@ -2,8 +2,11 @@ import type { APIRoute } from 'astro';
 import { errorMessage } from '../../lib/errors';
 import { makeSupabaseClient } from '../../lib/supabase';
 import { validateBulkCsv, executeBulkImport } from '../../lib/bulk-import';
-import { clearLiveCache } from '../../data/portfolio';
+import { clearLiveCache, markFresh } from '../../data/portfolio';
 import { notifyCompany } from '../../lib/realtime';
+
+const MAX_CSV_BYTES = 1024 * 1024;
+const MAX_ROWS = 500;
 
 export const POST: APIRoute = async ({ request, locals, cookies }) => {
   const user = locals.user;
@@ -17,6 +20,10 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
   }
 
   try {
+    // Refuse an oversized upload before reading it.
+    if (Number(request.headers.get('content-length') ?? 0) > MAX_CSV_BYTES * 2) {
+      return new Response(JSON.stringify({ error: 'That file is larger than 1 MB. Split it into smaller files and upload each one.' }), { status: 413 });
+    }
     const body = await request.json();
     const { csvText, mode, defaultManagerId } = body;
 
@@ -24,7 +31,16 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       return new Response(JSON.stringify({ error: 'CSV data is required.' }), { status: 400 });
     }
 
+    if (new TextEncoder().encode(csvText).length > MAX_CSV_BYTES) {
+      return new Response(JSON.stringify({ error: 'That file is larger than 1 MB. Split it into smaller files and upload each one.' }), { status: 413 });
+    }
+
     const validation = validateBulkCsv(csvText);
+    if (validation.rows.length > MAX_ROWS) {
+      return new Response(JSON.stringify({
+        error: `That file has ${validation.rows.length} rows. Upload up to ${MAX_ROWS} rows at a time. Nothing was imported.`,
+      }), { status: 400 });
+    }
 
     if (mode === 'validate') {
       return new Response(JSON.stringify({
@@ -50,10 +66,33 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
         }), { status: 400 });
       }
 
-      const result = await executeBulkImport(supabase, user.companyId, validation.rows, defaultManagerId);
+      // The manager assigned to new properties must be an owner or manager of
+      // this company, never an id from elsewhere.
+      let managerId: string | undefined;
+      if (defaultManagerId !== undefined && defaultManagerId !== null && defaultManagerId !== '') {
+        if (typeof defaultManagerId !== 'string') {
+          return new Response(JSON.stringify({ error: 'Choose a manager from your team.' }), { status: 400 });
+        }
+        const { data: manager, error: managerErr } = await supabase
+          .from('staff')
+          .select('id')
+          .eq('company_id', user.companyId)
+          .eq('id', defaultManagerId)
+          .in('role', ['owner', 'manager'])
+          .maybeSingle();
+        if (managerErr) throw managerErr;
+        if (!manager) {
+          return new Response(JSON.stringify({ error: 'Choose a manager from your team. That person is not an owner or manager here.' }), { status: 400 });
+        }
+        managerId = manager.id;
+      }
 
-      if (result.success) {
+      const result = await executeBulkImport(supabase, user.companyId, validation.rows, managerId);
+
+      // Anything written must show up, even when some rows failed.
+      if (result.wroteAnything) {
         clearLiveCache(user.companyId);
+        markFresh(cookies);
         notifyCompany(supabase, user.companyId, 'bulk_import');
       }
 

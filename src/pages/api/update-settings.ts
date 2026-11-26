@@ -2,7 +2,8 @@ import type { APIRoute } from 'astro';
 import { errorMessage } from '../../lib/errors';
 import { makeSupabaseClient } from '../../lib/supabase';
 import { notifyCompany } from '../../lib/realtime';
-import { clearLiveCache } from '../../data/portfolio';
+import { clearLiveCache, markFresh } from '../../data/portfolio';
+import { parseKenyanPhone } from '../../lib/tenant-auth';
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -60,6 +61,58 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       return json({ error: "Keep former tenants' records for 1 to 24 months." }, 400);
     }
 
+    // Per-property payment details: all checked before anything is written.
+    interface PropertyPayment {
+      propertyId: string;
+      mpesaPaybill: string | null;
+      bankName: string | null;
+      bankAccount: string | null;
+      pesalinkPhone: string | null;
+    }
+    const propertyPayments: PropertyPayment[] = [];
+    if (body.propertyPayments !== undefined && body.propertyPayments !== null) {
+      if (!Array.isArray(body.propertyPayments) || body.propertyPayments.length > 500) {
+        return json({ error: 'Property payment details are not valid. Reload the page and try again.' }, 400);
+      }
+      const seen = new Set<string>();
+      for (const item of body.propertyPayments) {
+        const propId = typeof item?.propertyId === 'string' ? item.propertyId.trim() : '';
+        if (!propId || seen.has(propId)) continue;
+        seen.add(propId);
+
+        const rawPaybill = text(item.mpesaPaybill).replace(/\s/g, '');
+        if (rawPaybill && !/^\d{5,7}$/.test(rawPaybill)) {
+          return json({ error: 'Property M-Pesa Paybill must be 5 to 7 digits.' }, 400);
+        }
+
+        const rawBankName = text(item.bankName);
+        if (rawBankName && (rawBankName.length < 2 || rawBankName.length > 80)) {
+          return json({ error: 'Property bank name must be between 2 and 80 characters.' }, 400);
+        }
+
+        const rawBankAccount = text(item.bankAccount).replace(/[\s-]/g, '');
+        if (rawBankAccount && !/^\d{6,20}$/.test(rawBankAccount)) {
+          return json({ error: 'Property bank account must be 6 to 20 digits.' }, 400);
+        }
+
+        const rawPesalink = text(item.pesalinkPhone);
+        let pesalinkPhone: string | null = null;
+        if (rawPesalink) {
+          const parsed = parseKenyanPhone(rawPesalink);
+          if (!parsed) return json({ error: 'Property PesaLink phone must be a Safaricom or Airtel number.' }, 400);
+          pesalinkPhone = parsed.local;
+        }
+
+        propertyPayments.push({
+          propertyId: propId,
+          mpesaPaybill: rawPaybill || null,
+          bankName: rawBankName || null,
+          bankAccount: rawBankAccount || null,
+          pesalinkPhone,
+        });
+      }
+    }
+
     const { data: current, error: readErr } = await supabase
       .from('companies')
       .select('settings')
@@ -79,6 +132,20 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       depositSchedule[beds] = amount;
     }
 
+    // Every property sent must be one of this company's.
+    if (propertyPayments.length > 0) {
+      const { data: owned, error: ownedErr } = await supabase
+        .from('properties')
+        .select('id')
+        .eq('company_id', user.companyId)
+        .in('id', propertyPayments.map((p) => p.propertyId));
+      if (ownedErr) throw ownedErr;
+      const ownedIds = new Set((owned ?? []).map((p) => p.id as string));
+      if (propertyPayments.some((p) => !ownedIds.has(p.propertyId))) {
+        return json({ error: 'One of those properties was not found. Reload the page and try again.' }, 404);
+      }
+    }
+
     // The brand theme is set only by Codzure in the super-admin portal. Any
     // `theme` sent here is ignored, so the stored theme stays as it is.
     const settings = {
@@ -88,6 +155,19 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       depositSchedule,
       recordRetentionMonths: retention,
     };
+    if (propertyPayments.length > 0) {
+      const updatedAt = new Date().toISOString();
+      settings.propertyPayments = { ...(current.settings?.propertyPayments ?? {}) };
+      for (const p of propertyPayments) {
+        settings.propertyPayments[p.propertyId] = {
+          mpesaPaybill: p.mpesaPaybill,
+          bankName: p.bankName,
+          bankAccount: p.bankAccount,
+          pesalinkPhone: p.pesalinkPhone,
+          updatedAt,
+        };
+      }
+    }
 
     const { error } = await supabase
       .from('companies')
@@ -95,75 +175,23 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       .eq('id', user.companyId);
     if (error) throw error;
 
-    if (Array.isArray(body.propertyPayments)) {
-      for (const item of body.propertyPayments) {
-        const propId = typeof item?.propertyId === 'string' ? item.propertyId.trim() : '';
-        if (!propId) continue;
-
-        let propPaybill: string | null = null;
-        const rawPaybill = text(item.mpesaPaybill).replace(/\s/g, '');
-        if (rawPaybill) {
-          if (!/^\d{5,7}$/.test(rawPaybill)) {
-            return json({ error: 'Property M-Pesa Paybill must be 5 to 7 digits.' }, 400);
-          }
-          propPaybill = rawPaybill;
-        }
-
-        let propBankName: string | null = null;
-        const rawBankName = text(item.bankName);
-        if (rawBankName) {
-          if (rawBankName.length < 2 || rawBankName.length > 80) {
-            return json({ error: 'Property bank name must be between 2 and 80 characters.' }, 400);
-          }
-          propBankName = rawBankName;
-        }
-
-        let propBankAccount: string | null = null;
-        const rawBankAccount = text(item.bankAccount).replace(/[\s-]/g, '');
-        if (rawBankAccount) {
-          if (!/^\d{6,20}$/.test(rawBankAccount)) {
-            return json({ error: 'Property bank account must be 6 to 20 digits.' }, 400);
-          }
-          propBankAccount = rawBankAccount;
-        }
-
-        let propPesalinkPhone: string | null = null;
-        const rawPesalink = text(item.pesalinkPhone).replace(/\s/g, '');
-        if (rawPesalink) {
-          propPesalinkPhone = rawPesalink;
-        }
-
-        const { error: propErr } = await supabase
-          .from('properties')
-          .update({
-            mpesa_paybill: propPaybill,
-            bank_name: propBankName,
-            bank_account: propBankAccount,
-          })
-          .eq('id', propId)
-          .eq('company_id', user.companyId);
-
-        if (propErr) throw propErr;
-
-        if (!settings.propertyPayments) {
-          settings.propertyPayments = {};
-        }
-        settings.propertyPayments[propId] = {
-          mpesaPaybill: propPaybill,
-          bankName: propBankName,
-          bankAccount: propBankAccount,
-          pesalinkPhone: propPesalinkPhone,
-          updatedAt: new Date().toISOString(),
-        };
+    for (const p of propertyPayments) {
+      const { error: propErr } = await supabase
+        .from('properties')
+        .update({ mpesa_paybill: p.mpesaPaybill, bank_name: p.bankName, bank_account: p.bankAccount })
+        .eq('id', p.propertyId)
+        .eq('company_id', user.companyId);
+      if (propErr) {
+        // The company details were saved: drop the stale cache, then say what failed.
+        clearLiveCache(user.companyId);
+        markFresh(cookies);
+        console.error('[update-settings] property payment details not saved:', propErr);
+        return json({ error: errorMessage(propErr, "Company details saved, but a property's payment details didn't. Try again.") }, 500);
       }
-
-      await supabase
-        .from('companies')
-        .update({ settings })
-        .eq('id', user.companyId);
     }
 
     clearLiveCache(user.companyId);
+    markFresh(cookies);
     // Every tenant's app refetches and shows the new details.
     await notifyCompany(supabase, user.companyId, 'data_updated', { action: 'settings_updated' });
 

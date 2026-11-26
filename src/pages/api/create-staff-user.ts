@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { errorMessage } from '../../lib/errors';
 import { makeSupabaseClient } from '../../lib/supabase';
+import { allowAction } from '../../lib/auth/rate-limit';
 
 const json = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
@@ -18,6 +19,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
   const user = locals.user;
   if (!user) return json({ error: 'Unauthorized' }, 401);
   if (user.role !== 'owner') return json({ error: 'Only an owner can add users.' }, 403);
+  if (!allowAction('create-staff-user', `${user.companyId}:${user.email}`)) return json({ error: 'Too many attempts to add users. Wait a minute, then try again.' }, 429);
 
   const supabase = makeSupabaseClient(cookies);
   if (!supabase) return json({ error: 'Database not configured' }, 500);

@@ -3,7 +3,7 @@ import { errorMessage } from '../../lib/errors';
 import { makeSupabaseClient } from '../../lib/supabase';
 import { notifyTenancy } from '../../lib/realtime';
 import { parseKenyanPhone } from '../../lib/tenant-auth';
-import { clearLiveCache } from '../../data/portfolio';
+import { clearLiveCache, markFresh } from '../../data/portfolio';
 
 const STATUSES = new Set(['open', 'in_progress', 'resolved', 'voided']);
 
@@ -73,8 +73,18 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     if (status === 'resolved' || status === 'voided') updateData.resolved_at = new Date().toISOString();
 
     if (body.photoUrl !== undefined) {
-      const p = typeof body.photoUrl === 'string' ? body.photoUrl.trim() : null;
-      updateData.photo_url = p;
+      // Only a path in this company's folder of the repair-photos bucket, or
+      // null to clear it; never an outside URL or another company's file.
+      const p: string | null = typeof body.photoUrl === 'string' ? body.photoUrl.trim().replace(/^\/+/, '') : null;
+      if (p) {
+        const safePath = /^[A-Za-z0-9_-]+(\/[A-Za-z0-9_.-]+)+$/.test(p) && !p.split('/').some((seg) => seg === '.' || seg === '..');
+        if (!safePath || !p.startsWith(`${user.companyId}/`)) {
+          return json({ error: 'That photo is not one of your uploads. Upload the photo again.' }, 400);
+        }
+      } else if (body.photoUrl !== null && body.photoUrl !== '') {
+        return json({ error: 'That photo is not one of your uploads. Upload the photo again.' }, 400);
+      }
+      updateData.photo_url = p || null;
       updateData.has_photo = Boolean(p);
     }
 
@@ -89,6 +99,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     if (!updated?.length) return json({ error: 'Ticket not found' }, 404);
 
     clearLiveCache(user.companyId);
+    markFresh(cookies);
     // Ids only (realtime.ts): the app refetches through its own access rules.
     await notifyTenancy(supabase, updated[0].tenancy_id, 'data_updated', { action: 'ticket_updated' });
 
