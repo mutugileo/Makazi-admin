@@ -1,7 +1,7 @@
 ---
 import DashboardLayout from '../layouts/DashboardLayout.astro';
 import { getPortfolio } from '../data/portfolio';
-import { ChevronDown } from '@lucide/astro';
+import { Search } from '@lucide/astro';
 
 // This company's data only (the signed-in user's).
 const { portfolioSummary, staffById, threads, currentPeriod, whenLabel } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
@@ -10,9 +10,12 @@ const { portfolioSummary, staffById, threads, currentPeriod, whenLabel } = await
 const requested = Astro.url.searchParams.get('thread');
 const active = threads.find((t) => t.view.tenancy.id === requested) ?? threads[0];
 
-// Supabase client configuration for Realtime broadcast
-const supabaseUrl = process.env.PUBLIC_SUPABASE_URL || 'https://gdapdyvgppatnjksbdco.supabase.co';
-const supabaseAnonKey = process.env.PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_qBGIzPSKLoDOtTZgDy_-mA_MSCmUWs5';
+// Realtime (typing and live messages) uses the public URL and publishable key
+// from the environment only, never the service key. Without them the page
+// still works; live updates are off.
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || process.env.PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
+const supabaseAnonKey =
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY || process.env.PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
 ---
 
 <DashboardLayout title="Makazi — Messages" currentPath="/messages">
@@ -28,32 +31,38 @@ const supabaseAnonKey = process.env.PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_
     </div>
 
     <div class="flex items-center gap-3 self-start md:self-auto">
-      <!-- Period Selector -->
-      <div class="relative inline-block">
-        <button 
-          type="button" 
-          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white border border-[#E3E6DF] text-xs font-semibold text-[#0D382B] shadow-xs hover:border-[#0D382B] transition-colors cursor-pointer"
-        >
-          <span>{currentPeriod}</span>
-          <ChevronDown class="w-4 h-4 text-[#69847A]" />
-        </button>
-      </div>
+      <!-- Current billing period -->
+      <span class="inline-flex items-center px-4 py-2.5 rounded-full bg-white border border-[#E3E6DF] text-xs font-semibold text-[#0D382B] shadow-xs">
+        {currentPeriod}
+      </span>
     </div>
   </div>
 
   <!-- Messages: one thread per tenancy, same records as the tenant app -->
   {threads.length === 0 ? (
     <div class="p-12 text-center bg-white rounded-3xl border border-[#E3E6DF] text-xs font-medium text-[#69847A] shadow-xs">
-      No messages yet.
+      No messages yet. When tenants write from the Makazi app, their conversations appear here.
     </div>
   ) : (
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start lg:h-[calc(100vh-13rem)] lg:min-h-[460px] lg:max-h-[820px]">
-      <nav class="lg:col-span-4 bg-white rounded-3xl border border-[#E3E6DF] flex flex-col max-h-[320px] lg:max-h-none lg:h-full overflow-hidden shadow-xs" aria-label="Conversations">
+      <nav class="lg:col-span-4 bg-white rounded-3xl border border-[#E3E6DF] flex flex-col lg:h-full overflow-hidden shadow-xs" aria-label="Conversations">
         <div class="p-4 px-5 border-b border-[#E3E6DF] bg-[#F8F9F6]/50 flex items-center justify-between shrink-0">
           <span class="text-xs font-semibold text-[#0D382B] uppercase tracking-wider">Conversations</span>
           <span class="text-xs font-medium text-[#69847A]">{threads.length} active</span>
         </div>
-        <div class="flex-1 min-h-0 overflow-y-auto divide-y divide-[#E3E6DF] chat-scroll">
+        <div class="px-4 py-3 border-b border-[#E3E6DF] shrink-0">
+          <div class="relative">
+            <Search class="w-4 h-4 text-[#69847A] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              id="thread-search"
+              type="search"
+              placeholder="Search tenant or unit"
+              aria-label="Search conversations"
+              class="w-full pl-10 pr-4 py-2 rounded-full border border-[#E3E6DF] bg-white text-xs text-[#0D382B] placeholder:text-[#8FA69C] focus:outline-hidden focus:border-[#0D382B] transition-colors"
+            />
+          </div>
+        </div>
+        <div class="flex-1 min-h-0 lg:overflow-y-auto divide-y divide-[#E3E6DF] chat-scroll">
           {threads.map((thread) => {
             const isActive = thread === active;
             return (
@@ -85,6 +94,7 @@ const supabaseAnonKey = process.env.PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_
               </a>
             );
           })}
+          <p id="thread-search-empty" class="hidden p-6 text-center text-xs text-[#69847A]">No conversation matches.</p>
         </div>
       </nav>
 
@@ -218,6 +228,7 @@ const supabaseAnonKey = process.env.PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_
 
 <script>
   import { setBusy } from '../lib/busy';
+  import { toast } from '../components/dashboard/toast';
   import { createClient } from '@supabase/supabase-js';
 
   function escapeHtml(text: string): string {
@@ -390,6 +401,22 @@ const supabaseAnonKey = process.env.PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_
     scrollActiveChatToBottom(false);
     requestAnimationFrame(() => scrollActiveChatToBottom(false));
 
+    // Filter the conversation list by tenant name or unit.
+    const threadSearch = document.getElementById('thread-search') as HTMLInputElement | null;
+    if (threadSearch) {
+      threadSearch.oninput = () => {
+        const q = threadSearch.value.trim().toLowerCase();
+        let shown = 0;
+        document.querySelectorAll<HTMLAnchorElement>('.thread-nav-item').forEach((link) => {
+          const hay = `${link.dataset.tenantName ?? ''} ${link.dataset.unitLabel ?? ''}`.toLowerCase();
+          const on = !q || hay.includes(q);
+          link.classList.toggle('hidden', !on);
+          if (on) shown++;
+        });
+        document.getElementById('thread-search-empty')?.classList.toggle('hidden', shown > 0);
+      };
+    }
+
     // Handle instant thread switching
     document.querySelectorAll<HTMLAnchorElement>('.thread-nav-item').forEach((link) => {
       link.onclick = (e) => {
@@ -535,7 +562,7 @@ const supabaseAnonKey = process.env.PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_
         // Give the text back so nothing typed is lost.
         if (input && !input.value) input.value = body;
         const msg = err instanceof Error ? err.message : String(err);
-        window.makaziUi?.showToast('Message not sent', msg || 'Check your connection and try again.');
+        toast('Message not sent', msg || 'Check your connection and try again.', 'error');
       } finally {
         restoreSend();
       }

@@ -142,127 +142,42 @@ const presets = [
             <div class="flex items-center gap-2">
               <h2 class="font-editorial text-2xl text-[#0D382B]">Brand theme & colors</h2>
               <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#EBF0EC] text-[#0D382B]">
-                Live preview
+                Read-only
               </span>
             </div>
             <p class="text-xs text-[#69847A] mt-1">
-              Set by Codzure for your company. These colors apply to your admin side navigation and the tenant mobile app.
+              These colors apply to your admin side navigation and the tenant mobile app.
             </p>
           </div>
           <div class="flex items-center gap-2">
             <span class="text-xs font-semibold text-[#69847A]">Preset:</span>
-            <span id="theme-active-preset-badge" class="text-xs font-bold px-2.5 py-1 rounded-lg bg-[#FAFBF9] border border-[#E3E6DF] text-[#0D382B] capitalize">
-              {currentTheme.preset || 'custom'}
+            <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-[#FAFBF9] border border-[#E3E6DF] text-[#0D382B]">
+              {presets.find((p) => p.id === currentTheme.preset)?.name ?? 'Custom'}
             </span>
           </div>
         </div>
 
-        <input type="hidden" id="theme-preset-input" name="themePreset" value={currentTheme.preset || 'custom'} />
-
         <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
-          <!-- Left: Presets & Color inputs (7 cols) -->
-          <div class="xl:col-span-7 space-y-5">
-            <!-- Read-only here: the theme is set in the super-admin portal. -->
-            <fieldset disabled class="space-y-5 min-w-0">
-            <div>
-              <span class={label}>Curated presets</span>
-              <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
-                {presets.map((p) => (
-                  <button
-                    type="button"
-                    class={`p-3 rounded-[12px] border text-left transition-all cursor-pointer select-none theme-preset-btn ${currentTheme.preset === p.id ? 'border-[#1E90DE] bg-[#DCEBFB]/40 shadow-xs ring-2 ring-[#1E90DE]' : 'border-[#E3E6DF] bg-[#FAFBF9] hover:bg-white'}`}
-                    data-preset-id={p.id}
-                    data-primary={p.primary}
-                    data-nav-bg={p.navBg}
-                    data-accent={p.accent}
-                  >
-                    <div class="flex items-center gap-1.5 mb-2">
-                      <div class="w-4 h-4 rounded-full border border-black/10" style={`background-color: ${p.primary};`}></div>
-                      <div class="w-4 h-4 rounded-full border border-black/10" style={`background-color: ${p.navBg};`}></div>
-                      <div class="w-4 h-4 rounded-full border border-black/10" style={`background-color: ${p.accent};`}></div>
-                    </div>
-                    <p class="text-xs font-semibold text-[#0D382B] leading-tight">{p.name}</p>
-                    <p class="text-[10px] text-[#73827C] mt-0.5 leading-snug">{p.shortDesc}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <!-- Custom Color Pickers -->
-            <div class="border-t border-[#E8ECE5] pt-4">
-              <span class={label}>Color tokens</span>
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <!-- Primary Brand Color -->
-                <div class="rounded-xl border border-[#E3E6DF] bg-[#FAFBF9] p-3">
-                  <span class="block text-[11px] font-semibold text-[#0D382B] mb-0.5">Primary brand</span>
-                  <span class="block text-[10px] text-[#73827C] mb-2">Cards, headers & text</span>
-                  <div class="flex items-center gap-2">
-                    <input 
-                      type="color" 
-                      id="theme-primary-picker" 
-                      class="w-8 h-8 rounded-lg border border-black/10 cursor-pointer p-0 bg-transparent shrink-0"
-                      value={currentTheme.primary} 
-                    />
-                    <input 
-                      type="text" 
-                      id="theme-primary-input" 
-                      name="themePrimary" 
-                      class="w-full font-mono text-xs uppercase px-2.5 py-1.5 rounded-lg border border-[#E2E5DF] bg-white font-semibold text-[#0D382B]" 
-                      value={currentTheme.primary} 
-                      maxlength="7" 
-                      required 
-                    />
-                  </div>
-                </div>
-
-                <!-- Nav Background / Dark Chrome -->
-                <div class="rounded-xl border border-[#E3E6DF] bg-[#FAFBF9] p-3">
-                  <span class="block text-[11px] font-semibold text-[#0D382B] mb-0.5">Sidebar & dark</span>
-                  <span class="block text-[10px] text-[#73827C] mb-2">Side nav, dark chrome</span>
-                  <div class="flex items-center gap-2">
-                    <input 
-                      type="color" 
-                      id="theme-navbg-picker" 
-                      class="w-8 h-8 rounded-lg border border-black/10 cursor-pointer p-0 bg-transparent shrink-0"
-                      value={currentTheme.navBg} 
-                    />
-                    <input 
-                      type="text" 
-                      id="theme-navbg-input" 
-                      name="themeNavBg" 
-                      class="w-full font-mono text-xs uppercase px-2.5 py-1.5 rounded-lg border border-[#E2E5DF] bg-white font-semibold text-[#0D382B]" 
-                      value={currentTheme.navBg} 
-                      maxlength="7" 
-                      required 
-                    />
-                  </div>
-                </div>
-
-                <!-- Brand Accent -->
-                <div class="rounded-xl border border-[#E3E6DF] bg-[#FAFBF9] p-3">
-                  <span class="block text-[11px] font-semibold text-[#0D382B] mb-0.5">Brand accent</span>
-                  <span class="block text-[10px] text-[#73827C] mb-2">Pills, active icons, glow</span>
-                  <div class="flex items-center gap-2">
-                    <input 
-                      type="color" 
-                      id="theme-accent-picker" 
-                      class="w-8 h-8 rounded-lg border border-black/10 cursor-pointer p-0 bg-transparent shrink-0"
-                      value={currentTheme.accent} 
-                    />
-                    <input 
-                      type="text" 
-                      id="theme-accent-input" 
-                      name="themeAccent" 
-                      class="w-full font-mono text-xs uppercase px-2.5 py-1.5 rounded-lg border border-[#E2E5DF] bg-white font-semibold text-[#0D382B]" 
-                      value={currentTheme.accent} 
-                      maxlength="7" 
-                      required 
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </fieldset>
+          <!-- Left: the company's colors, read-only (set in the super-admin portal) -->
+          <div class="xl:col-span-7 space-y-3">
+            <span class={label}>Your colors</span>
+            <ul class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {[
+                { name: 'Primary brand', use: 'Cards, headers & text', hex: currentTheme.primary },
+                { name: 'Sidebar & dark', use: 'Side nav, dark chrome', hex: currentTheme.navBg },
+                { name: 'Brand accent', use: 'Pills, active icons, glow', hex: currentTheme.accent },
+              ].map((c) => (
+                <li class="rounded-xl border border-[#E3E6DF] bg-[#FAFBF9] p-3 flex items-center gap-3 min-w-0">
+                  <span class="w-8 h-8 rounded-lg border border-black/10 shrink-0" style={`background-color: ${c.hex};`} aria-hidden="true"></span>
+                  <span class="min-w-0">
+                    <span class="block text-[11px] font-semibold text-[#0D382B]">{c.name}</span>
+                    <span class="block text-[10px] text-[#73827C]">{c.use}</span>
+                    <span class="block font-mono text-xs uppercase font-semibold text-[#0D382B] mt-0.5">{c.hex}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p class="text-[11px] text-[#73827C]">Your theme is set by Makazi support.</p>
           </div>
 
           <!-- Right: Live Dual Previews (5 cols) -->
@@ -616,117 +531,6 @@ const presets = [
       });
     });
 
-    // Theme preset and live color synchronization
-    const presetButtons = form.querySelectorAll<HTMLButtonElement>('.theme-preset-btn');
-    const presetInput = form.querySelector<HTMLInputElement>('#theme-preset-input');
-    const presetBadge = document.getElementById('theme-active-preset-badge');
-
-    const primaryPicker = form.querySelector<HTMLInputElement>('#theme-primary-picker');
-    const primaryInput = form.querySelector<HTMLInputElement>('#theme-primary-input');
-    const navBgPicker = form.querySelector<HTMLInputElement>('#theme-navbg-picker');
-    const navBgInput = form.querySelector<HTMLInputElement>('#theme-navbg-input');
-    const accentPicker = form.querySelector<HTMLInputElement>('#theme-accent-picker');
-    const accentInput = form.querySelector<HTMLInputElement>('#theme-accent-input');
-
-    const previewSidebar = document.getElementById('preview-admin-sidebar');
-    const previewSidebarEmblem = document.getElementById('preview-sidebar-emblem');
-    const previewSidebarPill = document.getElementById('preview-sidebar-pill');
-    const previewActiveNavItem = document.getElementById('preview-active-nav-item');
-    const previewActiveDot = document.getElementById('preview-active-dot');
-    const previewActiveBadge = document.getElementById('preview-active-badge');
-    const previewTenantCard = document.getElementById('preview-tenant-card');
-    const previewTenantStatusPill = document.getElementById('preview-tenant-status-pill');
-    const previewProgressTrack = document.getElementById('preview-progress-track');
-    const previewProgressBar = document.getElementById('preview-progress-bar');
-    const previewTenantBtn = document.getElementById('preview-tenant-btn');
-
-    const updateLivePreview = (primary: string, navBg: string, accent: string) => {
-      if (previewSidebar) previewSidebar.style.backgroundColor = navBg;
-      if (previewSidebarEmblem) previewSidebarEmblem.style.background = `linear-gradient(135deg, ${accent}, ${primary})`;
-      if (previewSidebarPill) {
-        previewSidebarPill.style.backgroundColor = `${accent}26`;
-        previewSidebarPill.style.borderColor = `${accent}4D`;
-        previewSidebarPill.style.color = accent;
-      }
-      if (previewActiveNavItem) {
-        previewActiveNavItem.style.background = `linear-gradient(to right, ${primary}, ${navBg})`;
-        previewActiveNavItem.style.borderColor = `${accent}80`;
-      }
-      if (previewActiveDot) previewActiveDot.style.backgroundColor = accent;
-      if (previewActiveBadge) {
-        previewActiveBadge.style.backgroundColor = accent;
-        previewActiveBadge.style.color = navBg;
-      }
-      if (previewTenantCard) previewTenantCard.style.backgroundColor = primary;
-      if (previewTenantStatusPill) {
-        previewTenantStatusPill.style.backgroundColor = `${navBg}B3`;
-        previewTenantStatusPill.style.borderColor = `${accent}59`;
-        previewTenantStatusPill.style.color = accent;
-      }
-      if (previewProgressTrack) previewProgressTrack.style.backgroundColor = `${navBg}80`;
-      if (previewProgressBar) previewProgressBar.style.backgroundColor = accent;
-      if (previewTenantBtn) {
-        previewTenantBtn.style.backgroundColor = accent;
-        previewTenantBtn.style.color = navBg;
-      }
-    };
-
-    presetButtons.forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        const pId = btn.dataset.presetId!;
-        const pPrimary = btn.dataset.primary!;
-        const pNavBg = btn.dataset.navBg!;
-        const pAccent = btn.dataset.accent!;
-
-        if (presetInput) presetInput.value = pId;
-        if (presetBadge) presetBadge.textContent = pId;
-
-        if (primaryPicker) primaryPicker.value = pPrimary;
-        if (primaryInput) primaryInput.value = pPrimary;
-        if (navBgPicker) navBgPicker.value = pNavBg;
-        if (navBgInput) navBgInput.value = pNavBg;
-        if (accentPicker) accentPicker.value = pAccent;
-        if (accentInput) accentInput.value = pAccent;
-
-        presetButtons.forEach((b) => {
-          b.classList.remove('border-[#0D382B]', 'bg-[#F7F9F6]', 'shadow-xs', 'ring-1', 'ring-[#0D382B]');
-          b.classList.add('border-[#E3E6DF]', 'bg-[#FAFBF9]');
-        });
-        btn.classList.remove('border-[#E3E6DF]', 'bg-[#FAFBF9]');
-        btn.classList.add('border-[#0D382B]', 'bg-[#F7F9F6]', 'shadow-xs', 'ring-1', 'ring-[#0D382B]');
-
-        updateLivePreview(pPrimary, pNavBg, pAccent);
-      });
-    });
-
-    const bindColorPair = (picker: HTMLInputElement | null, textIn: HTMLInputElement | null) => {
-      if (!picker || !textIn) return;
-      const onColorChange = () => {
-        if (presetInput) presetInput.value = 'custom';
-        if (presetBadge) presetBadge.textContent = 'custom';
-        presetButtons.forEach((b) => {
-          b.classList.remove('border-[#0D382B]', 'bg-[#F7F9F6]', 'shadow-xs', 'ring-1', 'ring-[#0D382B]');
-          b.classList.add('border-[#E3E6DF]', 'bg-[#FAFBF9]');
-        });
-        updateLivePreview(primaryInput?.value || '#0A2540', navBgInput?.value || '#081B2E', accentInput?.value || '#38BDF8');
-      };
-      picker.addEventListener('input', () => {
-        textIn.value = picker.value.toUpperCase();
-        onColorChange();
-      });
-      textIn.addEventListener('input', () => {
-        if (/^#[0-9A-Fa-f]{6}$/.test(textIn.value.trim())) {
-          picker.value = textIn.value.trim();
-        }
-        onColorChange();
-      });
-    };
-
-    bindColorPair(primaryPicker, primaryInput);
-    bindColorPair(navBgPicker, navBgInput);
-    bindColorPair(accentPicker, accentInput);
-
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       if (!submit) return;
@@ -773,7 +577,7 @@ const presets = [
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok || data.error) throw new Error(data.error || 'Could not save settings');
-        window.makaziUi?.showToast('Settings saved', 'Theme and details updated across dashboard and tenant app.');
+        window.makaziUi?.showToast('Settings saved', 'Company details updated across the dashboard and tenant app.');
         setTimeout(() => window.location.reload(), 800);
       } catch (err: unknown) {
         restoreSubmit();

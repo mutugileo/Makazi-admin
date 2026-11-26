@@ -217,7 +217,7 @@ const priorityTone = {
                             </span>
                             <label class="inline-flex items-center gap-1 text-[11px] font-semibold text-[#0D382B] hover:text-[#154637] bg-[#F4F5F1] hover:bg-[#E7EAE4] px-2.5 py-1 rounded-lg cursor-pointer transition-colors">
                               <Upload class="w-3 h-3" /> Attach photo
-                              <input type="file" accept="image/*" class="admin-photo-upload-input hidden" data-ticket={t.ticket.id} />
+                              <input type="file" accept="image/jpeg,image/png,image/webp" class="admin-photo-upload-input hidden" data-ticket={t.ticket.id} />
                             </label>
                           </div>
                         )}
@@ -296,6 +296,7 @@ const priorityTone = {
 
   <!-- Assign: who is going, their mobile and when. The tenant sees this in the app. -->
   <div
+    slot="modals"
     id="assign-repair-modal"
     class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-200"
     role="dialog"
@@ -318,7 +319,8 @@ const priorityTone = {
         </button>
       </div>
 
-      <form id="assign-repair-form" class="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto" novalidate>
+      <form id="assign-repair-form" class="flex flex-col flex-1 min-h-0" novalidate>
+        <div class="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto">
         <div>
           <label for="assign-name" class="block text-xs font-semibold uppercase tracking-wider text-[#5A6862] mb-1.5">Who's going</label>
           <input id="assign-name" name="name" type="text" required maxlength="80" autocomplete="off" placeholder="Contractor or fundi name"
@@ -336,7 +338,8 @@ const priorityTone = {
           <p class="text-[11px] text-[#73827C] mt-1.5">Nairobi time. The tenant sees the name, number and visit time inside their request.</p>
         </div>
         <p data-field="error" class="hidden text-xs text-[#C04A26]" role="alert"></p>
-        <div class="pt-4 flex items-center justify-end gap-3 border-t border-[#F0F2EE]">
+        </div>
+        <div class="px-6 py-4 shrink-0 flex items-center justify-end gap-3 border-t border-[#F0F2EE]">
           <button type="button" data-close class="px-5 py-2.5 rounded-xl text-sm font-medium text-[#5A6862] hover:bg-[#F4F5F1] transition-colors cursor-pointer">Cancel</button>
           <button type="submit" data-field="submit" class="px-6 py-2.5 rounded-xl text-sm font-semibold bg-[#0D382B] text-white hover:bg-[#154637] transition-all shadow-md cursor-pointer disabled:opacity-60">Assign & start</button>
         </div>
@@ -369,6 +372,7 @@ const priorityTone = {
   </section>
 
   <div
+    slot="modals"
     id="repair-photo-modal"
     class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-200"
     role="dialog"
@@ -399,7 +403,7 @@ const priorityTone = {
         <div class="flex items-center gap-2">
           <label class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-[#5A6862] hover:text-[#0D382B] border border-[#E3E6DF] bg-white hover:bg-[#F4F5F1] transition-colors cursor-pointer">
             <Upload class="w-3.5 h-3.5" /> Replace photo
-            <input type="file" accept="image/*" id="modal-photo-replace-input" class="hidden" />
+            <input type="file" accept="image/jpeg,image/png,image/webp" id="modal-photo-replace-input" class="hidden" />
           </label>
           <a data-photo-field="download" href="#" download="damage-photo.jpg" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-[#5A6862] hover:text-[#0D382B] border border-[#E3E6DF] bg-white hover:bg-[#F4F5F1] transition-colors cursor-pointer">
             <Download class="w-3.5 h-3.5" /> Save file
@@ -418,6 +422,7 @@ const priorityTone = {
   </div>
 
   <div
+    slot="modals"
     id="void-ticket-modal"
     class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-200"
     role="dialog"
@@ -434,7 +439,8 @@ const priorityTone = {
           <X class="w-4 h-4" />
         </button>
       </div>
-      <form id="void-ticket-form" class="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto" novalidate>
+      <form id="void-ticket-form" class="flex flex-col flex-1 min-h-0" novalidate>
+        <div class="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto">
         <p class="text-xs text-[#5A6862]">The ticket leaves the board and the tenant sees it as Voided with your reason.</p>
         <div class="flex flex-wrap gap-1.5">
           {['Not a repair issue', 'Duplicate request', 'Tenant fixed it', 'Tenant responsibility'].map((r) => (
@@ -447,7 +453,8 @@ const priorityTone = {
             class="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E5DF] bg-[#FAFBF9] text-sm text-[#17231E] focus:outline-none focus:border-[#0D382B]" />
         </div>
         <p data-void-field="error" class="hidden text-xs text-[#C04A26]" role="alert"></p>
-        <div class="pt-4 flex items-center justify-end gap-3 border-t border-[#F0F2EE]">
+        </div>
+        <div class="px-6 py-4 shrink-0 flex items-center justify-end gap-3 border-t border-[#F0F2EE]">
           <button type="button" data-close class="px-5 py-2.5 rounded-xl text-sm font-medium text-[#5A6862] hover:bg-[#F4F5F1] transition-colors cursor-pointer">Keep ticket</button>
           <button type="submit" data-void-field="submit" class="px-6 py-2.5 rounded-xl text-sm font-semibold bg-[#C04A26] text-white hover:bg-[#A83D1D] transition-all shadow-md cursor-pointer disabled:opacity-60">Void ticket</button>
         </div>
@@ -458,6 +465,7 @@ const priorityTone = {
 
 <script>
   import { setBusy } from '../lib/busy';
+  import { toast } from '../components/dashboard/toast';
   type UpdateBody = {
     ticketId: string;
     status: 'in_progress' | 'resolved' | 'voided';
@@ -618,6 +626,7 @@ const priorityTone = {
       // Update priority buttons
       priorityBtns.forEach((btn) => {
         const on = btn.dataset.priorityBtn === selectedPriority;
+        btn.setAttribute('aria-pressed', String(on));
         btn.classList.remove(...(on ? PRIORITY_IDLE : PRIORITY_ACTIVE));
         btn.classList.add(...(on ? PRIORITY_ACTIVE : PRIORITY_IDLE));
       });
@@ -737,7 +746,7 @@ const priorityTone = {
         try {
           await shareAttachedImage({ photoUrl: photo, ticketId: ticket, title, reporter, phone, fundi });
         } catch (err) {
-          window.makaziUi?.showToast('Share failed', err instanceof Error ? err.message : String(err));
+          toast('Share failed', err instanceof Error ? err.message : String(err), 'error');
         } finally {
           restore();
         }
@@ -750,13 +759,14 @@ const priorityTone = {
         const file = input.files?.[0];
         const ticketId = input.dataset.ticket;
         if (!file || !ticketId) return;
-        window.makaziUi?.showToast('Uploading photo…', 'Attaching image to ticket.');
+        toast('Uploading photo…', 'Attaching image to ticket.', 'progress');
         try {
           await uploadAdminPhoto(ticketId, file);
-          window.makaziUi?.showToast('Photo attached', 'The image is now visible on this ticket.');
+          toast('Photo attached', 'The image is now visible on this ticket.');
           setTimeout(() => window.location.reload(), 600);
         } catch (err) {
-          window.makaziUi?.showToast('Upload error', err instanceof Error ? err.message : String(err));
+          input.value = '';
+          toast('Upload error', err instanceof Error ? err.message : String(err), 'error');
         }
       };
     });
@@ -808,7 +818,7 @@ const priorityTone = {
               fundi: currentTicket.fundi,
             });
           } catch (err) {
-            window.makaziUi?.showToast('Share failed', err instanceof Error ? err.message : String(err));
+            toast('Share failed', err instanceof Error ? err.message : String(err), 'error');
           } finally {
             restore();
           }
@@ -842,17 +852,18 @@ const priorityTone = {
         modalReplaceInput.onchange = async () => {
           const file = modalReplaceInput.files?.[0];
           if (!file || !currentTicket.ticket) return;
-          window.makaziUi?.showToast('Uploading new photo…', 'Updating ticket image.');
+          toast('Uploading new photo…', 'Updating ticket image.', 'progress');
           try {
             const newUrl = await uploadAdminPhoto(currentTicket.ticket, file);
             currentTicket.photo = newUrl;
             (photoField('img') as HTMLImageElement).src = newUrl;
             (photoField('open') as HTMLAnchorElement).href = newUrl;
             (photoField('download') as HTMLAnchorElement).href = newUrl;
-            window.makaziUi?.showToast('Photo updated', 'New damage image saved.');
+            toast('Photo updated', 'New damage image saved.');
             setTimeout(() => window.location.reload(), 600);
           } catch (err) {
-            window.makaziUi?.showToast('Update failed', err instanceof Error ? err.message : String(err));
+            modalReplaceInput.value = '';
+            toast('Photo not replaced', err instanceof Error ? err.message : String(err), 'error');
           }
         };
       }
@@ -977,17 +988,43 @@ const priorityTone = {
       }
     };
 
+    // Resolving tells the tenant it's fixed, so it takes a second, deliberate click.
     resolveBtns.forEach((btn) => {
+      const originalLabel = btn.textContent?.trim() || 'Mark resolved';
+      let hint: HTMLElement | null = null;
+      let revertTimer: ReturnType<typeof setTimeout> | undefined;
+      const reset = () => {
+        clearTimeout(revertTimer);
+        delete btn.dataset.confirming;
+        btn.textContent = originalLabel;
+        hint?.remove();
+        hint = null;
+      };
       btn.onclick = async () => {
+        if (btn.dataset.confirming !== 'true') {
+          btn.dataset.confirming = 'true';
+          btn.textContent = 'Yes, mark resolved';
+          hint = document.createElement('p');
+          hint.setAttribute('role', 'status');
+          hint.className = 'w-full text-[11px] font-medium text-[#5A6862]';
+          hint.textContent = "Mark resolved? The tenant is told it's fixed.";
+          btn.insertAdjacentElement('beforebegin', hint);
+          revertTimer = setTimeout(reset, 6000);
+          return;
+        }
+        clearTimeout(revertTimer);
+        hint?.remove();
+        hint = null;
         const id = btn.dataset.ticket ?? '';
         const restoreResolve = setBusy(btn, 'Resolving…');
         try {
           await updateTicket({ ticketId: id, status: 'resolved' });
-          window.makaziUi?.showToast('Ticket resolved', `${id} moved to Resolved.`);
+          toast('Ticket resolved', `${id} moved to Resolved.`);
           setTimeout(() => window.location.reload(), 800);
         } catch (err: unknown) {
           restoreResolve();
-          window.makaziUi?.showToast('Error', err instanceof Error ? err.message : String(err));
+          reset();
+          toast('Ticket not resolved', err instanceof Error ? err.message : String(err), 'error');
         }
       };
     });

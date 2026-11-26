@@ -35,7 +35,8 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
       </button>
     </div>
 
-    <form id="edit-rates-form" class="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto" novalidate>
+    <form id="edit-rates-form" class="flex flex-col flex-1 min-h-0" novalidate>
+      <div class="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto">
       <div class="grid grid-cols-2 gap-4">
         <div>
           <label for="rate-water" class={labelClass}>Water per unit (KES)</label>
@@ -63,7 +64,9 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
 
       <p id="edit-rates-error" role="alert" class="hidden text-sm text-[#C04A26]"></p>
 
-      <div class="pt-4 flex items-center justify-end gap-3 border-t border-[#F0F2EE]">
+      </div>
+
+      <div class="px-6 py-4 shrink-0 flex items-center justify-end gap-3 border-t border-[#F0F2EE]">
         <button type="button" data-close class="px-5 py-2.5 rounded-xl text-sm font-medium text-[#5A6862] hover:bg-[#F4F5F1] transition-colors cursor-pointer">Cancel</button>
         <button type="submit" class="px-6 py-2.5 rounded-xl text-sm font-semibold bg-[#0D382B] text-white hover:bg-[#154637] transition-all shadow-md cursor-pointer">Save rates</button>
       </div>

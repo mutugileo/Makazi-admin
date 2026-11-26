@@ -156,6 +156,12 @@ const pageSlide = {
       </button>
     </div>
 
+    <!-- Page modals sit outside <main>: its slide animation's transform would trap
+         them in its stacking context, under the sidebar. -->
+    <div id="page-modals-root">
+      <slot name="modals" />
+    </div>
+
     <!-- Modals & Feedback Elements (persisted across page transitions) -->
     <div id="dashboard-modals-root" transition:persist="modals">
       <OnboardTenantModal />
@@ -170,11 +176,41 @@ const pageSlide = {
     <!-- Vanilla Interactivity Scripts -->
     <script>
       import { setBusy } from '../lib/busy';
-      // Helper function to show/hide modals with animations
+      // Modals: every dialog root is `[role="dialog"][aria-modal="true"]` with an id,
+      // hidden by `opacity-0 pointer-events-none` (or `hidden`). Opening remembers
+      // the opener so focus goes back to it on close.
+      const openers = new Map<string, HTMLElement>();
+      const FOCUSABLE =
+        'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+      function isOpen(el: HTMLElement) {
+        return !el.classList.contains('pointer-events-none') && !el.classList.contains('hidden');
+      }
+
+      function openDialogs(): HTMLElement[] {
+        return [...document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]')].filter(isOpen);
+      }
+
+      function focusablesIn(el: HTMLElement): HTMLElement[] {
+        return [...el.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((f) => f.getClientRects().length > 0);
+      }
+
+      function closeMobileDrawer() {
+        const sidebar = document.getElementById('app-sidebar');
+        const backdrop = document.getElementById('sidebar-backdrop');
+        if (sidebar && backdrop && !backdrop.classList.contains('hidden')) {
+          sidebar.classList.add('-translate-x-full');
+          backdrop.classList.add('hidden');
+        }
+      }
+
       function showModal(modalId: string) {
         const modal = document.getElementById(modalId);
         if (!modal) return;
-        modal.classList.remove('opacity-0', 'pointer-events-none');
+        closeMobileDrawer();
+        const active = document.activeElement as HTMLElement | null;
+        if (active && active !== document.body && !modal.contains(active)) openers.set(modalId, active);
+        modal.classList.remove('opacity-0', 'pointer-events-none', 'hidden');
         modal.classList.add('opacity-100');
         const modalBox = modal.firstElementChild as HTMLElement;
         if (modalBox) {
@@ -182,11 +218,21 @@ const pageSlide = {
           modalBox.classList.add('scale-100');
         }
         document.body.style.overflow = 'hidden';
+        // Move focus into the dialog (its card) unless a script already focused a field.
+        requestAnimationFrame(() => {
+          if (modal.contains(document.activeElement)) return;
+          if (modalBox) {
+            if (!modalBox.hasAttribute('tabindex')) modalBox.setAttribute('tabindex', '-1');
+            modalBox.classList.add('outline-none');
+            modalBox.focus({ preventScroll: true });
+          }
+        });
       }
 
       function hideModal(modalId: string) {
         const modal = document.getElementById(modalId);
         if (!modal) return;
+        const wasOpen = isOpen(modal);
         modal.classList.remove('opacity-100');
         modal.classList.add('opacity-0', 'pointer-events-none');
         const modalBox = modal.firstElementChild as HTMLElement;
@@ -194,31 +240,50 @@ const pageSlide = {
           modalBox.classList.remove('scale-100');
           modalBox.classList.add('scale-95');
         }
-        document.body.style.overflow = '';
+        if (openDialogs().length === 0) document.body.style.overflow = '';
+        const opener = openers.get(modalId);
+        openers.delete(modalId);
+        const focusLost = modal.contains(document.activeElement) || document.activeElement === document.body;
+        const openerDialog = opener?.closest<HTMLElement>('[role="dialog"]');
+        const openerVisible = !openerDialog || isOpen(openerDialog);
+        if (wasOpen && opener?.isConnected && focusLost && openerVisible) opener.focus({ preventScroll: true });
       }
 
       function hideAllModals() {
-        ['onboard-tenant-modal', 'send-reminders-modal', 'receipt-modal', 'command-palette-modal', 'tenant-app-modal', 'move-out-modal', 'readings-modal', 'reset-password-modal', 'add-property-modal', 'edit-rates-modal', 'makazi-assistant-modal'].forEach(id => {
-          hideModal(id);
+        openDialogs().forEach((el) => {
+          if (el.id) hideModal(el.id);
         });
       }
 
-      // Toast notification trigger
-      function showToast(title: string, message: string) {
+      // Toast: tone 'success' (default), 'error' (stays longer) or 'progress'
+      // (stays until the next toast replaces it).
+      type ToastTone = 'success' | 'error' | 'progress';
+      let toastTimer: ReturnType<typeof setTimeout> | undefined;
+      function showToast(title: string, message: string, tone: ToastTone = 'success') {
         const toast = document.getElementById('dashboard-toast');
         const titleEl = document.getElementById('toast-title');
         const msgEl = document.getElementById('toast-message');
         if (!toast || !titleEl || !msgEl) return;
 
+        toast.dataset.tone = tone;
+        toast.setAttribute('role', tone === 'error' ? 'alert' : 'status');
+        toast.setAttribute('aria-live', tone === 'error' ? 'assertive' : 'polite');
         titleEl.textContent = title;
         msgEl.textContent = message;
         toast.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
         toast.classList.add('opacity-100', 'translate-y-0');
 
-        setTimeout(() => {
+        clearTimeout(toastTimer);
+        const hide = () => {
           toast.classList.remove('opacity-100', 'translate-y-0');
           toast.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
-        }, 3500);
+        };
+        if (tone === 'progress') {
+          // Safety net: never leave a spinner up forever if the caller never follows up.
+          toastTimer = setTimeout(hide, 60000);
+        } else {
+          toastTimer = setTimeout(hide, tone === 'error' ? 6000 : 3500);
+        }
       }
 
       window.makaziUi = { showModal, hideModal, showToast };
@@ -363,9 +428,33 @@ const pageSlide = {
         if (closeOnboardBtn) closeOnboardBtn.onclick = () => hideModal('onboard-tenant-modal');
         if (cancelOnboardBtn) cancelOnboardBtn.onclick = () => hideModal('onboard-tenant-modal');
 
-        // Send Reminders Modal triggers
+        // Send Reminders Modal triggers. On the arrears page, ticked rows narrow
+        // the send to those tenancies; with none ticked it goes to everyone owing.
+        const selectedTenancyIds = () =>
+          [...document.querySelectorAll<HTMLInputElement>('.arrear-checkbox:checked')]
+            .map((cb) => cb.dataset.tenancy ?? '')
+            .filter(Boolean);
+        const syncRemindersModal = () => {
+          const ids = new Set(selectedTenancyIds());
+          const rows = document.querySelectorAll<HTMLElement>('#send-reminders-modal [data-reminder-tenancy]');
+          let shown = 0;
+          rows.forEach((row) => {
+            const on = ids.size === 0 || ids.has(row.dataset.reminderTenancy ?? '');
+            row.classList.toggle('hidden', !on);
+            if (on) shown++;
+          });
+          const n = ids.size > 0 ? ids.size : rows.length;
+          const label = ids.size > 0 ? `Send reminders to ${n} selected` : `Send reminders to all ${n}`;
+          const countEl = document.getElementById('reminders-recipient-count');
+          if (countEl) countEl.textContent = String(ids.size > 0 ? shown : rows.length);
+          const confirmLabel = document.getElementById('confirm-send-reminders-label');
+          if (confirmLabel) confirmLabel.textContent = label;
+        };
         document.querySelectorAll('#send-reminders-header-btn, #send-reminders-action-btn').forEach((btn) => {
-          (btn as HTMLElement).onclick = () => showModal('send-reminders-modal');
+          (btn as HTMLElement).onclick = () => {
+            syncRemindersModal();
+            showModal('send-reminders-modal');
+          };
         });
         const closeRemindersBtn = document.getElementById('close-reminders-modal-btn');
         const cancelRemindersBtn = document.getElementById('cancel-reminders-btn');
@@ -375,16 +464,17 @@ const pageSlide = {
         if (confirmRemindersBtn) {
           confirmRemindersBtn.onclick = async () => {
             const btn = confirmRemindersBtn as HTMLButtonElement;
+            const tenancyIds = selectedTenancyIds();
             const restoreReminders = setBusy(btn, 'Sending…');
             try {
               // Success only once the server has saved the notifications.
               const res = await fetch('/api/send-reminders', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: '{}',
+                body: JSON.stringify(tenancyIds.length > 0 ? { tenancyIds } : {}),
               });
               const data = await res.json().catch(() => ({}));
-              if (!res.ok || data.error) throw new Error(data.error || 'Could not send reminders');
+              if (!res.ok || data.error) throw new Error(data.error || 'Reminders were not sent. Try again.');
               hideModal('send-reminders-modal');
               const skipped = data.skipped ? ` ${data.skipped} already reminded in the last 24 hours.` : '';
               showToast(
@@ -392,19 +482,10 @@ const pageSlide = {
                 `${data.sent} tenant${data.sent === 1 ? '' : 's'} notified in the Makazi app.${skipped}`,
               );
             } catch (err: unknown) {
-              showToast('Error', err instanceof Error ? err.message : String(err));
+              showToast('Reminders not sent', err instanceof Error ? err.message : String(err), 'error');
             } finally {
               restoreReminders();
             }
-          };
-        }
-
-        // Select all arrears checkboxes
-        const selectAllArrears = document.getElementById('select-all-arrears') as HTMLInputElement | null;
-        const arrearCheckboxes = document.querySelectorAll('.arrear-checkbox') as NodeListOf<HTMLInputElement>;
-        if (selectAllArrears && arrearCheckboxes.length > 0) {
-          selectAllArrears.onchange = () => {
-            arrearCheckboxes.forEach((cb) => { cb.checked = selectAllArrears.checked; });
           };
         }
 
@@ -564,7 +645,36 @@ const pageSlide = {
             toggleSidebarCollapse();
           }
           if (e.key === 'Escape') {
-            hideAllModals();
+            // Close only the topmost open dialog.
+            const top = openDialogs().pop();
+            // A dialog mid-save (aria-busy) stays open until its request ends.
+            if (top?.id && top.getAttribute('aria-busy') !== 'true') {
+              e.preventDefault();
+              hideModal(top.id);
+            }
+          }
+          if (e.key === 'Tab') {
+            // Keep keyboard focus inside the open dialog.
+            const top = openDialogs().pop();
+            if (!top) return;
+            const items = focusablesIn(top);
+            if (items.length === 0) {
+              e.preventDefault();
+              return;
+            }
+            const first = items[0];
+            const last = items[items.length - 1];
+            const active = document.activeElement as HTMLElement | null;
+            if (!active || !top.contains(active)) {
+              e.preventDefault();
+              (e.shiftKey ? last : first).focus();
+            } else if (e.shiftKey && (active === first || active === top.firstElementChild)) {
+              e.preventDefault();
+              last.focus();
+            } else if (!e.shiftKey && active === last) {
+              e.preventDefault();
+              first.focus();
+            }
           }
         });
       }

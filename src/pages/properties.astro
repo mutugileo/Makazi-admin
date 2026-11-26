@@ -181,6 +181,7 @@ const { portfolioSummary, propertyViews, currentPeriod } = await getPortfolio(As
                         type="button"
                         class="edit-unit-btn ml-1.5 p-1 text-[#69847A] hover:text-[#0D382B] hover:bg-[#F2F5EF] rounded transition-colors cursor-pointer inline-flex items-center align-middle"
                         title="Edit unit label or bedrooms"
+                        aria-label={`Edit unit ${u.unit.label}`}
                         data-unit-id={u.unit.id}
                         data-label={u.unit.label}
                         data-bedrooms={u.unit.bedrooms}
@@ -246,14 +247,17 @@ const { portfolioSummary, propertyViews, currentPeriod } = await getPortfolio(As
       ))}
     </div>
   )}
-  <AddPropertyModal />
-  <BulkImportModal />
-  <EditRatesModal />
-  <EditPropertyModal />
-  <EditUnitModal />
+  <AddPropertyModal slot="modals" />
+  <BulkImportModal slot="modals" />
+  <EditRatesModal slot="modals" />
+  <EditPropertyModal slot="modals" />
+  <EditUnitModal slot="modals" />
 </DashboardLayout>
 
 <script>
+  import { setBusy } from '../lib/busy';
+  import { toast } from '../components/dashboard/toast';
+
   function initPropertiesPage() {
     const allButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.toggle-units-btn'));
 
@@ -308,9 +312,7 @@ const { portfolioSummary, propertyViews, currentPeriod } = await getPortfolio(As
 
         if (!unitId) return;
 
-        btn.disabled = true;
-        const originalText = btn.textContent;
-        btn.textContent = '...';
+        const restore = setBusy(btn, 'Saving…');
 
         try {
           const res = await fetch('/api/update-unit-listing', {
@@ -330,9 +332,8 @@ const { portfolioSummary, propertyViews, currentPeriod } = await getPortfolio(As
 
           window.location.reload();
         } catch (err: any) {
-          alert(err.message || 'Error updating listing');
-          btn.disabled = false;
-          btn.textContent = originalText;
+          toast('Listing not updated', err.message || 'Try again in a moment.', 'error');
+          restore();
         }
       });
     });
@@ -369,10 +370,7 @@ const { portfolioSummary, propertyViews, currentPeriod } = await getPortfolio(As
         if (waterInput) waterInput.value = water;
         if (garbageInput) garbageInput.value = garbage;
 
-        editPropModal.classList.remove('opacity-0', 'pointer-events-none');
-        const inner = editPropModal.querySelector('div.transform');
-        inner?.classList.remove('scale-95');
-        inner?.classList.add('scale-100');
+        window.makaziUi?.showModal('edit-property-modal');
       });
     });
 
@@ -397,10 +395,7 @@ const { portfolioSummary, propertyViews, currentPeriod } = await getPortfolio(As
         if (labelInput) labelInput.value = label;
         if (bedSelect) bedSelect.value = bedrooms;
 
-        editUnitModal.classList.remove('opacity-0', 'pointer-events-none');
-        const inner = editUnitModal.querySelector('div.transform');
-        inner?.classList.remove('scale-95');
-        inner?.classList.add('scale-100');
+        window.makaziUi?.showModal('edit-unit-modal');
       });
     });
   }

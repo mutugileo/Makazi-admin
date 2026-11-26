@@ -20,8 +20,6 @@ const preview = sample
       asOf,
     })
   : null;
-const disabledChannel =
-  'flex items-center gap-2 p-3 rounded-xl border border-[#E7EAE4] bg-[#F7F8F5] cursor-not-allowed text-xs font-medium text-[#A8B3AE]';
 ---
 
 <div 
@@ -59,12 +57,12 @@ const disabledChannel =
     <div class="p-6 space-y-5 flex-1 min-h-0 overflow-y-auto">
       <!-- Target Tenants Summary -->
       <div class="space-y-2">
-        <label class="block text-xs font-semibold uppercase tracking-wider text-[#5A6862]">
-          Recipients ({arrears.length})
-        </label>
+        <p class="block text-xs font-semibold uppercase tracking-wider text-[#5A6862]">
+          Recipients (<span id="reminders-recipient-count">{arrears.length}</span>)
+        </p>
         <div class="bg-[#F8F9F7] rounded-2xl p-3 border border-[#E7EAE4] divide-y divide-[#EAECE6] text-xs">
           {arrears.map(t => (
-            <div class="py-2 first:pt-1 last:pb-1 flex items-center justify-between gap-3">
+            <div data-reminder-tenancy={t.tenancy.id} class="py-2 first:pt-1 last:pb-1 flex items-center justify-between gap-3">
               <div class="min-w-0">
                 <span class="font-semibold text-[#17231E]">{t.tenant.name}</span>
                 <span class="text-[#73827C]"> ({t.unitLabel} · {lateLabel(t)})</span>
@@ -75,36 +73,15 @@ const disabledChannel =
         </div>
       </div>
 
-      <!-- Channel Selection -->
-      <div>
-        <label class="block text-xs font-semibold uppercase tracking-wider text-[#5A6862] mb-2">
-          Dispatch Channels
-        </label>
-        <div class="grid grid-cols-3 gap-3">
-          <label class={disabledChannel} title="Not available">
-            <input type="checkbox" disabled class="rounded focus:ring-0" />
-            <span>SMS Alert</span>
-          </label>
-          <label class={disabledChannel} title="Not available">
-            <input type="checkbox" disabled class="rounded focus:ring-0" />
-            <span>Email</span>
-          </label>
-          <label class="flex items-center gap-2 p-3 rounded-xl border border-[#0D382B] bg-[#0D382B]/5 text-xs font-semibold text-[#0D382B]">
-            <input type="checkbox" checked disabled class="rounded accent-[#0D382B] focus:ring-0" />
-            <span>In-App Push</span>
-          </label>
-        </div>
-        <p class="text-[11px] text-[#73827C] mt-2">
-          Shows as a notification in each tenant's Makazi app, at no cost. SMS and email aren't available.
-          Anyone reminded in the last 24 hours is skipped.
-        </p>
-      </div>
+      <p class="text-[11px] text-[#73827C]">
+        Sent as a notification in each tenant's Makazi app. Anyone reminded in the last 24 hours is skipped.
+      </p>
 
       <!-- Message Preview -->
       <div>
-        <label class="block text-xs font-semibold uppercase tracking-wider text-[#5A6862] mb-1.5">
+        <p class="block text-xs font-semibold uppercase tracking-wider text-[#5A6862] mb-1.5">
           Notification preview{sample && ` (${sample.tenant.name})`}
-        </label>
+        </p>
         <div class="p-3.5 bg-[#FAFBF9] rounded-xl border border-[#E2E5DF] text-xs text-[#2C3B34] leading-relaxed">
           {preview ? (
             <>
@@ -115,8 +92,10 @@ const disabledChannel =
         </div>
       </div>
 
-      <!-- Actions -->
-      <div class="pt-3 flex items-center justify-end gap-3 border-t border-[#F0F2EE]">
+    </div>
+
+    <!-- Actions -->
+    <div class="px-6 py-4 flex items-center justify-end gap-3 border-t border-[#F0F2EE] shrink-0">
         <button 
           type="button" 
           id="cancel-reminders-btn"
@@ -130,9 +109,8 @@ const disabledChannel =
           disabled={arrears.length === 0}
           class="px-6 py-2.5 rounded-xl text-sm font-semibold bg-[#C04A26] text-white hover:bg-[#A93C1C] transition-all shadow-md hover:shadow-lg cursor-pointer flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <span>Send {arrears.length} reminder{arrears.length === 1 ? '' : 's'}</span>
+          <span id="confirm-send-reminders-label">Send reminders to all {arrears.length}</span>
         </button>
-      </div>
     </div>
   </div>
 </div>

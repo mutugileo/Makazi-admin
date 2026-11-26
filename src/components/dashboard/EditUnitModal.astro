@@ -36,7 +36,8 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
     </div>
 
     <!-- Form -->
-    <form id="edit-unit-form" class="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto">
+    <form id="edit-unit-form" class="flex flex-col flex-1 min-h-0">
+      <div class="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto">
       <input type="hidden" id="edit-unit-id" />
 
       <!-- Unit Label -->
@@ -60,7 +61,9 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
 
       <p id="edit-unit-error" class="hidden text-xs text-[#991B1B] bg-[#FEF2F2] border border-[#F8D7DA] p-3 rounded-xl font-medium"></p>
 
-      <div class="pt-4 border-t border-[#F0F2EE] flex items-center justify-between">
+      </div>
+
+      <div class="px-6 py-4 shrink-0 border-t border-[#F0F2EE] flex items-center justify-between">
         <button
           type="button"
           id="cancel-edit-unit-btn"
@@ -83,6 +86,9 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
 <script>
   function initEditUnitModal() {
     const modal = document.getElementById('edit-unit-modal');
+    // Bind once per page: this runs on page-load and on first load.
+    if (!modal || modal.dataset.bound === 'true') return;
+    modal.dataset.bound = 'true';
     const closeBtn = document.getElementById('close-edit-unit-btn');
     const cancelBtn = document.getElementById('cancel-edit-unit-btn');
     const form = document.getElementById('edit-unit-form') as HTMLFormElement | null;
@@ -90,11 +96,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
     const errorText = document.getElementById('edit-unit-error');
 
     function closeModal() {
-      if (!modal) return;
-      modal.classList.add('opacity-0', 'pointer-events-none');
-      const inner = modal.querySelector('div.transform');
-      inner?.classList.remove('scale-100');
-      inner?.classList.add('scale-95');
+      window.makaziUi?.hideModal('edit-unit-modal');
       if (errorText) errorText.classList.add('hidden');
     }
 

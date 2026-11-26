@@ -4,7 +4,7 @@ import { getPortfolio, formatDate, formatKes } from '../data/portfolio';
 import { paymentMethodLabel } from '../lib/billing';
 import { fetchPendingClaims, type PaymentClaim } from '../lib/payment-claims';
 import { makeSupabaseClient } from '../lib/supabase';
-import { ChevronDown, Plus, X, CreditCard, Check, AlertCircle, Search, MessageSquareText } from '@lucide/astro';
+import { Plus, X, CreditCard, Check, AlertCircle, Search, MessageSquareText } from '@lucide/astro';
 
 // This company's data only (the signed-in user's).
 const companyId = Astro.locals.user!.companyId;
@@ -28,6 +28,25 @@ if (supabase) {
   }
 }
 const tenancyById = new Map(activeTenancies.map((t) => [t.tenancy.id, t]));
+// Payment-message search data for the Record payment window, safe inside a
+// <script> tag. Tenant search reads the hidden <select>'s options instead.
+const jsonForScript = (value: unknown) => JSON.stringify(value).replace(/</g, '\\u003c');
+const claimSearchData = jsonForScript(
+  claims.map((c) => {
+    const view = tenancyById.get(c.tenancyId);
+    return {
+      id: c.id,
+      name: view?.tenant.name ?? 'Former tenancy',
+      unit: view?.unit.label ?? '',
+      property: view?.property.name ?? '',
+      reference: c.reference ?? '',
+      amount: c.amount,
+      payer: c.payer ?? '',
+      date: c.paidDate ?? '',
+      message: c.message,
+    };
+  }),
+);
 const nairobiStamp = (iso: string) => {
   const local = new Date(Date.parse(iso) + 3 * 60 * 60 * 1000).toISOString();
   return `${formatDate(local.slice(0, 10))}, ${local.slice(11, 16)}`;
@@ -57,16 +76,10 @@ const nairobiStamp = (iso: string) => {
         <span>Record Payment</span>
       </button>
 
-      <!-- Period Selector -->
-      <div class="relative inline-block">
-        <button 
-          type="button" 
-          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white border border-[#E3E6DF] text-xs font-semibold text-[#0D382B] shadow-xs hover:border-[#0D382B] transition-colors cursor-pointer"
-        >
-          <span>{currentPeriod}</span>
-          <ChevronDown class="w-4 h-4 text-[#69847A]" />
-        </button>
-      </div>
+      <!-- Current billing period -->
+      <span class="inline-flex items-center px-4 py-2.5 rounded-full bg-white border border-[#E3E6DF] text-xs font-semibold text-[#0D382B] shadow-xs">
+        {currentPeriod}
+      </span>
     </div>
   </div>
 
@@ -282,28 +295,31 @@ const nairobiStamp = (iso: string) => {
     )}
   </div>
 
+  <Fragment slot="modals">
   <!-- Manual Record Payment Modal -->
-  <div id="record-payment-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-    <div class="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl border border-[#E3E6DF] animate-in fade-in zoom-in-95 duration-150">
+  <div id="record-payment-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs opacity-0 pointer-events-none transition-all duration-200" role="dialog" aria-modal="true" aria-labelledby="record-payment-title">
+    <div class="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl border border-[#E3E6DF] transform scale-95 transition-transform duration-200">
       <div class="flex items-center justify-between p-6 pb-3 border-b border-[#E3E6DF] shrink-0">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-2xl bg-[#0D382B] text-[#C6EE58] flex items-center justify-center">
             <CreditCard class="w-5 h-5" />
           </div>
           <div>
-            <h3 class="font-bold text-base text-[#0D382B]">Record Manual Payment</h3>
+            <h3 id="record-payment-title" class="font-bold text-base text-[#0D382B]">Record Manual Payment</h3>
             <p class="text-xs text-[#5A6862]">Cash, Cheque, Bank Transfer, or Manual M-Pesa</p>
           </div>
         </div>
         <button
           type="button"
           id="close-record-payment-modal-btn"
+          aria-label="Close"
           class="p-1.5 text-[#5A6862] hover:text-[#0D382B] rounded-lg transition-colors cursor-pointer"
         >
           <X class="w-5 h-5" />
         </button>
       </div>
 
+      <script type="application/json" id="record-claim-data" set:html={claimSearchData}></script>
       <form id="record-payment-form" class="flex flex-col flex-1 min-h-0">
         <div class="flex-1 min-h-0 overflow-y-auto px-6 pt-5 space-y-4">
         <div id="record-payment-error" class="hidden p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-center gap-2">
@@ -311,23 +327,53 @@ const nairobiStamp = (iso: string) => {
           <span id="record-payment-error-msg"></span>
         </div>
 
-        <div>
-          <label for="record-tenancy-select" class="block text-xs font-semibold text-[#0D382B] mb-1">
+        <div class="rounded-2xl border border-[#E3E6DF] bg-[#F8F9F6] p-3">
+          <label for="record-claim-search" class="block text-xs font-semibold text-[#0D382B] mb-1">
+            Find a payment message from the app
+          </label>
+          <input
+            type="search"
+            id="record-claim-search"
+            autocomplete="off"
+            placeholder="Reference, tenant, house number or amount"
+            class="w-full px-3 py-2 text-xs rounded-xl border border-[#CCD2C7] focus:outline-none focus:border-[#0D382B] bg-white text-[#0D382B]"
+            aria-controls="record-claim-results"
+          />
+          <ul id="record-claim-results" role="listbox" class="mt-2 max-h-44 overflow-y-auto space-y-1.5"></ul>
+          <p class="text-[11px] text-[#73827C] mt-1.5">Picking one opens its review, so the message and the payment are recorded together and never twice.</p>
+        </div>
+
+        <div class="relative">
+          <label for="record-tenancy-search" class="block text-xs font-semibold text-[#0D382B] mb-1">
             Tenant & Unit *
           </label>
+          <input
+            type="search"
+            id="record-tenancy-search"
+            autocomplete="off"
+            role="combobox"
+            aria-expanded="false"
+            aria-controls="record-tenancy-results"
+            placeholder="Search by name or house number"
+            class="w-full px-3 py-2 text-xs rounded-xl border border-[#CCD2C7] focus:outline-none focus:border-[#0D382B] bg-white text-[#0D382B]"
+          />
+          <ul id="record-tenancy-results" role="listbox" class="hidden absolute z-20 left-0 right-0 mt-1 max-h-56 overflow-y-auto rounded-xl border border-[#E3E6DF] bg-white shadow-lg"></ul>
           <select
             id="record-tenancy-select"
             required
-            class="w-full px-3 py-2 text-xs rounded-xl border border-[#CCD2C7] focus:outline-none focus:border-[#0D382B] bg-white text-[#0D382B]"
+            tabindex="-1"
+            aria-hidden="true"
+            class="hidden"
           >
             <option value="">Select a tenancy...</option>
             {activeTenancies.map((t) => (
               <option 
                 value={t.tenancy.id}
                 data-balance={t.balance}
-              >
-                {t.tenant.name} · Unit {t.unit.label} ({t.property.name}) [Ref: {t.accountNumber}]
-              </option>
+                data-unit={t.unit.label}
+                data-property={t.property.name}
+                data-account={t.accountNumber}
+              >{t.tenant.name}</option>
             ))}
           </select>
         </div>
@@ -384,7 +430,7 @@ const nairobiStamp = (iso: string) => {
             type="text"
             id="record-ref-input"
             required
-            placeholder="QJD92881X or EFT-10293 or CASH-OCT"
+            placeholder="M-Pesa code, bank reference or CASH"
             class="w-full px-3 py-2 text-xs rounded-xl border border-[#CCD2C7] focus:outline-none focus:border-[#0D382B] font-mono uppercase"
           />
         </div>
@@ -445,8 +491,8 @@ const nairobiStamp = (iso: string) => {
   </div>
 
   <!-- Review a tenant's payment message -->
-  <div id="review-claim-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs" role="dialog" aria-modal="true" aria-labelledby="review-claim-title">
-    <div class="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl border border-[#E3E6DF]">
+  <div id="review-claim-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs opacity-0 pointer-events-none transition-all duration-200" role="dialog" aria-modal="true" aria-labelledby="review-claim-title">
+    <div class="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl border border-[#E3E6DF] transform scale-95 transition-transform duration-200">
       <div class="flex items-center justify-between p-6 pb-3 border-b border-[#E3E6DF] shrink-0">
         <div class="flex items-center gap-3 min-w-0">
           <div class="w-10 h-10 rounded-2xl bg-[#0D382B] text-[#C6EE58] flex items-center justify-center shrink-0">
@@ -519,6 +565,7 @@ const nairobiStamp = (iso: string) => {
       </div>
     </div>
   </div>
+  </Fragment>
 </DashboardLayout>
 
 <script>
@@ -532,7 +579,7 @@ const nairobiStamp = (iso: string) => {
 
     const ON = ['bg-[#0D382B]', 'text-white', 'border-[#0D382B]'];
     const OFF = ['bg-white', 'text-[#0D382B]', 'border-[#E3E6DF]'];
-    const PAGE_SIZE = 5;
+    const PAGE_SIZE = 25;
     let method = 'All';
     let query = '';
     let currentPage = 1;
@@ -562,6 +609,7 @@ const nairobiStamp = (iso: string) => {
 
       methodBtns.forEach((b) => {
         const on = b.dataset.methodBtn === method;
+        b.setAttribute('aria-pressed', String(on));
         b.classList.remove(...(on ? OFF : ON));
         b.classList.add(...(on ? ON : OFF));
       });
@@ -718,16 +766,186 @@ const nairobiStamp = (iso: string) => {
       };
     }
 
+    // Search: tenants by name, house number, property or account ref, and the
+    // tenants' payment messages. Results are built with textContent only.
+    interface TenancyOption { id: string; name: string; unit: string; property: string; account: string }
+    interface ClaimOption {
+      id: string; name: string; unit: string; property: string; reference: string;
+      amount: number | null; payer: string; date: string; message: string;
+    }
+    const readJson = <T,>(id: string): T[] => {
+      try {
+        return JSON.parse(document.getElementById(id)?.textContent || '[]') as T[];
+      } catch {
+        return [];
+      }
+    };
+    const tenancyOptions: TenancyOption[] = recordTenancySelect
+      ? [...recordTenancySelect.options]
+          .filter((o) => o.value)
+          .map((o) => ({
+            id: o.value,
+            name: o.textContent?.trim() ?? '',
+            unit: o.dataset.unit ?? '',
+            property: o.dataset.property ?? '',
+            account: o.dataset.account ?? '',
+          }))
+      : [];
+    const claimOptions = readJson<ClaimOption>('record-claim-data');
+    const norm = (s: string) => s.toLowerCase().replace(/[\s,]+/g, '');
+    const matches = (query: string, fields: (string | number | null)[]) => {
+      const q = norm(query);
+      return !q || fields.some((f) => f !== null && norm(String(f)).includes(q));
+    };
+    const tenancyLabel = (t: TenancyOption) => `${t.name} · ${t.unit} (${t.property})`;
+
+    const tenancySearch = document.getElementById('record-tenancy-search') as HTMLInputElement | null;
+    const tenancyResults = document.getElementById('record-tenancy-results');
+    let activeIndex = -1;
+
+    function chooseTenancy(t: TenancyOption) {
+      if (!recordTenancySelect || !tenancySearch || !tenancyResults) return;
+      recordTenancySelect.value = t.id;
+      tenancySearch.value = tenancyLabel(t);
+      tenancyResults.classList.add('hidden');
+      tenancySearch.setAttribute('aria-expanded', 'false');
+      updateAmountDue();
+    }
+
+    function renderTenancyResults() {
+      if (!tenancySearch || !tenancyResults || !recordTenancySelect) return;
+      const query = tenancySearch.value;
+      // Typing again means a new choice: never keep a hidden, stale tenant.
+      const chosen = tenancyOptions.find((t) => t.id === recordTenancySelect.value);
+      if (chosen && tenancyLabel(chosen) !== query) {
+        recordTenancySelect.value = '';
+        updateAmountDue();
+      }
+      const found = tenancyOptions.filter((t) => matches(query, [t.name, t.unit, t.property, t.account])).slice(0, 30);
+      tenancyResults.replaceChildren();
+      activeIndex = -1;
+      if (found.length === 0) {
+        const li = document.createElement('li');
+        li.className = 'px-3 py-2.5 text-xs text-[#69847A]';
+        li.textContent = 'No tenant matches. Try a name or house number.';
+        tenancyResults.appendChild(li);
+      }
+      for (const t of found) {
+        const li = document.createElement('li');
+        li.setAttribute('role', 'option');
+        li.dataset.id = t.id;
+        li.className = 'px-3 py-2.5 text-xs cursor-pointer hover:bg-[#F1F3ED] aria-selected:bg-[#EBF0EC]';
+        const name = document.createElement('span');
+        name.className = 'block font-semibold text-[#0D382B]';
+        name.textContent = t.name;
+        const where = document.createElement('span');
+        where.className = 'block text-[11px] text-[#69847A]';
+        where.textContent = `${t.unit} · ${t.property} · Ref ${t.account}`;
+        li.append(name, where);
+        li.addEventListener('mousedown', (event) => {
+          event.preventDefault();
+          chooseTenancy(t);
+        });
+        tenancyResults.appendChild(li);
+      }
+      tenancyResults.classList.remove('hidden');
+      tenancySearch.setAttribute('aria-expanded', 'true');
+    }
+
+    if (tenancySearch && tenancyResults) {
+      tenancySearch.addEventListener('focus', renderTenancyResults);
+      tenancySearch.addEventListener('input', renderTenancyResults);
+      tenancySearch.addEventListener('blur', () => {
+        tenancyResults.classList.add('hidden');
+        tenancySearch.setAttribute('aria-expanded', 'false');
+      });
+      tenancySearch.addEventListener('keydown', (event) => {
+        const items = [...tenancyResults.querySelectorAll<HTMLElement>('[role="option"]')];
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+          event.preventDefault();
+          if (items.length === 0) return;
+          activeIndex = (activeIndex + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+          items.forEach((el, i) => el.setAttribute('aria-selected', String(i === activeIndex)));
+          items[activeIndex].scrollIntoView({ block: 'nearest' });
+        } else if (event.key === 'Enter' && !tenancyResults.classList.contains('hidden')) {
+          const pick = items[activeIndex >= 0 ? activeIndex : 0];
+          const t = tenancyOptions.find((o) => o.id === pick?.dataset.id);
+          if (t) {
+            event.preventDefault();
+            chooseTenancy(t);
+          }
+        } else if (event.key === 'Escape' && !tenancyResults.classList.contains('hidden')) {
+          // Close the list first; a second Escape closes the window.
+          event.stopPropagation();
+          tenancyResults.classList.add('hidden');
+          tenancySearch.setAttribute('aria-expanded', 'false');
+        }
+      });
+    }
+
+    const claimSearch = document.getElementById('record-claim-search') as HTMLInputElement | null;
+    const claimResults = document.getElementById('record-claim-results');
+
+    function renderClaimResults() {
+      if (!claimSearch || !claimResults) return;
+      const found = claimOptions
+        .filter((c) => matches(claimSearch.value, [c.reference, c.name, c.unit, c.property, c.amount, c.payer, c.message]))
+        .slice(0, 20);
+      claimResults.replaceChildren();
+      if (found.length === 0) {
+        const li = document.createElement('li');
+        li.className = 'text-[11px] text-[#69847A]';
+        li.textContent = claimOptions.length === 0 ? 'No payment messages are waiting.' : 'No payment message matches.';
+        claimResults.appendChild(li);
+        return;
+      }
+      for (const c of found) {
+        const li = document.createElement('li');
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'w-full text-left px-3 py-2 rounded-xl bg-white border border-[#E3E6DF] hover:border-[#0D382B] transition-colors cursor-pointer';
+        const top = document.createElement('span');
+        top.className = 'flex items-center justify-between gap-2 text-xs font-semibold text-[#0D382B]';
+        const ref = document.createElement('span');
+        ref.className = 'font-mono';
+        ref.textContent = c.reference || 'No reference found';
+        const amount = document.createElement('span');
+        amount.textContent = c.amount !== null ? `KES ${c.amount.toLocaleString('en-KE')}` : 'No amount found';
+        top.append(ref, amount);
+        const who = document.createElement('span');
+        who.className = 'block text-[11px] text-[#69847A] mt-0.5';
+        who.textContent = [c.name, c.unit, c.date].filter(Boolean).join(' · ');
+        btn.append(top, who);
+        btn.addEventListener('click', () => {
+          const review = [...document.querySelectorAll<HTMLButtonElement>('.review-claim-btn')].find(
+            (b) => b.dataset.claimId === c.id,
+          );
+          if (!review) return;
+          closeRecordModal();
+          review.click();
+        });
+        li.appendChild(btn);
+        claimResults.appendChild(li);
+      }
+    }
+    claimSearch?.addEventListener('input', renderClaimResults);
+
     function openRecordModal() {
       if (recordModal) {
-        recordModal.classList.remove('hidden');
+        window.makaziUi?.showModal('record-payment-modal');
         if (errorBox) errorBox.classList.add('hidden');
+        if (claimSearch) claimSearch.value = '';
+        renderClaimResults();
+        if (tenancySearch && recordTenancySelect) {
+          const chosen = tenancyOptions.find((t) => t.id === recordTenancySelect.value);
+          tenancySearch.value = chosen ? tenancyLabel(chosen) : '';
+        }
         updateAmountDue();
       }
     }
 
     function closeRecordModal() {
-      if (recordModal) recordModal.classList.add('hidden');
+      window.makaziUi?.hideModal('record-payment-modal');
     }
 
     if (openRecordBtn) openRecordBtn.onclick = openRecordModal;
@@ -788,7 +1006,6 @@ const nairobiStamp = (iso: string) => {
     }
 
     // Review a tenant's payment message
-    const reviewModal = document.getElementById('review-claim-modal');
     const reviewForm = document.getElementById('review-claim-form') as HTMLFormElement | null;
     const reviewErrorBox = document.getElementById('review-claim-error');
     const reviewErrorMsg = document.getElementById('review-claim-error-msg');
@@ -803,7 +1020,7 @@ const nairobiStamp = (iso: string) => {
     }
 
     function closeReviewModal() {
-      reviewModal?.classList.add('hidden');
+      window.makaziUi?.hideModal('review-claim-modal');
     }
 
     document.querySelectorAll<HTMLButtonElement>('.review-claim-btn').forEach((btn) => {
@@ -823,7 +1040,7 @@ const nairobiStamp = (iso: string) => {
         reviewInput('review-claim-method').value = 'M-Pesa';
         reviewInput('review-claim-note').value = '';
         reviewErrorBox?.classList.add('hidden');
-        reviewModal?.classList.remove('hidden');
+        window.makaziUi?.showModal('review-claim-modal');
       };
     });
 

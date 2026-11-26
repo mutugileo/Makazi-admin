@@ -38,7 +38,8 @@ const endOfMonth = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
       </button>
     </div>
 
-    <form id="move-out-form" class="p-6 space-y-5 flex-1 min-h-0 overflow-y-auto" novalidate>
+    <form id="move-out-form" class="flex flex-col flex-1 min-h-0" novalidate>
+      <div class="p-6 space-y-5 flex-1 min-h-0 overflow-y-auto">
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label for="move-out-date" class="block text-xs font-semibold uppercase tracking-wider text-[#5A6862] mb-1.5">Move-out date</label>
@@ -82,7 +83,9 @@ const endOfMonth = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
         ({retentionMonths} months after move-out) so you can issue a payment statement, then archived.
       </p>
 
-      <div class="pt-4 flex items-center justify-end gap-3 border-t border-[#F0F2EE]">
+      </div>
+
+      <div class="px-6 py-4 shrink-0 flex items-center justify-end gap-3 border-t border-[#F0F2EE]">
         <button type="button" data-close class="px-5 py-2.5 rounded-xl text-sm font-medium text-[#5A6862] hover:bg-[#F4F5F1] transition-colors cursor-pointer">Cancel</button>
         <button type="submit" class="px-6 py-2.5 rounded-xl text-sm font-semibold bg-[#C04A26] text-white hover:bg-[#A93C1C] transition-all shadow-md cursor-pointer">Confirm move-out</button>
       </div>
@@ -92,6 +95,7 @@ const endOfMonth = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
 
 <script>
   import { setBusy } from '../../lib/busy';
+  import { toast } from './toast';
 
   function initMoveOutModal() {
     const modalEl = document.getElementById('move-out-modal');
@@ -207,7 +211,7 @@ const endOfMonth = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
         setTimeout(() => window.location.reload(), 1000);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        window.makaziUi?.showToast('Error', msg);
+        toast('Move-out not recorded', msg, 'error');
         if (submitBtn) {
           restoreSubmit();
         }

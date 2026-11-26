@@ -67,7 +67,8 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
     </div>
 
     <!-- Form -->
-    <form id="onboard-tenant-form" class="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto">
+    <form id="onboard-tenant-form" class="flex flex-col flex-1 min-h-0">
+      <div class="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto">
       <div>
         <label for="tenant-full-name" class={labelClass}>Full name</label>
         <input type="text" id="tenant-full-name" required placeholder="Official legal name" class={inputClass} />
@@ -250,7 +251,9 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
       </div>
 
       <!-- Action Buttons -->
-      <div class="pt-4 flex items-center justify-end gap-3 border-t border-[#F0F2EE]">
+      </div>
+
+      <div class="px-6 py-4 shrink-0 flex items-center justify-end gap-3 border-t border-[#F0F2EE]">
         <button
           type="button"
           id="cancel-onboard-btn"
@@ -492,13 +495,13 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
       if (currentMode === 'preset') {
         unitId = unitSelect?.value || '';
         if (!unitId) {
-          window.makaziUi?.showToast('Select a unit', 'Please select a vacant unit preset or switch to Custom Unit.');
+          window.makaziUi?.showToast('Select a unit', 'Pick a vacant unit, or switch to Custom Unit.', 'error');
           return;
         }
       } else {
         unitLabel = customLabelInput?.value.trim() || '';
         if (!unitLabel) {
-          window.makaziUi?.showToast('Enter unit label', 'Use letters, numbers and dashes only, like A1 or B-4.');
+          window.makaziUi?.showToast('Enter unit label', 'Use letters, numbers and dashes only, like A1 or B-4.', 'error');
           customLabelInput?.focus();
           return;
         }
@@ -564,7 +567,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        window.makaziUi?.showToast('Error', msg);
+        window.makaziUi?.showToast('Tenant not onboarded', msg, 'error');
         if (submitBtn) {
           submitBtn.disabled = false;
           submitBtn.removeAttribute('aria-busy');

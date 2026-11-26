@@ -361,6 +361,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
 
   <!-- Log Enquiry Modal -->
   <div
+    slot="modals"
     id="log-enquiry-modal"
     class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-200"
     role="dialog"
@@ -388,7 +389,8 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
         </button>
       </div>
 
-      <form id="log-enquiry-form" class="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto">
+      <form id="log-enquiry-form" class="flex flex-col flex-1 min-h-0">
+        <div class="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto">
         <!-- Target Property -->
         <div>
           <label for="enquiry-property-id" class={labelClass}>Target Property</label>
@@ -449,7 +451,10 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
           <textarea id="enquiry-notes" rows="2" placeholder="Budget, move-in timeline, special requests" class={inputClass}></textarea>
         </div>
 
-        <div class="pt-4 border-t border-[#F0F2EE] flex items-center justify-between">
+        <p id="enquiry-error" role="alert" class="hidden text-xs text-[#991B1B] bg-[#FEF2F2] border border-[#F8D7DA] p-3 rounded-xl font-medium"></p>
+        </div>
+
+        <div class="px-6 py-4 shrink-0 border-t border-[#F0F2EE] flex items-center justify-between">
           <button
             type="button"
             id="cancel-enquiry-btn"
@@ -471,8 +476,20 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
 </DashboardLayout>
 
 <script>
+  import { setBusy } from '../lib/busy';
+  import { toast } from '../components/dashboard/toast';
+
   function initEnquiriesPage() {
     const modal = document.getElementById('log-enquiry-modal');
+    // Bind once per page: this runs on page-load and on first load.
+    if (!modal || modal.dataset.bound === 'true') return;
+    modal.dataset.bound = 'true';
+    const errorEl = document.getElementById('enquiry-error');
+    const showError = (message: string) => {
+      if (!errorEl) return;
+      errorEl.textContent = message;
+      errorEl.classList.toggle('hidden', !message);
+    };
     const openBtn = document.getElementById('open-log-enquiry-btn');
     const closeBtn = document.getElementById('close-enquiry-modal-btn');
     const cancelBtn = document.getElementById('cancel-enquiry-btn');
@@ -480,19 +497,12 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
     const saveBtn = document.getElementById('save-enquiry-btn') as HTMLButtonElement | null;
 
     function openModal() {
-      if (!modal) return;
-      modal.classList.remove('opacity-0', 'pointer-events-none');
-      const inner = modal.querySelector('div.transform');
-      inner?.classList.remove('scale-95');
-      inner?.classList.add('scale-100');
+      showError('');
+      window.makaziUi?.showModal('log-enquiry-modal');
     }
 
     function closeModal() {
-      if (!modal) return;
-      modal.classList.add('opacity-0', 'pointer-events-none');
-      const inner = modal.querySelector('div.transform');
-      inner?.classList.remove('scale-100');
-      inner?.classList.add('scale-95');
+      window.makaziUi?.hideModal('log-enquiry-modal');
     }
 
     openBtn?.addEventListener('click', openModal);
@@ -516,8 +526,8 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
       const viewingAt = (document.getElementById('enquiry-viewing-date') as HTMLInputElement)?.value || null;
       const notes = (document.getElementById('enquiry-notes') as HTMLTextAreaElement)?.value;
 
-      saveBtn.disabled = true;
-      saveBtn.textContent = 'Saving...';
+      showError('');
+      const restoreSave = setBusy(saveBtn, 'Saving…');
 
       try {
         const res = await fetch('/api/enquiries', {
@@ -531,9 +541,8 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
 
         window.location.reload();
       } catch (err: any) {
-        alert(err.message || 'Error saving enquiry');
-        saveBtn.disabled = false;
-        saveBtn.textContent = 'Save enquiry';
+        showError(err.message || 'The enquiry was not saved. Try again.');
+        restoreSave();
       }
     });
 
@@ -548,7 +557,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
         const targetStatus = btn.dataset.targetStatus;
         if (!id || !targetStatus) return;
 
-        btn.disabled = true;
+        const restoreStage = setBusy(btn, 'Saving…');
 
         try {
           const res = await fetch('/api/enquiries', {
@@ -562,8 +571,8 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
 
           window.location.reload();
         } catch (err: any) {
-          alert(err.message || 'Error updating stage');
-          btn.disabled = false;
+          toast('Stage not updated', err.message || 'Try again in a moment.', 'error');
+          restoreStage();
         }
       });
     });

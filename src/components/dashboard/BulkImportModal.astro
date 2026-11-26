@@ -39,6 +39,8 @@ const managers = seed.staff
 
     <!-- Modal Body (Scrollable) -->
     <div class="flex-1 min-h-0 overflow-y-auto p-6 space-y-6">
+      <p id="bulk-import-error" role="alert" class="hidden p-3 rounded-xl bg-[#FDF2F2] border border-[#F8D7DA] text-xs font-medium text-[#991B1B] whitespace-pre-line"></p>
+
       <!-- Download Template Banner -->
       <div class="p-4.5 rounded-2xl bg-[#F8F9F6] border border-[#E3E6DF] flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -192,7 +194,7 @@ const managers = seed.staff
         <div class="h-2 w-full max-w-md mx-auto rounded-full overflow-hidden bg-white/60">
           <div class="h-full w-full shimmer" style="background-color: #C6EE58;"></div>
         </div>
-        <p class="text-xs font-semibold text-[#0D382B]" id="execution-status-text">Creating properties, units, and tenant accounts in Supabase...</p>
+        <p class="text-xs font-semibold text-[#0D382B]" id="execution-status-text">Creating properties, units and tenant accounts…</p>
         <div class="flex items-center justify-center gap-2 pt-1">
           <div class="shimmer h-2 w-2 rounded-full"></div>
           <div class="shimmer h-2 w-2 rounded-full"></div>
@@ -244,23 +246,27 @@ const managers = seed.staff
     const executionPanel = document.getElementById('execution-panel');
     const executionStatusText = document.getElementById('execution-status-text');
 
+    // Bind once per page: this runs on page-load and on first load.
+    if (!modal || modal.dataset.bound === 'true') return;
+    modal.dataset.bound = 'true';
+    const importError = document.getElementById('bulk-import-error');
+
     let currentCsvText = '';
     let isImporting = false;
 
+    function showImportError(message: string) {
+      if (!importError) return;
+      importError.textContent = message;
+      importError.classList.toggle('hidden', !message);
+    }
+
     function openModal() {
-      if (!modal) return;
-      modal.classList.remove('opacity-0', 'pointer-events-none');
-      const inner = modal.querySelector('div.transform');
-      inner?.classList.remove('scale-95');
-      inner?.classList.add('scale-100');
+      window.makaziUi?.showModal('bulk-import-modal');
     }
 
     function closeModal() {
-      if (!modal || isImporting) return;
-      modal.classList.add('opacity-0', 'pointer-events-none');
-      const inner = modal.querySelector('div.transform');
-      inner?.classList.remove('scale-100');
-      inner?.classList.add('scale-95');
+      if (isImporting) return;
+      window.makaziUi?.hideModal('bulk-import-modal');
     }
 
     openBtns.forEach((btn) => btn.addEventListener('click', openModal));
@@ -304,9 +310,10 @@ const managers = seed.staff
 
     function handleFile(file: File) {
       if (!file.name.toLowerCase().endsWith('.csv') && file.type !== 'text/csv') {
-        alert('Please choose a .csv file.');
+        showImportError('Choose a .csv file. Save the spreadsheet as CSV, then try again.');
         return;
       }
+      showImportError('');
 
       if (fileInfoText) {
         fileInfoText.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
@@ -410,7 +417,7 @@ const managers = seed.staff
             .join('');
         }
       } catch (err: any) {
-        alert(err.message || 'Error parsing CSV');
+        showImportError(err.message || "The CSV couldn't be read. Check it matches the template.");
         submitBtn.disabled = true;
         submitLabel.textContent = 'Upload valid CSV';
       }
@@ -421,6 +428,8 @@ const managers = seed.staff
       if (!currentCsvText || isImporting) return;
       isImporting = true;
       submitBtn.disabled = true;
+      showImportError('');
+      modal.setAttribute('aria-busy', 'true');
 
       executionPanel?.classList.remove('hidden');
       validationPanel?.classList.add('hidden');
@@ -477,8 +486,9 @@ const managers = seed.staff
           window.location.reload();
         }, 1200);
       } catch (err: any) {
-        alert(err.message || 'Import failed');
+        showImportError(err.message || 'Import failed. Nothing was imported.');
         isImporting = false;
+        modal.removeAttribute('aria-busy');
         executionPanel?.classList.add('hidden');
         validationPanel?.classList.remove('hidden');
         submitBtn.disabled = false;

@@ -19,10 +19,13 @@ const kindLabel = { opening: 'Opening balance', 'move-in': 'Move-in', final: 'Fi
 
 // Flat rows for CSV export and the totals bar. Column names follow the
 // owner's spreadsheet, plus Deposit and Balance b/f.
+const searchText = (view: (typeof billRows)[number]['view']) =>
+  [view.tenant.name, view.unit.label, view.property.name, view.tenant.phone].join(' ').toLowerCase();
 const exportRows = billRows.map(({ view, bill }) => ({
   month: bill.month,
   property: view.property.id,
   status: bill.status,
+  search: searchText(view),
   csv: {
     TENANT: view.tenant.name,
     PROPERTY: view.property.name,
@@ -89,10 +92,19 @@ const td = 'py-3 px-3 whitespace-nowrap';
         </button>
       ))}
     </div>
+    <div class="flex flex-wrap items-center gap-2">
+    <input
+      type="search"
+      id="bill-search"
+      class="w-full sm:w-64 px-4 py-2 rounded-full border border-[#E3E6DF] bg-white text-xs text-[#0D382B] placeholder:text-[#69847A] focus:border-[#0D382B] focus:ring-1 focus:ring-[#0D382B] outline-none shadow-xs"
+      placeholder="Search name, unit or phone"
+      aria-label="Search bills"
+    />
     <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Status">
       {['All', 'Unpaid', 'Partial', 'Paid', 'Credit'].map((s) => (
         <button type="button" data-status-btn={s} class="status-btn px-3 py-1.5 rounded-full border text-[11px] font-semibold cursor-pointer transition-colors">{s}</button>
       ))}
+    </div>
     </div>
   </div>
 
@@ -143,7 +155,7 @@ const td = 'py-3 px-3 whitespace-nowrap';
           {billRows.map(({ view, bill }) => {
             const depositCell = bill.deposit + bill.depositApplied;
             return (
-              <tr class="bill-row group hover:bg-[#F8F9F6]/60 transition-colors" data-month={bill.month} data-property={view.property.id} data-status={bill.status}>
+              <tr class="bill-row group hover:bg-[#F8F9F6]/60 transition-colors" data-month={bill.month} data-property={view.property.id} data-status={bill.status} data-search={searchText(view)}>
                 <td class={`${td} pl-4 lg:pl-6 sticky left-0 bg-white group-hover:bg-[#F8F9F6] z-10 transition-colors`}>
                   <span class="font-semibold text-[#0D382B]">{view.tenant.name}</span>
                   {!view.isActive && <span class="ml-1.5 text-[10px] uppercase tracking-wider text-[#69847A]">former</span>}
@@ -218,11 +230,12 @@ const td = 'py-3 px-3 whitespace-nowrap';
   </p>
 
   <script type="application/json" id="bill-export-data" set:html={JSON.stringify(exportRows).replace(/</g, "\\u003c")} />
-  <ReadingsModal />
+  <ReadingsModal slot="modals" />
 </DashboardLayout>
 
 <script>
-  type ExportRow = { month: string; property: string; status: string; csv: Record<string, string | number> };
+  type ExportRow = { month: string; property: string; status: string; search: string; csv: Record<string, string | number> };
+  type Filterable = { month: string; property: string; status: string; search?: string };
 
   function initBillsPage() {
     const exportScript = document.getElementById('bill-export-data');
@@ -244,18 +257,21 @@ const td = 'py-3 px-3 whitespace-nowrap';
       monthSelect.value = paramMonth;
     }
 
-    const PAGE_SIZE = 6;
+    const PAGE_SIZE = 25;
     let currentPage = 1;
+    const searchInput = document.getElementById('bill-search') as HTMLInputElement | null;
+    let query = searchInput ? searchInput.value.trim().toLowerCase() : '';
 
-    const matches = (r: { month: string; property: string; status: string }) =>
+    const matches = (r: Filterable) =>
       (monthSelect.value === 'all' || r.month === monthSelect.value) &&
       (property === 'all' || r.property === property) &&
-      (status === 'All' || r.status === status);
+      (status === 'All' || r.status === status) &&
+      (!query || (r.search ?? '').includes(query));
 
     function render() {
       const matchingEls: HTMLElement[] = [];
       document.querySelectorAll<HTMLElement>('.bill-row').forEach((row) => {
-        const show = matches(row.dataset as { month: string; property: string; status: string });
+        const show = matches(row.dataset as unknown as Filterable);
         if (show) {
           matchingEls.push(row);
         } else {
@@ -303,11 +319,13 @@ const td = 'py-3 px-3 whitespace-nowrap';
 
       document.querySelectorAll<HTMLElement>('[data-property-btn]').forEach((b) => {
         const on = b.dataset.propertyBtn === property;
+        b.setAttribute('aria-pressed', String(on));
         b.classList.remove(...(on ? OFF : ON));
         b.classList.add(...(on ? ON : OFF));
       });
       document.querySelectorAll<HTMLElement>('[data-status-btn]').forEach((b) => {
         const on = b.dataset.statusBtn === status;
+        b.setAttribute('aria-pressed', String(on));
         b.classList.remove(...(on ? OFF : ON));
         b.classList.add(...(on ? ON : OFF));
       });
@@ -339,6 +357,13 @@ const td = 'py-3 px-3 whitespace-nowrap';
       currentPage = 1;
       render();
     };
+    if (searchInput) {
+      searchInput.oninput = () => {
+        query = searchInput.value.trim().toLowerCase();
+        currentPage = 1;
+        render();
+      };
+    }
     document.querySelectorAll<HTMLElement>('[data-property-btn]').forEach((b) => {
       b.onclick = () => {
         property = b.dataset.propertyBtn ?? 'all';

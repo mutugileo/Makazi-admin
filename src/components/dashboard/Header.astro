@@ -1,5 +1,5 @@
 ---
-import { Search, Bell, ExternalLink, Menu } from '@lucide/astro';
+import { Search, ExternalLink, Menu } from '@lucide/astro';
 ---
 
 <header 
@@ -19,20 +19,23 @@ import { Search, Bell, ExternalLink, Menu } from '@lucide/astro';
     </button>
 
     <!-- Search Input Triggering Command Palette -->
-    <div 
+    <button 
+      type="button"
       id="search-trigger-btn"
-      class="w-full min-w-0 flex items-center justify-between bg-white border border-[#E4E7E0] hover:border-[#CBD1C5] rounded-full px-4 py-2.5 shadow-sm text-sm text-[#73827C] cursor-pointer transition-all group"
+      aria-label="Search tenants, units and receipts"
+      aria-keyshortcuts="Meta+K Control+K"
+      class="w-full text-left min-w-0 flex items-center justify-between bg-white border border-[#E4E7E0] hover:border-[#CBD1C5] rounded-full px-4 py-2.5 shadow-sm text-sm text-[#73827C] cursor-pointer transition-all group"
     >
-      <div class="flex items-center gap-3 min-w-0">
+      <span class="flex items-center gap-3 min-w-0">
         <Search class="w-4 h-4 flex-shrink-0 text-[#8A9690] group-hover:text-[#17231E] transition-colors" />
         <span class="text-xs sm:text-sm text-[#73827C] select-none truncate">
           Search tenants, units, receipts
         </span>
-      </div>
+      </span>
       <kbd class="hidden sm:inline-flex items-center gap-0.5 px-2 py-0.5 text-[11px] font-semibold text-[#73827C] bg-[#F4F5F1] rounded-md border border-[#E1E4DC]">
         ⌘K
       </kbd>
-    </div>
+    </button>
   </div>
 
   <!-- Right Actions -->
@@ -46,18 +49,6 @@ import { Search, Bell, ExternalLink, Menu } from '@lucide/astro';
     >
       <span class="hidden sm:inline">Tenant app</span>
       <ExternalLink class="w-3.5 h-3.5 text-[#5A6862]" />
-    </button>
-
-    <!-- Notifications Bell -->
-    <button 
-      type="button" 
-      id="notifications-bell-btn"
-      aria-label="View notifications"
-      class="relative p-2.5 rounded-full bg-white border border-[#E4E7E0] hover:bg-[#F8F9F7] text-[#17231E] shadow-sm transition-all cursor-pointer"
-    >
-      <Bell class="w-4 h-4 text-[#2C3B34]" />
-      <!-- Notification Dot -->
-      <span class="absolute top-2 right-2 h-2 w-2 rounded-full bg-[#E5532E] ring-2 ring-white"></span>
     </button>
   </div>
 </header>

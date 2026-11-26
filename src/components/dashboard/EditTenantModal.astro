@@ -36,7 +36,8 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
     </div>
 
     <!-- Form -->
-    <form id="edit-tenant-form" class="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto">
+    <form id="edit-tenant-form" class="flex flex-col flex-1 min-h-0">
+      <div class="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto">
       <input type="hidden" id="edit-tenancy-id" />
       <input type="hidden" id="edit-tenant-id" />
 
@@ -90,7 +91,9 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
 
       <p id="edit-tenant-error" class="hidden text-xs text-[#991B1B] bg-[#FEF2F2] border border-[#F8D7DA] p-3 rounded-xl font-medium"></p>
 
-      <div class="pt-4 border-t border-[#F0F2EE] flex items-center justify-between">
+      </div>
+
+      <div class="px-6 py-4 shrink-0 border-t border-[#F0F2EE] flex items-center justify-between">
         <button
           type="button"
           id="cancel-edit-tenant-btn"
@@ -113,6 +116,9 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
 <script>
   function initEditTenantModal() {
     const modal = document.getElementById('edit-tenant-modal');
+    // Bind once per page: this runs on page-load and on first load.
+    if (!modal || modal.dataset.bound === 'true') return;
+    modal.dataset.bound = 'true';
     const closeBtn = document.getElementById('close-edit-tenant-btn');
     const cancelBtn = document.getElementById('cancel-edit-tenant-btn');
     const form = document.getElementById('edit-tenant-form') as HTMLFormElement | null;
@@ -120,11 +126,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
     const errorText = document.getElementById('edit-tenant-error');
 
     function closeModal() {
-      if (!modal) return;
-      modal.classList.add('opacity-0', 'pointer-events-none');
-      const inner = modal.querySelector('div.transform');
-      inner?.classList.remove('scale-100');
-      inner?.classList.add('scale-95');
+      window.makaziUi?.hideModal('edit-tenant-modal');
       if (errorText) errorText.classList.add('hidden');
     }
 

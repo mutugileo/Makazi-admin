@@ -6,6 +6,7 @@
 import '../../styles/global.css';
 import { getPortfolio, bedLabel, formatDate, formatKes, monthLabel, type TenancyView } from '../../data/portfolio';
 import { receiptDescription } from '../../lib/billing';
+import StatusBadge from '../../components/ui/StatusBadge.astro';
 
 // This company's data only (the signed-in user's).
 const { company, tenancies, asOf } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
@@ -22,6 +23,8 @@ const period = `${formatDate(tenancy.moveIn)} – ${tenancy.moveOut ? formatDate
 const from = bills[0]?.month;
 const th = 'py-2 px-3 text-left font-semibold whitespace-nowrap';
 const td = 'py-2 px-3 whitespace-nowrap';
+// Same bill-kind words as the Bills page and the app.
+const kindLabel = { opening: 'Opening balance', 'move-in': 'Move-in', final: 'Final', monthly: 'Monthly' } as const;
 ---
 
 <!doctype html>
@@ -119,6 +122,7 @@ const td = 'py-2 px-3 whitespace-nowrap';
                   <th class={`${th} text-right`}>Bal. b/f</th>
                   <th class={`${th} text-right`}>Total due</th>
                   <th class={`${th} text-right`}>Paid</th>
+                  <th class={th}>Status</th>
                   <th class={`${th} text-right sticky right-0 bg-white/95 backdrop-blur-xs shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.05)] print:static print:shadow-none`}>Outstanding</th>
                 </tr>
               </thead>
@@ -127,13 +131,17 @@ const td = 'py-2 px-3 whitespace-nowrap';
                   <tr>
                     <td class={td}>
                       {monthLabel(b.month)}
-                      {b.kind !== 'monthly' && <span class="ml-1 text-[10px] text-[#69847A]">({b.kind === 'move-in' ? 'move-in' : b.kind === 'opening' ? 'opening balance' : 'final'})</span>}
+                      {b.kind !== 'monthly' && (
+                        <span class="ml-1 px-1.5 py-0.5 rounded-md bg-[#EFF6FF] text-[#1E40AF] text-[10px] font-semibold print:bg-transparent print:px-0">{kindLabel[b.kind]}</span>
+                      )}
                     </td>
                     <td class={`${td} text-right`}>
                       {b.rent ? formatKes(b.rent) : '—'}
                     </td>
                     <td class={`${td} text-right`}>
-                      {b.water ? formatKes(b.water.amount) : '—'}
+                      {b.water ? formatKes(b.water.amount) : b.kind === 'monthly' ? (
+                        <span class="text-[11px] font-semibold text-[#B78103]">Reading due</span>
+                      ) : '—'}
                       {b.water && <span class="block text-[10px] text-[#69847A]">{b.water.units} units</span>}
                     </td>
                     <td class={`${td} text-right`}>{b.garbage ? formatKes(b.garbage) : '—'}</td>
@@ -144,6 +152,7 @@ const td = 'py-2 px-3 whitespace-nowrap';
                     <td class={`${td} text-right`}>{b.balanceBf ? formatKes(b.balanceBf) : '—'}</td>
                     <td class={`${td} text-right font-semibold`}>{formatKes(b.totalDue)}</td>
                     <td class={`${td} text-right`}>{formatKes(b.amountPaid)}</td>
+                    <td class={td}><StatusBadge status={b.status} /></td>
                     <td class={`${td} text-right font-semibold sticky right-0 bg-white/95 backdrop-blur-xs shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.05)] print:static print:shadow-none`}>{formatKes(b.outstanding)}</td>
                   </tr>
                 ))}
