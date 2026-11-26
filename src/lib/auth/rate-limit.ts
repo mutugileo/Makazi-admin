@@ -1,13 +1,15 @@
 // In-memory throttles, per server instance. Enough to slow guessing and
 // runaway clicks; Supabase Auth rate-limits sign-ins on its side as well.
 
-const MAX_KEYS = 10_000;
+// A few MB at most. Filling it with active locks takes 500k+ failed sign-ins
+// inside one 15-minute window, far beyond what Vercel and Supabase Auth allow.
+const MAX_KEYS = 100_000;
 
 /**
- * Keeps the map under MAX_KEYS without ever dropping an active lock: expired
- * keys go first, then the keys with the fewest failures (so partial counts
- * survive longer than one-off junk). Returns false when the map is still full
- * of active locks; callers then fail closed rather than forget a lock.
+ * Keeps the map under MAX_KEYS: expired keys go first, then the keys with the
+ * fewest failures that aren't an active lock (partial counts outlive one-off
+ * junk), and only as a last resort the oldest active locks. Sign-ins are never
+ * refused globally: losing a few locks is better than locking everyone out.
  */
 function prune(map: Map<string, number[]>, windowMs: number, isLocked: (key: string, count: number) => boolean = () => false): boolean {
   if (map.size <= MAX_KEYS) return true;
@@ -24,7 +26,12 @@ function prune(map: Map<string, number[]>, windowMs: number, isLocked: (key: str
     if (map.size <= target) break;
     map.delete(key);
   }
-  return map.size <= MAX_KEYS;
+  // Last resort: the oldest locks (Map keeps insertion order).
+  for (const key of map.keys()) {
+    if (map.size <= target) break;
+    map.delete(key);
+  }
+  return true;
 }
 
 function recentIn(map: Map<string, number[]>, key: string, windowMs: number): number[] {
@@ -48,10 +55,6 @@ const MAX_FAILURES_PER_IP = 20;
 const MAX_FAILURES_PER_EMAIL = 50;
 
 const failures = new Map<string, number[]>();
-// Set when the failure map is full of active locks: every sign-in is refused
-// until enough of them expire. Reaching it takes tens of thousands of failed
-// sign-ins inside one window.
-let saturated = false;
 
 const isLockKey = (key: string, count: number) =>
   count >= (key.startsWith('pair:') ? MAX_FAILURES_PER_EMAIL_IP : key.startsWith('ip:') ? MAX_FAILURES_PER_IP : MAX_FAILURES_PER_EMAIL);
@@ -67,10 +70,6 @@ function lockFor(key: string, max: number): number {
 }
 
 export function isLockedOut(email: string, ip: string): { locked: boolean; retryInMinutes: number } {
-  if (saturated) {
-    saturated = !prune(failures, WINDOW_MS, isLockKey);
-    if (saturated) return { locked: true, retryInMinutes: Math.ceil(WINDOW_MS / 60000) };
-  }
   const retryMs = Math.max(
     lockFor(pairKey(email, ip), MAX_FAILURES_PER_EMAIL_IP),
     lockFor(ipKey(ip), MAX_FAILURES_PER_IP),
@@ -87,7 +86,7 @@ export function recordFailure(email: string, ip: string) {
     list.push(now);
     failures.set(key, list);
   }
-  saturated = !prune(failures, WINDOW_MS, isLockKey);
+  prune(failures, WINDOW_MS, isLockKey);
 }
 
 /** A good sign-in clears the email's counts; the IP's count stays. */
