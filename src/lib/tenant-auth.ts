@@ -7,6 +7,7 @@
 // since users can edit their own metadata.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { UserFacingError } from './errors';
 
 export interface KenyanPhone {
   /** 254712345678 */
@@ -78,6 +79,27 @@ export async function tenantAuthUserIds(supabase: SupabaseClient): Promise<Map<s
 }
 
 /**
+ * One phone has one Makazi login across every landlord. Resetting it from a
+ * company that doesn't hold it would hand that company the other landlord's
+ * tenant account, so the login must be linked to a tenant of this company
+ * (or, when it has no tenant row yet, have been created for this company).
+ */
+async function assertLoginBelongsToCompany(supabase: SupabaseClient, userId: string, companyId: string) {
+  const { data: rows, error } = await supabase.from('tenants').select('company_id').eq('auth_user_id', userId);
+  if (error) throw error;
+  if (rows && rows.length > 0) {
+    if (rows.some((r) => r.company_id === companyId)) return;
+    throw new UserFacingError('This phone number already has a Makazi login with another landlord. Ask the tenant to use a different number.');
+  }
+  const { data: found, error: userErr } = await supabase.auth.admin.getUserById(userId);
+  if (userErr) throw userErr;
+  const owner = found?.user?.user_metadata?.company_id;
+  if (owner && owner !== companyId) {
+    throw new UserFacingError('This phone number already has a Makazi login with another landlord. Ask the tenant to use a different number.');
+  }
+}
+
+/**
  * Creates the tenant's login, or resets it, with a 4-digit PIN.
  * Returns the auth user id.
  */
@@ -111,6 +133,7 @@ export async function issueOneTimePassword(
   const supabasePassword = pinToSupabasePassword(opts.password);
 
   if (userId) {
+    await assertLoginBelongsToCompany(supabase, userId, opts.companyId);
     const { error } = await supabase.auth.admin.updateUserById(userId, {
       password: supabasePassword,
       user_metadata: metadata,

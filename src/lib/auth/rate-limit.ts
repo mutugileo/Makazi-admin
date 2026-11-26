@@ -3,17 +3,20 @@
 
 const MAX_KEYS = 10_000;
 
-/** Drops expired keys; if still over the cap, drops the oldest ones. */
-function prune(map: Map<string, number[]>, windowMs: number) {
+/**
+ * Drops expired keys; if still over the cap, drops the oldest keys that are
+ * below `keepAtOrAbove` entries, so an active lockout is never the one evicted.
+ */
+function prune(map: Map<string, number[]>, windowMs: number, keepAtOrAbove = Infinity) {
   if (map.size <= MAX_KEYS) return;
   const now = Date.now();
   for (const [key, list] of map) {
     if (list.length === 0 || now - list[list.length - 1] >= windowMs) map.delete(key);
   }
   // Map iterates in insertion order, so the first keys are the oldest.
-  for (const key of map.keys()) {
+  for (const [key, list] of map) {
     if (map.size <= MAX_KEYS) break;
-    map.delete(key);
+    if (list.length < keepAtOrAbove) map.delete(key);
   }
 }
 
@@ -26,16 +29,21 @@ function recentIn(map: Map<string, number[]>, key: string, windowMs: number): nu
 }
 
 // ---- Sign-in lockout -------------------------------------------------------
-// 5 failed sign-ins for one email (from any IP) or 20 from one IP (any email)
-// within 15 minutes lock that email or IP out for the rest of the window.
+// Within 15 minutes: 5 failures for one email from one IP lock that pair;
+// 20 from one IP (any email) lock the IP; 50 for one email across all IPs lock
+// the email. Locking an email on a handful of failures from anywhere would let
+// anyone lock a real admin out; the high email-wide cap only stops spread-out
+// guessing (admin passwords are 12+ characters).
 
 const WINDOW_MS = 15 * 60 * 1000;
-const MAX_FAILURES_PER_EMAIL = 5;
+const MAX_FAILURES_PER_EMAIL_IP = 5;
 const MAX_FAILURES_PER_IP = 20;
+const MAX_FAILURES_PER_EMAIL = 50;
 
 const failures = new Map<string, number[]>();
 
 const emailKey = (email: string) => `email:${email.trim().toLowerCase()}`;
+const pairKey = (email: string, ip: string) => `pair:${email.trim().toLowerCase()}|${ip}`;
 const ipKey = (ip: string) => `ip:${ip}`;
 
 function lockFor(key: string, max: number): number {
@@ -45,24 +53,29 @@ function lockFor(key: string, max: number): number {
 }
 
 export function isLockedOut(email: string, ip: string): { locked: boolean; retryInMinutes: number } {
-  const retryMs = Math.max(lockFor(emailKey(email), MAX_FAILURES_PER_EMAIL), lockFor(ipKey(ip), MAX_FAILURES_PER_IP));
+  const retryMs = Math.max(
+    lockFor(pairKey(email, ip), MAX_FAILURES_PER_EMAIL_IP),
+    lockFor(ipKey(ip), MAX_FAILURES_PER_IP),
+    lockFor(emailKey(email), MAX_FAILURES_PER_EMAIL),
+  );
   if (retryMs <= 0) return { locked: false, retryInMinutes: 0 };
   return { locked: true, retryInMinutes: Math.max(1, Math.ceil(retryMs / 60000)) };
 }
 
 export function recordFailure(email: string, ip: string) {
   const now = Date.now();
-  for (const key of [emailKey(email), ipKey(ip)]) {
+  for (const key of [pairKey(email, ip), emailKey(email), ipKey(ip)]) {
     const list = recentIn(failures, key, WINDOW_MS);
     list.push(now);
     failures.set(key, list);
   }
-  prune(failures, WINDOW_MS);
+  prune(failures, WINDOW_MS, MAX_FAILURES_PER_EMAIL_IP);
 }
 
-/** A good sign-in clears the email's count; the IP's count stays. */
-export function clearFailures(email: string) {
+/** A good sign-in clears the email's counts; the IP's count stays. */
+export function clearFailures(email: string, ip?: string) {
   failures.delete(emailKey(email));
+  if (ip) failures.delete(pairKey(email, ip));
 }
 
 // ---- Per-user action limit -------------------------------------------------

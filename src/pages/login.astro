@@ -79,7 +79,7 @@ if (Astro.request.method === 'POST') {
     }
 
     if (authenticatedUser) {
-      clearFailures(email);
+      clearFailures(email, ip);
       // Production is always served over HTTPS (behind Vercel's proxy the
       // request URL may still read http:), so the cookie is always Secure there.
       createSession(Astro.cookies, authenticatedUser, import.meta.env.PROD || Astro.url.protocol === 'https:');

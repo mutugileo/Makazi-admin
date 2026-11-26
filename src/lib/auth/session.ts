@@ -132,7 +132,10 @@ export function safeNext(next: string | null): string {
     const base = 'http://x';
     const url = new URL(next, base);
     if (url.origin !== base) return '/';
-    return `${url.pathname}${url.search}${url.hash}`;
+    const out = `${url.pathname}${url.search}${url.hash}`;
+    // Normalising can turn odd input into a protocol-relative path: re-check.
+    if (!out.startsWith('/') || out.startsWith('//') || out.includes('\\')) return '/';
+    return out;
   } catch {
     return '/';
   }
