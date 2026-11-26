@@ -4,10 +4,11 @@
 const MAX_KEYS = 10_000;
 
 /**
- * Drops expired keys; if still over the cap, drops the oldest keys that are
- * below `keepAtOrAbove` entries, so an active lockout is never the one evicted.
+ * Keeps the map under MAX_KEYS: drops expired keys, then the oldest keys that
+ * aren't an active lock (`isLocked`), then, as a hard bound, the oldest keys
+ * regardless, so a flood of distinct keys can never grow memory without limit.
  */
-function prune(map: Map<string, number[]>, windowMs: number, keepAtOrAbove = Infinity) {
+function prune(map: Map<string, number[]>, windowMs: number, isLocked: (key: string, count: number) => boolean = () => false) {
   if (map.size <= MAX_KEYS) return;
   const now = Date.now();
   for (const [key, list] of map) {
@@ -16,7 +17,11 @@ function prune(map: Map<string, number[]>, windowMs: number, keepAtOrAbove = Inf
   // Map iterates in insertion order, so the first keys are the oldest.
   for (const [key, list] of map) {
     if (map.size <= MAX_KEYS) break;
-    if (list.length < keepAtOrAbove) map.delete(key);
+    if (!isLocked(key, list.length)) map.delete(key);
+  }
+  for (const key of map.keys()) {
+    if (map.size <= MAX_KEYS) break;
+    map.delete(key);
   }
 }
 
@@ -69,7 +74,9 @@ export function recordFailure(email: string, ip: string) {
     list.push(now);
     failures.set(key, list);
   }
-  prune(failures, WINDOW_MS, MAX_FAILURES_PER_EMAIL_IP);
+  prune(failures, WINDOW_MS, (key, count) =>
+    count >= (key.startsWith('pair:') ? MAX_FAILURES_PER_EMAIL_IP : key.startsWith('ip:') ? MAX_FAILURES_PER_IP : MAX_FAILURES_PER_EMAIL),
+  );
 }
 
 /** A good sign-in clears the email's counts; the IP's count stays. */

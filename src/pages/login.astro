@@ -29,8 +29,11 @@ if (Astro.request.method === 'POST') {
     let authenticatedUser: { email: string; name: string; companyId: string; role: StaffRole; staffId?: string } | null = null;
 
     // 1. Supabase Auth check: the signed-in user must exist and have a staff row.
+    // Tenant app logins (phone@tenant.makazi.app, 4-digit PIN) are never checked
+    // here: answering them would let this page be used to guess tenant PINs.
     const supabase = makeSupabaseClient();
-    if (supabase) {
+    const isTenantLogin = email.endsWith('@tenant.makazi.app');
+    if (supabase && !isTenantLogin) {
       try {
         const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
           email,
@@ -53,9 +56,9 @@ if (Astro.request.method === 'POST') {
             };
           } else if (staffRow) {
             error = 'Caretaker accounts cannot sign in to the admin portal.';
-          } else {
-            error = 'This account does not have staff permissions.';
           }
+          // No staff row: answer exactly like a wrong password (below), so a
+          // correct password for a non-staff login is never confirmed.
         }
       } catch (err) {
         console.error('Supabase auth check failed:', err);
@@ -86,8 +89,9 @@ if (Astro.request.method === 'POST') {
       return Astro.redirect(next, 303);
     }
 
-    // A caretaker or non-staff account keeps its own message: the password
-    // was right, so it is not counted as a guess.
+    // A caretaker keeps its own message (a real staff member, right password).
+    // Everything else, including a correct password with no staff row, reads
+    // and counts as a wrong guess.
     if (!error) {
       recordFailure(email, ip);
       error = 'Email or password is incorrect.';

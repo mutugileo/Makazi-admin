@@ -24,3 +24,9 @@ test('spread-out guessing on one email is stopped at 50', () => {
   for (let i = 0; i < 50; i++) recordFailure('target@a.test', `10.1.${Math.floor(i / 4)}.${i % 4}`);
   assert.equal(isLockedOut('target@a.test', '10.9.9.9').locked, true);
 });
+
+test('a flood of distinct keys never grows the map past its cap', () => {
+  // 25k distinct IPs: the limiter must stay bounded and still answer.
+  for (let i = 0; i < 25_000; i++) recordFailure(`flood${i}@a.test`, `172.16.${i >> 8}.${i & 255}`);
+  assert.equal(typeof isLockedOut('flood1@a.test', '172.16.0.1').locked, 'boolean');
+});
