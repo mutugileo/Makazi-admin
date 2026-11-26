@@ -25,8 +25,13 @@ test('spread-out guessing on one email is stopped at 50', () => {
   assert.equal(isLockedOut('target@a.test', '10.9.9.9').locked, true);
 });
 
-test('a flood of distinct keys never grows the map past its cap', () => {
-  // 25k distinct IPs: the limiter must stay bounded and still answer.
+test('a flood of distinct keys never evicts an existing lock', () => {
+  for (let i = 0; i < 5; i++) recordFailure('victim-target@a.test', '10.2.0.1');
+  assert.equal(isLockedOut('victim-target@a.test', '10.2.0.1').locked, true);
+  // 25k one-off failures from distinct IPs and emails (75k keys) push the map
+  // far over its cap; the lock above must survive the clean-up.
   for (let i = 0; i < 25_000; i++) recordFailure(`flood${i}@a.test`, `172.16.${i >> 8}.${i & 255}`);
-  assert.equal(typeof isLockedOut('flood1@a.test', '172.16.0.1').locked, 'boolean');
+  assert.equal(isLockedOut('victim-target@a.test', '10.2.0.1').locked, true);
+  // One-off junk keys were evicted, so an unrelated user is not locked out.
+  assert.equal(isLockedOut('innocent@a.test', '10.3.0.1').locked, false);
 });

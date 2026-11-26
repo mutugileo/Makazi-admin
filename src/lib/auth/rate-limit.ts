@@ -4,25 +4,27 @@
 const MAX_KEYS = 10_000;
 
 /**
- * Keeps the map under MAX_KEYS: drops expired keys, then the oldest keys that
- * aren't an active lock (`isLocked`), then, as a hard bound, the oldest keys
- * regardless, so a flood of distinct keys can never grow memory without limit.
+ * Keeps the map under MAX_KEYS without ever dropping an active lock: expired
+ * keys go first, then the keys with the fewest failures (so partial counts
+ * survive longer than one-off junk). Returns false when the map is still full
+ * of active locks; callers then fail closed rather than forget a lock.
  */
-function prune(map: Map<string, number[]>, windowMs: number, isLocked: (key: string, count: number) => boolean = () => false) {
-  if (map.size <= MAX_KEYS) return;
+function prune(map: Map<string, number[]>, windowMs: number, isLocked: (key: string, count: number) => boolean = () => false): boolean {
+  if (map.size <= MAX_KEYS) return true;
   const now = Date.now();
   for (const [key, list] of map) {
     if (list.length === 0 || now - list[list.length - 1] >= windowMs) map.delete(key);
   }
-  // Map iterates in insertion order, so the first keys are the oldest.
-  for (const [key, list] of map) {
-    if (map.size <= MAX_KEYS) break;
-    if (!isLocked(key, list.length)) map.delete(key);
-  }
-  for (const key of map.keys()) {
-    if (map.size <= MAX_KEYS) break;
+  if (map.size <= MAX_KEYS) return true;
+  // Trim to 90% of the cap so the sort runs once per ~1,000 new keys, not on
+  // every failure while the map sits at the cap.
+  const target = Math.floor(MAX_KEYS * 0.9);
+  const evictable = [...map].filter(([key, list]) => !isLocked(key, list.length)).sort((a, b) => a[1].length - b[1].length);
+  for (const [key] of evictable) {
+    if (map.size <= target) break;
     map.delete(key);
   }
+  return map.size <= MAX_KEYS;
 }
 
 function recentIn(map: Map<string, number[]>, key: string, windowMs: number): number[] {
@@ -46,6 +48,13 @@ const MAX_FAILURES_PER_IP = 20;
 const MAX_FAILURES_PER_EMAIL = 50;
 
 const failures = new Map<string, number[]>();
+// Set when the failure map is full of active locks: every sign-in is refused
+// until enough of them expire. Reaching it takes tens of thousands of failed
+// sign-ins inside one window.
+let saturated = false;
+
+const isLockKey = (key: string, count: number) =>
+  count >= (key.startsWith('pair:') ? MAX_FAILURES_PER_EMAIL_IP : key.startsWith('ip:') ? MAX_FAILURES_PER_IP : MAX_FAILURES_PER_EMAIL);
 
 const emailKey = (email: string) => `email:${email.trim().toLowerCase()}`;
 const pairKey = (email: string, ip: string) => `pair:${email.trim().toLowerCase()}|${ip}`;
@@ -58,6 +67,10 @@ function lockFor(key: string, max: number): number {
 }
 
 export function isLockedOut(email: string, ip: string): { locked: boolean; retryInMinutes: number } {
+  if (saturated) {
+    saturated = !prune(failures, WINDOW_MS, isLockKey);
+    if (saturated) return { locked: true, retryInMinutes: Math.ceil(WINDOW_MS / 60000) };
+  }
   const retryMs = Math.max(
     lockFor(pairKey(email, ip), MAX_FAILURES_PER_EMAIL_IP),
     lockFor(ipKey(ip), MAX_FAILURES_PER_IP),
@@ -74,9 +87,7 @@ export function recordFailure(email: string, ip: string) {
     list.push(now);
     failures.set(key, list);
   }
-  prune(failures, WINDOW_MS, (key, count) =>
-    count >= (key.startsWith('pair:') ? MAX_FAILURES_PER_EMAIL_IP : key.startsWith('ip:') ? MAX_FAILURES_PER_IP : MAX_FAILURES_PER_EMAIL),
-  );
+  saturated = !prune(failures, WINDOW_MS, isLockKey);
 }
 
 /** A good sign-in clears the email's counts; the IP's count stays. */
