@@ -197,6 +197,27 @@ const mapMessage = (r: MessageRow): Message => ({
   sentAt: nairobiIso(r.sent_at), readByStaffAt: r.read_by_staff_at,
 });
 
+/**
+ * Swaps each ticket's private storage path for a one-hour signed link. If
+ * signing fails the paths stay as they are, as before.
+ */
+async function signRepairPhotos(supabase: SupabaseClient, repairTickets: RepairTicket[]): Promise<void> {
+  const pathsToSign = repairTickets
+    .map((t) => t.photoUrl)
+    .filter((p): p is string => Boolean(p && !p.startsWith('http')));
+  if (pathsToSign.length === 0) return;
+  const { data: signed } = await supabase.storage
+    .from('repair-photos')
+    .createSignedUrls(pathsToSign, 3600);
+  if (!signed) return;
+  const byPath = new Map(signed.map((s) => [s.path, s.signedUrl]));
+  for (const t of repairTickets) {
+    if (t.photoUrl && !t.photoUrl.startsWith('http')) {
+      t.photoUrl = byPath.get(t.photoUrl) ?? null;
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Main fetcher — runs all queries concurrently for speed.
 
@@ -222,6 +243,7 @@ const PAGE_SIZE = 1000;
 async function allRows(
   supabase: SupabaseClient,
   table: string,
+  columns: string,
   companyColumn: string,
   companyId: string,
   orderBy: string[],
@@ -232,7 +254,7 @@ async function allRows(
   for (let from = 0; ; from = rows.length) {
     let query = supabase
       .from(table)
-      .select('*')
+      .select(columns)
       .eq(companyColumn, companyId);
     for (const column of orderBy) query = query.order(column, { ascending: true });
     const { data, error } = await query.range(from, from + PAGE_SIZE - 1);
@@ -243,6 +265,25 @@ async function allRows(
   }
   return { data: rows, error: null };
 }
+
+// Only the columns the mappers above read (audit columns, auth links and
+// image_url stay in the database). Every one of them is in an applied
+// migration; keep these lists in step with the Row interfaces.
+const COLUMNS = {
+  companies: 'id, slug, name, kra_pin, mpesa_paybill, bank_name, bank_account, settings, sequences, subscription',
+  properties:
+    'id, company_id, manager_id, name, type, address, account_prefix, water_rate, garbage_fee, rate_history, mpesa_paybill, bank_name, bank_account',
+  units: 'id, property_id, label, bedrooms, is_listed, listed_rent, listing_notes',
+  tenants: 'id, company_id, name, phone, email',
+  tenancies:
+    'id, tenant_id, unit_id, rent, deposit, move_in, move_in_rent, move_out, lease_start, lease_end, opening_balance, opening_balance_month, opening_reading, move_in_garbage, renewal, move_out_note, deposit_refund',
+  payments: 'receipt_number, tenancy_id, amount, date, time, method, reference, simulated',
+  staff: 'id, company_id, name, role, phone, property_ids',
+  meter_readings: 'unit_id, month, value',
+  repair_tickets:
+    'id, company_id, tenancy_id, unit_id, category, priority, status, title, description, has_photo, photo_url, created_at, resolved_at, assigned_to, resolution_note, assigned_phone, visit_at',
+  messages: 'id, company_id, tenancy_id, sender, staff_id, body, sent_at, read_by_staff_at',
+} as const;
 
 export async function fetchSeedFromSupabase(
   supabase: SupabaseClient,
@@ -257,19 +298,25 @@ export async function fetchSeedFromSupabase(
     paymentsRes,
     staffRes,
     meterReadingsRes,
-    ticketsRes,
+    ticketsTask,
     messagesRes,
   ] = await Promise.all([
-    allRows(supabase, 'companies', 'id', companyId, ['id']),
-    allRows(supabase, 'properties', 'company_id', companyId, ['id']),
-    allRows(supabase, 'units', 'company_id', companyId, ['id']),
-    allRows(supabase, 'tenants', 'company_id', companyId, ['id']),
-    allRows(supabase, 'tenancies', 'company_id', companyId, ['id']),
-    allRows(supabase, 'payments', 'company_id', companyId, ['receipt_number']),
-    allRows(supabase, 'staff', 'company_id', companyId, ['id']),
-    allRows(supabase, 'meter_readings', 'company_id', companyId, ['unit_id', 'month']),
-    allRows(supabase, 'repair_tickets', 'company_id', companyId, ['id']),
-    allRows(supabase, 'messages', 'company_id', companyId, ['id']),
+    allRows(supabase, 'companies', COLUMNS.companies, 'id', companyId, ['id']),
+    allRows(supabase, 'properties', COLUMNS.properties, 'company_id', companyId, ['id']),
+    allRows(supabase, 'units', COLUMNS.units, 'company_id', companyId, ['id']),
+    allRows(supabase, 'tenants', COLUMNS.tenants, 'company_id', companyId, ['id']),
+    allRows(supabase, 'tenancies', COLUMNS.tenancies, 'company_id', companyId, ['id']),
+    allRows(supabase, 'payments', COLUMNS.payments, 'company_id', companyId, ['receipt_number']),
+    allRows(supabase, 'staff', COLUMNS.staff, 'company_id', companyId, ['id']),
+    allRows(supabase, 'meter_readings', COLUMNS.meter_readings, 'company_id', companyId, ['unit_id', 'month']),
+    // Photo links are signed as soon as the tickets arrive, not after the slowest table.
+    allRows(supabase, 'repair_tickets', COLUMNS.repair_tickets, 'company_id', companyId, ['id']).then(async (res) => {
+      if (res.error || res.data === null) return { res, tickets: null };
+      const tickets = res.data.map(mapTicket);
+      await signRepairPhotos(supabase, tickets);
+      return { res, tickets };
+    }),
+    allRows(supabase, 'messages', COLUMNS.messages, 'company_id', companyId, ['id']),
   ]);
 
   const companies = assertOk(companiesRes.data, companiesRes.error, 'companies').map(mapCompany);
@@ -281,23 +328,8 @@ export async function fetchSeedFromSupabase(
   const tenancies = assertOk(tenanciesRes.data, tenanciesRes.error, 'tenancies').map(mapTenancy);
   const payments = assertOk(paymentsRes.data, paymentsRes.error, 'payments').map(mapPayment);
   const staff = assertOk(staffRes.data, staffRes.error, 'staff').map(mapStaff);
-  const repairTickets = assertOk(ticketsRes.data, ticketsRes.error, 'repair_tickets').map(mapTicket);
-  const pathsToSign = repairTickets
-    .map((t) => t.photoUrl)
-    .filter((p): p is string => Boolean(p && !p.startsWith('http')));
-  if (pathsToSign.length > 0) {
-    const { data: signed } = await supabase.storage
-      .from('repair-photos')
-      .createSignedUrls(pathsToSign, 3600);
-    if (signed) {
-      const byPath = new Map(signed.map((s) => [s.path, s.signedUrl]));
-      for (const t of repairTickets) {
-        if (t.photoUrl && !t.photoUrl.startsWith('http')) {
-          t.photoUrl = byPath.get(t.photoUrl) ?? null;
-        }
-      }
-    }
-  }
+  assertOk(ticketsTask.res.data, ticketsTask.res.error, 'repair_tickets');
+  const repairTickets = ticketsTask.tickets ?? [];
   const messages = assertOk(messagesRes.data, messagesRes.error, 'messages').map(mapMessage);
 
   // meter_readings: flatten rows → nested Record<unitId, Record<month, value>>

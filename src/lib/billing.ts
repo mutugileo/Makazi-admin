@@ -424,15 +424,57 @@ export function statusFor(amountPaid: number, outstanding: number): BillStatus {
   return amountPaid > 0 ? 'Partial' : 'Unpaid';
 }
 
+// Lookup indexes over a seed's arrays, built once per array and reused by
+// every tenancy's ledger (a linear find per tenancy made a portfolio O(n²)).
+// Keyed on the array itself, so a derived seed with a new array (seedAsAt,
+// scopeSeed) gets its own index; the length check rebuilds after a push.
+// Each map keeps the first record per id, the same one `find` returned.
+interface ArrayIndex<V> {
+  length: number;
+  map: Map<string, V>;
+}
+
+const byIdIndexes = new WeakMap<readonly { id: string }[], ArrayIndex<unknown>>();
+const paymentIndexes = new WeakMap<readonly Payment[], ArrayIndex<readonly Payment[]>>();
+
+function byId<T extends { id: string }>(records: readonly T[], id: string): T | undefined {
+  let index = byIdIndexes.get(records) as ArrayIndex<T> | undefined;
+  if (!index || index.length !== records.length) {
+    const map = new Map<string, T>();
+    for (const r of records) if (!map.has(r.id)) map.set(r.id, r);
+    index = { length: records.length, map };
+    byIdIndexes.set(records, index as ArrayIndex<unknown>);
+  }
+  return index.map.get(id);
+}
+
+const NO_PAYMENTS: readonly Payment[] = Object.freeze([]);
+
+/** A tenancy's payments in seed order (the same list as filtering seed.payments). Read-only: copy before sorting. */
+function paymentsOf(seed: Seed, tenancyId: string): readonly Payment[] {
+  let index = paymentIndexes.get(seed.payments);
+  if (!index || index.length !== seed.payments.length) {
+    const map = new Map<string, Payment[]>();
+    for (const p of seed.payments) {
+      const list = map.get(p.tenancyId);
+      if (list) list.push(p);
+      else map.set(p.tenancyId, [p]);
+    }
+    index = { length: seed.payments.length, map };
+    paymentIndexes.set(seed.payments, index);
+  }
+  return index.map.get(tenancyId) ?? NO_PAYMENTS;
+}
+
 export function companyOfProperty(seed: Seed, propertyId: string): Company {
-  const property = seed.properties.find((p) => p.id === propertyId);
-  const company = property && seed.companies.find((c) => c.id === property.companyId);
+  const property = byId(seed.properties, propertyId);
+  const company = property && byId(seed.companies, property.companyId);
   if (!company) throw new Error(`No company for property ${propertyId}`);
   return company;
 }
 
 export function companyOfTenancy(seed: Seed, tenancy: Tenancy): Company {
-  const unit = seed.units.find((u) => u.id === tenancy.unitId);
+  const unit = byId(seed.units, tenancy.unitId);
   if (!unit) throw new Error(`Unknown unit for ${tenancy.id}`);
   return companyOfProperty(seed, unit.propertyId);
 }
@@ -471,14 +513,17 @@ export function ledgerStartFor(seed: Seed, tenancy: Tenancy): Month {
 
 /** First and last month a tenancy is billed for within the seed window. */
 export function billingWindow(seed: Seed, tenancy: Tenancy): [Month, Month] | null {
+  return windowFrom(seed, tenancy, ledgerStartFor(seed, tenancy));
+}
+
+function windowFrom(seed: Seed, tenancy: Tenancy, start: Month): [Month, Month] | null {
   const asOfMonth = cycleOf(seed.asOf);
-  const start = ledgerStartFor(seed, tenancy);
   const moveInMonth = cycleOf(tenancy.moveIn);
   const first = moveInMonth > start ? moveInMonth : start;
 
   // Billing never runs ahead of today's cycle: a reading or payment dated in a
   // future month must not charge rent for months that haven't started.
-  const tenancyPayments = seed.payments.filter((p) => p.tenancyId === tenancy.id).map((p) => cycleOf(p.date));
+  const tenancyPayments = paymentsOf(seed, tenancy.id).map((p) => cycleOf(p.date));
   const maxActive = asOfMonth;
 
   const finalMonth = tenancy.moveOut ? addMonths(cycleOf(tenancy.moveOut), 1) : maxActive;
@@ -490,19 +535,19 @@ export function billingWindow(seed: Seed, tenancy: Tenancy): [Month, Month] | nu
 }
 
 export function buildLedger(seed: Seed, tenancy: Tenancy): MonthlyBill[] {
-  const window = billingWindow(seed, tenancy);
+  const ledgerStart = ledgerStartFor(seed, tenancy);
+  const window = windowFrom(seed, tenancy, ledgerStart);
   if (!window) return [];
 
-  const unit = seed.units.find((u) => u.id === tenancy.unitId);
-  const property = unit && seed.properties.find((p) => p.id === unit.propertyId);
+  const unit = byId(seed.units, tenancy.unitId);
+  const property = unit && byId(seed.properties, unit.propertyId);
   if (!unit || !property) throw new Error(`Unknown unit for ${tenancy.id}`);
   const { settings } = companyOfTenancy(seed, tenancy);
 
   const moveInMonth = cycleOf(tenancy.moveIn);
-  const ledgerStart = ledgerStartFor(seed, tenancy);
   const finalMonth = tenancy.moveOut ? addMonths(cycleOf(tenancy.moveOut), 1) : null;
-  const payments = seed.payments
-    .filter((p) => p.tenancyId === tenancy.id)
+  // A copy: the index's list is shared and must keep seed order.
+  const payments = [...paymentsOf(seed, tenancy.id)]
     .sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));
 
   const bills: MonthlyBill[] = [];

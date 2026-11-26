@@ -1,20 +1,12 @@
-// Admin view models — Phase 1: derived from shared/billing-seed.json.
-// Phase 2: fetched from Supabase when SUPABASE_URL + SUPABASE_ANON_KEY are
-// set in .env.  Every money figure on every admin page comes through here so
+// Admin view models, built from the company's live Supabase data (see
+// src/lib/supabase-data.ts) by the billing engine.  Every money figure on every admin page comes through here so
 // the admin and the tenant app always agree.
 
 import { supabaseConfigured, makeSupabaseClient } from '../lib/supabase';
 import { fetchSeedFromSupabase } from '../lib/supabase-data';
-import {
-  isDistributedCacheEnabled,
-  getFromDistributedCache,
-  setInDistributedCache,
-  invalidateDistributedKey,
-} from '../lib/cache';
 import type { AstroCookies } from 'astro';
 import {
   addMonths,
-  type Company,
   addMonthsToDate,
   arrearsSlices,
   buildLedger,
@@ -48,41 +40,6 @@ import {
   REPAIR_PRIORITY_LABELS,
   REPAIR_STATUS_LABELS,
 } from '../lib/billing';
-
-function createEmptySeed(companyId: string): Seed {
-  return {
-    asOf: new Date().toISOString().slice(0, 10),
-    companies: [{
-      id: companyId,
-      slug: companyId,
-      name: companyId,
-      kraPin: '',
-      mpesaPaybill: '',
-      bankName: '',
-      bankAccount: '',
-      settings: {
-        ledgerStartMonth: '2026-10',
-        dueDay: 4,
-        graceDay: 20,
-        depositSchedule: {},
-        recordRetentionMonths: 6,
-      },
-      sequences: { receipt: 0, repairTicket: 0 },
-      subscription: { plan: 'growth', status: 'active', unitLimit: 100, staffLimit: 10, trialEndsAt: null },
-    }],
-    properties: [],
-    units: [],
-    tenants: [],
-    tenancies: [],
-    meterReadings: {},
-    payments: [],
-    staff: [],
-    repairTickets: [],
-    messages: [],
-  };
-}
-
-export const companies: Company[] = [];
 
 export { formatDate, formatKes, monthLabel } from '../lib/billing';
 
@@ -224,8 +181,7 @@ export function scopeSeed(all: Seed, companyId: string): Seed {
   };
 }
 
-function buildPortfolio(companyId: string, seedOverride?: Seed) {
-  const baseSeed = seedOverride ?? createEmptySeed(companyId);
+function buildPortfolio(companyId: string, baseSeed: Seed) {
   const seed = scopeSeed(baseSeed, companyId);
   const asOf = seed.asOf;
   const currentMonth: Month = cycleOf(asOf);
@@ -245,10 +201,10 @@ function buildPortfolio(companyId: string, seedOverride?: Seed) {
     const bills = buildLedger(seed, tenancy);
     const last = bills[bills.length - 1] ?? null;
     const isActive = tenancy.moveOut === null;
-    const ledgerStart = ledgerStartFor(seed, tenancy);
+    // Only needed when there are no bills yet.
     const balance = last
       ? last.outstanding
-      : cycleOf(seed.asOf) >= ledgerStart
+      : cycleOf(seed.asOf) >= ledgerStartFor(seed, tenancy)
         ? tenancy.openingBalance
         : 0;
     const arrears = arrearsSlices(seed, tenancy, bills);
@@ -296,11 +252,25 @@ function buildPortfolio(companyId: string, seedOverride?: Seed) {
   const billsIn = (views: TenancyView[], month: Month) =>
     views.flatMap((v) => v.bills.filter((b) => b.month === month));
 
+  // Grouped once, in seed order, so each property and unit reads its own list.
+  const groupBy = <T,>(items: readonly T[], key: (item: T) => string) => {
+    const groups = new Map<string, T[]>();
+    for (const item of items) {
+      const k = key(item);
+      const list = groups.get(k);
+      if (list) list.push(item);
+      else groups.set(k, [item]);
+    }
+    return groups;
+  };
+  const unitsByProperty = groupBy(seed.units, (u) => u.propertyId);
+  const tenanciesByUnit = groupBy(tenancies, (t) => t.unit.id);
+  const tenanciesByProperty = groupBy(tenancies, (t) => t.property.id);
+
   const propertyViews: PropertyView[] = seed.properties.map((property) => {
-    const units = seed.units
-      .filter((u) => u.propertyId === property.id)
+    const units = (unitsByProperty.get(property.id) ?? [])
       .map((unit) => {
-        const history = tenancies.filter((t) => t.unit.id === unit.id);
+        const history = tenanciesByUnit.get(unit.id) ?? [];
         return {
           unit,
           occupant: history.find((t) => t.isActive) ?? null,
@@ -321,7 +291,7 @@ function buildPortfolio(companyId: string, seedOverride?: Seed) {
       garbageFee: r.garbageFee,
     }));
 
-    const monthBills = billsIn(tenancies.filter((t) => t.property.id === property.id), currentMonth);
+    const monthBills = billsIn(tenanciesByProperty.get(property.id) ?? [], currentMonth);
     const expected = monthBills.reduce((acc, b) => acc + expectedFor(b), 0);
     const collected = monthBills.reduce((acc, b) => acc + collectedFor(b), 0);
 
@@ -346,12 +316,26 @@ function buildPortfolio(companyId: string, seedOverride?: Seed) {
   // Payments
 
 
+  // Tenancy ids are primary keys, so first and last match are the same record.
+  const tenancyById = new Map(tenancies.map((t) => [t.tenancy.id, t]));
+
+  // The bill the engine counted each payment against, first bill first (a
+  // payment made ahead of the first bill counts towards that bill, not its own
+  // month's). Keyed per tenancy, as the lookup only ever searched its own bills.
+  const billByReceipt = new Map<string, MonthlyBill>();
+  for (const view of tenancies) {
+    for (const bill of view.bills) {
+      for (const p of bill.payments) {
+        const key = `${view.tenancy.id}\u0000${p.receiptNumber}`;
+        if (!billByReceipt.has(key)) billByReceipt.set(key, bill);
+      }
+    }
+  }
+
   const payments: PaymentView[] = seed.payments
     .map((payment) => {
-      const view = tenancies.find((t) => t.tenancy.id === payment.tenancyId)!;
-      // The bill the engine counted it against (a payment made ahead of the
-      // first bill counts towards that bill, not its own month's).
-      const bill = view.bills.find((b) => b.payments.some((p) => p.receiptNumber === payment.receiptNumber));
+      const view = tenancyById.get(payment.tenancyId)!;
+      const bill = billByReceipt.get(`${view.tenancy.id}\u0000${payment.receiptNumber}`);
       return {
         payment,
         view,
@@ -541,13 +525,17 @@ function buildPortfolio(companyId: string, seedOverride?: Seed) {
         a.view.unit.label.localeCompare(b.view.unit.label, undefined, { numeric: true }),
     );
 
+  /** The first tenancy recorded per unit (what a find over seed.tenancies returned). */
+  const firstTenancyByUnit = new Map<string, Tenancy>();
+  for (const t of seed.tenancies) if (!firstTenancyByUnit.has(t.unitId)) firstTenancyByUnit.set(t.unitId, t);
+
   /** The latest meter reading per unit, for the readings form. */
   function lastReading(unitId: string): { month: Month; value: number } {
     const readings = seed.meterReadings[unitId] ?? {};
     const months = Object.keys(readings).sort();
     const month = months.pop();
     if (!month) {
-      const t = seed.tenancies.find((ten) => ten.unitId === unitId);
+      const t = firstTenancyByUnit.get(unitId);
       return { month: t ? cycleOf(t.moveIn) : currentMonth, value: t?.openingReading ?? 0 };
     }
     return { month, value: readings[month] };
@@ -560,9 +548,6 @@ function buildPortfolio(companyId: string, seedOverride?: Seed) {
 
   const staffById = new Map(seed.staff.map((s) => [s.id, s]));
 
-
-
-  const tenancyById = new Map(tenancies.map((t) => [t.tenancy.id, t]));
 
   const tickets: TicketView[] = seed.repairTickets
     .map((ticket) => {
@@ -595,12 +580,13 @@ function buildPortfolio(companyId: string, seedOverride?: Seed) {
   };
 
 
-  const threads: ThreadView[] = [...new Set(seed.messages.map((m) => m.tenancyId))]
+  // Map keys keep first-seen order, the same as the Set of tenancy ids did.
+  const messagesByTenancy = groupBy(seed.messages, (m) => m.tenancyId);
+  const threads: ThreadView[] = [...messagesByTenancy.keys()]
     .map((tenancyId) => {
       const view = tenancyById.get(tenancyId);
       if (!view) return null;
-      const messages = seed.messages
-        .filter((m) => m.tenancyId === tenancyId)
+      const messages = [...messagesByTenancy.get(tenancyId)!]
         .sort((a, b) => a.sentAt.localeCompare(b.sentAt));
       return {
         view,
@@ -671,14 +657,11 @@ function buildPortfolio(companyId: string, seedOverride?: Seed) {
 
 export type Portfolio = ReturnType<typeof buildPortfolio>;
 
-// Seed-mode cache (not used in Supabase mode — live data is always fresh).
-let demoWarned = false;
-const seedCache = new Map<string, Portfolio>();
-
 const LIVE_CACHE_TTL_MS = 30_000;
-const liveCache = new Map<string, { portfolio: Portfolio; expiresAt: number }>();
+// startedAt: when the fetch behind the entry began; the data is at least that fresh.
+const liveCache = new Map<string, { portfolio: Portfolio; expiresAt: number; startedAt: number }>();
 // Live Supabase inflight request deduplication for SSR components
-const liveInflight = new Map<string, Promise<Portfolio>>();
+const liveInflight = new Map<string, { promise: Promise<Portfolio>; startedAt: number }>();
 // Bumped on every write, so a fetch that started before the write can't put
 // its older result back into the cache.
 const liveGeneration = new Map<string, number>();
@@ -691,21 +674,52 @@ export function clearLiveCache(companyId?: string) {
     liveCache.delete(id);
     liveInflight.delete(id);
     liveGeneration.set(id, (liveGeneration.get(id) ?? 0) + 1);
-    if (isDistributedCacheEnabled()) {
-      void invalidateDistributedKey(`portfolio:${id}`);
-    }
   }
-  if (!companyId && isDistributedCacheEnabled()) {
-    void invalidateDistributedKey('portfolio:*');
-  }
+}
+
+// ---------------------------------------------------------------------------
+// Freshness across server instances
+//
+// clearLiveCache only empties this instance's cache. A write handled by one
+// Vercel instance leaves up to 30s of older data cached on the others, so the
+// writer's next page could show the record missing. markFresh(cookies) puts
+// the write time in a short-lived cookie; while it is set, any instance
+// skips a cached (or in-flight) portfolio fetched before that time.
+
+const FRESH_COOKIE = 'mk_fresh';
+// Longer than the cache TTL: after that every older entry has expired anyway.
+const FRESH_COOKIE_SECONDS = 60;
+// Allowance for clock differences between instances.
+const CLOCK_SKEW_MS = 1_000;
+
+/** Call after a successful write (alongside clearLiveCache) so the user's next pages skip older caches on every instance. */
+export function markFresh(cookies: AstroCookies): void {
+  cookies.set(FRESH_COOKIE, String(Date.now()), {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: import.meta.env.PROD,
+    path: '/',
+    maxAge: FRESH_COOKIE_SECONDS,
+  });
+}
+
+/** Cached data must have been fetched at or after this time, or 0 for no requirement. */
+function freshAfter(cookies: AstroCookies | undefined, now: number): number {
+  const raw = cookies?.get(FRESH_COOKIE)?.value;
+  if (!raw || !/^\d{1,16}$/.test(raw)) return 0;
+  const writtenAt = Number(raw);
+  // A future or stale stamp (a hand-edited cookie) asks for nothing, so it
+  // can't switch the cache off.
+  if (writtenAt > now + CLOCK_SKEW_MS || writtenAt < now - FRESH_COOKIE_SECONDS * 1000) return 0;
+  return writtenAt + CLOCK_SKEW_MS;
 }
 
 /**
  * Everything the admin shows for one company.
  *
- * Phase 1 (seed mode): called synchronously via the JSON seed.
- * Phase 2 (Supabase mode): fetches live data; pass `cookies` from Astro.cookies
- * so the RLS-scoped client is created for the current request.
+ * Fetches live data (cached 30s per instance); pass `cookies` from
+ * Astro.cookies so the RLS-scoped client is created for the current request
+ * and a recent write (markFresh) is honoured.
  *
  * All callers must `await` this function.
  */
@@ -784,46 +798,45 @@ async function getCurrentPortfolio(
 ): Promise<Portfolio> {
   // Phase 2: Supabase is configured → fetch live data.
   if (supabaseConfigured()) {
+    const now = Date.now();
+    const mustStartAfter = freshAfter(cookies, now);
+
     const cachedMem = liveCache.get(companyId);
-    if (cachedMem && cachedMem.expiresAt > Date.now()) {
+    if (cachedMem && cachedMem.expiresAt > now && cachedMem.startedAt >= mustStartAfter) {
       return cachedMem.portfolio;
     }
 
-    if (isDistributedCacheEnabled()) {
-      const cached = await getFromDistributedCache<Portfolio>(`portfolio:${companyId}`);
-      if (cached) {
-        liveCache.set(companyId, { portfolio: cached, expiresAt: Date.now() + LIVE_CACHE_TTL_MS });
-        return cached;
-      }
-    }
-
     const inflight = liveInflight.get(companyId);
-    if (inflight) {
-      return inflight;
+    if (inflight && inflight.startedAt >= mustStartAfter) {
+      return inflight.promise;
     }
 
     const supabase = makeSupabaseClient(cookies);
     if (supabase) {
       const generation = liveGeneration.get(companyId) ?? 0;
+      const startedAt = now;
       // Assigned below; the finally block only runs after the assignment.
-      let fetchPromise!: Promise<ReturnType<typeof buildPortfolio>>;
-      fetchPromise = (async () => {
+      let entry!: { promise: Promise<Portfolio>; startedAt: number };
+      const fetchPromise = (async () => {
         try {
           const liveSeed = await fetchSeedFromSupabase(supabase, companyId);
           const portfolio = buildPortfolio(companyId, liveSeed);
-          if ((liveGeneration.get(companyId) ?? 0) === generation) {
-            liveCache.set(companyId, { portfolio, expiresAt: Date.now() + LIVE_CACHE_TTL_MS });
-            if (isDistributedCacheEnabled()) {
-              void setInDistributedCache(`portfolio:${companyId}`, portfolio, 30);
-            }
+          const existing = liveCache.get(companyId);
+          // Never replace a newer entry with an older fetch that finished later.
+          if (
+            (liveGeneration.get(companyId) ?? 0) === generation &&
+            (!existing || existing.startedAt <= startedAt)
+          ) {
+            liveCache.set(companyId, { portfolio, expiresAt: Date.now() + LIVE_CACHE_TTL_MS, startedAt });
           }
           return portfolio;
         } finally {
-          if (liveInflight.get(companyId) === fetchPromise) liveInflight.delete(companyId);
+          if (liveInflight.get(companyId) === entry) liveInflight.delete(companyId);
         }
       })();
+      entry = { promise: fetchPromise, startedAt };
 
-      liveInflight.set(companyId, fetchPromise);
+      liveInflight.set(companyId, entry);
       return fetchPromise;
     }
 

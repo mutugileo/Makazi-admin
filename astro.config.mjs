@@ -1,5 +1,5 @@
 // @ts-check
-import { defineConfig, envField } from 'astro/config';
+import { defineConfig, envField, passthroughImageService } from 'astro/config';
 
 import tailwindcss from '@tailwindcss/vite';
 
@@ -18,6 +18,10 @@ export default defineConfig({
   },
 
   adapter: vercel(),
+
+  // No page uses astro:assets, so skip sharp: it would otherwise be traced
+  // into the server function (~19 MB) for nothing.
+  image: { service: passthroughImageService() },
 
   // Local admin account until Supabase Auth replaces it. Written to .env by
   // `npm run admin:create`; secrets never reach the browser.
