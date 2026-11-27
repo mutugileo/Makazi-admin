@@ -1,5 +1,7 @@
 import { defineMiddleware } from 'astro:middleware';
 import { readSession } from './lib/auth/session';
+import { makeSupabaseClient } from './lib/supabase';
+import { getEntitlements, READ_ONLY_MESSAGE } from './lib/entitlements';
 
 // Pages and probe endpoints anyone can open. Everything else needs a signed-in admin.
 const PUBLIC_PATHS = new Set(['/login', '/api/health']);
@@ -20,6 +22,14 @@ const CONTENT_SECURITY_POLICY = [
   "form-action 'self'",
   "object-src 'none'",
 ].join('; ');
+
+const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+// API routes that change nothing a suspension covers: the assistant only
+// reads, typing is a realtime ping, mark-read stamps messages as seen.
+const READ_ONLY_ALLOWED = new Set(['/api/assistant', '/api/typing', '/api/mark-read']);
+
+const jsonError = (error: string, status: number) =>
+  new Response(JSON.stringify({ error }), { status, headers: { 'Content-Type': 'application/json' } });
 
 function securityHeaders(response: Response) {
   response.headers.set('X-Content-Type-Options', 'nosniff');
@@ -46,6 +56,28 @@ export const onRequest = defineMiddleware(async (context, next) => {
   if (!user) {
     const target = encodeURIComponent(pathname + search);
     return context.redirect(`/login?next=${target}`, 303);
+  }
+
+  // Suspended or cancelled: refuse landlord writes with a clear message. The
+  // database refuses them too; this says why. Read fresh on every request.
+  const apiPath = pathname.replace(/\/+$/, '');
+  if (apiPath.startsWith('/api/') && WRITE_METHODS.has(context.request.method) && !READ_ONLY_ALLOWED.has(apiPath)) {
+    const supabase = makeSupabaseClient(context.cookies);
+    if (supabase) {
+      try {
+        const entitlements = await getEntitlements(supabase, user.companyId, context.locals);
+        if (entitlements.readOnly) {
+          const refused = jsonError(READ_ONLY_MESSAGE, 403);
+          securityHeaders(refused);
+          return refused;
+        }
+      } catch (err) {
+        console.error('[middleware] entitlements check failed:', err);
+        const failed = jsonError("Couldn't check your Makazi account. Try again.", 503);
+        securityHeaders(failed);
+        return failed;
+      }
+    }
   }
 
   const response = await next();

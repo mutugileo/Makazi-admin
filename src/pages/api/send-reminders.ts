@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { errorMessage } from '../../lib/errors';
 import { makeSupabaseClient } from '../../lib/supabase';
 import { notifyTenancy } from '../../lib/realtime';
+import { effectivePaymentDetails } from '../../lib/billing';
 import { paymentReminder } from '../../lib/reminders';
 import { clearLiveCache, getPortfolio, markFresh } from '../../data/portfolio';
 
@@ -50,20 +51,24 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
 
     const toSend = owing.filter((t) => !remindedToday.has(t.tenancy.id));
     if (toSend.length) {
-      const rows = toSend.map((t) => ({
-        company_id: user.companyId,
-        tenancy_id: t.tenancy.id,
-        kind: 'payment_reminder',
-        ...paymentReminder({
-          tenantName: t.tenant.name,
-          balance: t.balance,
-          accountNumber: t.accountNumber,
-          companyName: company.name,
-          mpesaPaybill: company.mpesaPaybill,
-          graceDay: company.settings.graceDay,
-          asOf,
-        }),
-      }));
+      const rows = toSend.map((t) => {
+        const pay = effectivePaymentDetails(company, t.accountNumber, t.property);
+        return {
+          company_id: user.companyId,
+          tenancy_id: t.tenancy.id,
+          kind: 'payment_reminder',
+          ...paymentReminder({
+            tenantName: t.tenant.name,
+            balance: t.balance,
+            accountNumber: pay.paybillAccount,
+            accountName: pay.accountHolderName,
+            companyName: company.name,
+            mpesaPaybill: pay.mpesaPaybill,
+            graceDay: company.settings.graceDay,
+            asOf,
+          }),
+        };
+      });
       const { error } = await supabase.from('notifications').insert(rows);
       if (error) throw error;
 

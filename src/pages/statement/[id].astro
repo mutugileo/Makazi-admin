@@ -5,7 +5,7 @@
 // Only the signed-in user's company's tenancies can be found here.
 import '../../styles/global.css';
 import { getPortfolio, bedLabel, formatDate, formatKes, monthLabel, type TenancyView } from '../../data/portfolio';
-import { receiptDescription } from '../../lib/billing';
+import { effectivePaymentDetails, receiptDescription } from '../../lib/billing';
 import StatusBadge from '../../components/ui/StatusBadge.astro';
 
 // This company's data only (the signed-in user's).
@@ -15,6 +15,7 @@ const found = tenancies.find((t) => t.tenancy.id === Astro.params.id);
 if (!found) return new Response('Statement not found', { status: 404 });
 const view: TenancyView = found;
 const { tenancy, tenant, unit, property, bills } = view;
+const pay = effectivePaymentDetails(company, view.accountNumber, property);
 const payments = bills.flatMap((bill) => bill.payments.map((payment) => ({ bill, payment })));
 const totalBilled = bills.reduce((acc, b) => acc + b.newCharges, 0);
 const totalPaid = payments.reduce((acc, p) => acc + p.payment.amount, 0);
@@ -79,7 +80,11 @@ const kindLabel = { opening: 'Opening balance', 'move-in': 'Move-in', final: 'Fi
             <div class="sm:text-right text-sm">
               <p class="font-semibold text-[#0D382B]">{company.name}</p>
               <p class="text-[#5A6862]">KRA PIN {company.kraPin}</p>
-              <p class="text-[#5A6862]">M-Pesa Paybill {company.mpesaPaybill}</p>
+              <p class="text-[#5A6862]">
+                {pay.usesFixedAccount
+                  ? `M-Pesa Paybill ${pay.mpesaPaybill} · Account ${pay.paybillAccount}${pay.accountHolderName ? ` (${pay.accountHolderName})` : ''}`
+                  : `M-Pesa Paybill ${pay.mpesaPaybill}`}
+              </p>
               <p class="text-[#5A6862] mt-2">Issued {formatDate(asOf)}</p>
             </div>
           </header>

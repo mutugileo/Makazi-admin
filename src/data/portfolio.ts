@@ -600,9 +600,10 @@ function buildPortfolio(companyId: string, baseSeed: Seed) {
 
   const unreadThreadCount = threads.filter((t) => t.unread > 0).length;
 
-  // Makazi plan usage (catered for; not enforced or billed yet).
-  const plan = {
-    ...company.subscription,
+  // What the company uses of its Makazi plan. The plan, limits and status
+  // are not here: this portfolio is cached, and a suspension must show at
+  // once, so they come from getEntitlements() (src/lib/entitlements.ts).
+  const planUsage = {
     unitsUsed: seed.units.length,
     staffUsed: seed.staff.length,
   };
@@ -624,7 +625,7 @@ function buildPortfolio(companyId: string, baseSeed: Seed) {
     whenLabel,
     seed,
     company,
-    plan,
+    planUsage,
     tenancies,
     activeTenancies,
     formerTenancies,

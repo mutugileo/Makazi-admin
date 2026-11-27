@@ -4,6 +4,7 @@ import { makeSupabaseClient } from '../../lib/supabase';
 import { notifyCompany } from '../../lib/realtime';
 import { clearLiveCache, markFresh } from '../../data/portfolio';
 import { parseKenyanPhone } from '../../lib/tenant-auth';
+import { getEntitlements, hasFeature, PROPERTY_PAYMENTS_LOCKED_MESSAGE } from '../../lib/entitlements';
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -18,7 +19,8 @@ const wholeNumber = (v: unknown) => {
  * in the app: the name on every screen, the KRA PIN on receipts, the Paybill
  * and bank on Pay rent, and the due and grace days on their bill.
  *
- * Owner only. The ledger start month and the plan are not editable here.
+ * Owner only. The ledger start month and the plan are not editable here;
+ * per-property payment details need the property_payment_details feature.
  */
 export const POST: APIRoute = async ({ request, locals, cookies }) => {
   const user = locals.user;
@@ -43,11 +45,13 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     const mpesaPaybill = text(body.mpesaPaybill).replace(/\s/g, '');
     if (!/^\d{5,7}$/.test(mpesaPaybill)) return json({ error: 'M-Pesa Paybill is 5 to 7 digits.' }, 400);
 
+    const paybillAccountMode = body.paybillAccountMode === 'bank' ? 'bank' : 'unit';
+
     const bankName = text(body.bankName);
-    if (bankName.length < 2 || bankName.length > 80) return json({ error: 'Enter the bank and branch.' }, 400);
+    if (bankName.length < 2 || bankName.length > 80) return json({ error: 'Enter the account name or bank.' }, 400);
 
     const bankAccount = text(body.bankAccount).replace(/[\s-]/g, '');
-    if (!/^\d{6,20}$/.test(bankAccount)) return json({ error: 'Bank account is 6 to 20 digits.' }, 400);
+    if (!/^\d{6,20}$/.test(bankAccount)) return json({ error: 'Account number is 6 to 20 digits.' }, 400);
 
     const dueDay = wholeNumber(body.dueDay);
     const graceDay = wholeNumber(body.graceDay);
@@ -73,6 +77,12 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     if (body.propertyPayments !== undefined && body.propertyPayments !== null) {
       if (!Array.isArray(body.propertyPayments) || body.propertyPayments.length > 500) {
         return json({ error: 'Property payment details are not valid. Reload the page and try again.' }, 400);
+      }
+      if (body.propertyPayments.length > 0) {
+        const entitlements = await getEntitlements(supabase, user.companyId, locals);
+        if (!hasFeature(entitlements, 'property_payment_details')) {
+          return json({ error: PROPERTY_PAYMENTS_LOCKED_MESSAGE }, 403);
+        }
       }
       const seen = new Set<string>();
       for (const item of body.propertyPayments) {
@@ -154,6 +164,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       graceDay,
       depositSchedule,
       recordRetentionMonths: retention,
+      paybillAccountMode,
     };
     if (propertyPayments.length > 0) {
       const updatedAt = new Date().toISOString();

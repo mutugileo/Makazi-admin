@@ -11,6 +11,8 @@ import MakaziAssistantModal from '../components/dashboard/MakaziAssistantModal.a
 import Toast from '../components/dashboard/Toast.astro';
 import { Sparkles } from '@lucide/astro';
 import { getPortfolio } from '../data/portfolio';
+import { makeSupabaseClient } from '../lib/supabase';
+import { getEntitlements, type Entitlements } from '../lib/entitlements';
 import { ClientRouter } from 'astro:transitions';
 
 interface Props {
@@ -23,6 +25,28 @@ const user = Astro.locals.user;
 const portfolio = user ? await getPortfolio(user.companyId, Astro.cookies) : null;
 const companyName = portfolio ? portfolio.company.name : 'Makazi';
 const companyTheme = portfolio?.company.settings.theme;
+
+// Plan status for the account banner, read fresh each request (shared with
+// the page through Astro.locals). A failed read shows no banner.
+let entitlements: Entitlements | null = null;
+const supabaseForPlan = user ? makeSupabaseClient(Astro.cookies) : null;
+if (user && supabaseForPlan) {
+  try {
+    entitlements = await getEntitlements(supabaseForPlan, user.companyId, Astro.locals);
+  } catch (err) {
+    console.error('[layout] entitlements not loaded:', err);
+  }
+}
+const accountBanner = !entitlements
+  ? null
+  : entitlements.readOnly
+    ? {
+        tone: 'locked' as const,
+        text: `This Makazi account is ${entitlements.status === 'cancelled' ? 'cancelled' : 'suspended'}. You can view your records, but changes are off. Contact Makazi support to restore access.`,
+      }
+    : entitlements.status === 'past_due'
+      ? { tone: 'due' as const, text: 'Your Makazi subscription is past due. Contact Makazi support to keep full access.' }
+      : null;
 function darkenColor(hexColor: string, factor = 0.2): string {
   const cleanHex = hexColor.replace('#', '');
   const r = Math.round((parseInt(cleanHex.substring(0, 2), 16) || 0) * factor);
@@ -122,6 +146,18 @@ const pageSlide = {
     <div id="dashboard-main-canvas" class="flex-1 flex flex-col min-w-0">
       <!-- Top Sticky Header -->
       <Header />
+
+      {accountBanner && (
+        <div
+          role="status"
+          class={`px-4 sm:px-6 py-2.5 text-xs font-semibold border-b ${accountBanner.tone === 'locked' ? 'bg-[#0A261F] text-white border-[#0A261F]' : 'bg-[#F7FBE9] text-[#0D382B] border-[#E3E6DF]'}`}
+        >
+          <p class="max-w-7xl mx-auto flex items-start gap-2">
+            <span class={`mt-1 h-2 w-2 rounded-full shrink-0 ${accountBanner.tone === 'locked' ? 'bg-[#C6EE58]' : 'bg-[#0D382B]'}`} aria-hidden="true"></span>
+            <span>{accountBanner.text}</span>
+          </p>
+        </div>
+      )}
 
       <!-- Page view: slides out the moment a link is clicked, the next page slides in -->
       <main id="main-content" class="flex-1 p-3 sm:p-5 lg:p-6 xl:p-8 max-w-7xl w-full mx-auto" transition:animate={pageSlide}>

@@ -1,15 +1,42 @@
 ---
 import DashboardLayout from '../layouts/DashboardLayout.astro';
-import { bedLabel, getPortfolio, monthLabel } from '../data/portfolio';
+import { bedLabel, formatDate, formatKes, getPortfolio, monthLabel } from '../data/portfolio';
+import { makeSupabaseClient } from '../lib/supabase';
+import {
+  CHANGE_PLAN_HINT,
+  PROPERTY_PAYMENTS_LOCKED_MESSAGE,
+  STATUS_LABELS,
+  getEntitlements,
+  hasFeature,
+  unitOverage,
+  type Entitlements,
+} from '../lib/entitlements';
 import { ChevronDown } from '@lucide/astro';
 
 // This company's data only (the signed-in user's).
-const { company, propertyViews, portfolioSummary } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+const user = Astro.locals.user!;
+const { company, propertyViews, portfolioSummary, planUsage } = await getPortfolio(user.companyId, Astro.cookies);
 const { settings } = company;
-const canEdit = Astro.locals.user!.role === 'owner';
+const isOwner = user.role === 'owner';
 const depositRows = Object.entries(settings.depositSchedule).sort(([a], [b]) => Number(a) - Number(b));
 
-// The Makazi plan is managed by Codzure in the super-admin portal, not here.
+// The Makazi plan is set by Makazi support in the super-admin portal, never
+// here. Read fresh each request (shared with the layout via Astro.locals).
+let entitlements: Entitlements | null = null;
+const supabase = makeSupabaseClient(Astro.cookies);
+if (supabase) {
+  try {
+    entitlements = await getEntitlements(supabase, user.companyId, Astro.locals);
+  } catch (err) {
+    console.error('[settings] entitlements not loaded:', err);
+  }
+}
+const readOnly = entitlements?.readOnly ?? false;
+const canEdit = isOwner && !readOnly;
+// Only locked when the plan is known to exclude it; the server checks anyway.
+const propertyPaymentsLocked = entitlements ? !hasFeature(entitlements, 'property_payment_details') : false;
+const overage = entitlements ? unitOverage(entitlements, planUsage.unitsUsed) : null;
+const trialEnd = entitlements?.trialEndsAt ? formatDate(entitlements.trialEndsAt.slice(0, 10)) : null;
 
 const card = 'bg-white rounded-3xl border border-[#E3E6DF] p-6 shadow-xs';
 const label = 'block text-[11px] font-semibold uppercase tracking-wider text-[#69847A] mb-1.5';
@@ -82,9 +109,11 @@ const presets = [
     <span class="text-xs font-semibold tracking-wider text-[#69847A] uppercase">{portfolioSummary}</span>
     <h1 class="text-3xl sm:text-4xl font-normal font-editorial text-[#0D382B] tracking-tight mt-1">Settings</h1>
     <p class="text-xs text-[#69847A] mt-2">
-      {canEdit
-        ? 'Tenants see these in the Makazi app as soon as you save.'
-        : 'Only the owner can change these.'}
+      {readOnly
+        ? 'Changes are off while this Makazi account is suspended.'
+        : canEdit
+          ? 'Tenants see these in the Makazi app as soon as you save.'
+          : 'Only the owner can change these.'}
     </p>
   </div>
 
@@ -120,18 +149,22 @@ const presets = [
             <p class={hint}>Shown on Pay rent in the app.</p>
           </div>
           <div>
-            <span class={label}>Account number</span>
-            <p class={fixed}>Unit code (such as RC-5A)</p>
-            <p class={hint}>Each tenant's own, set by their unit.</p>
+            <label for="s-paybill-mode" class={label}>Paybill account number</label>
+            <select id="s-paybill-mode" name="paybillAccountMode" class={input}>
+              <option value="unit" selected={(settings.paybillAccountMode ?? 'unit') === 'unit'}>Unit code (such as NKA-29A)</option>
+              <option value="bank" selected={settings.paybillAccountMode === 'bank'}>Fixed account number (same for all tenants)</option>
+            </select>
+            <p class={hint}>Choose fixed account when using a bank collection Paybill.</p>
           </div>
           <div>
-            <label for="s-bank" class={label}>Bank</label>
+            <label for="s-bank" class={label}>Account name / Bank</label>
             <input id="s-bank" name="bankName" class={input} value={company.bankName} maxlength="80" required />
+            <p class={hint}>Recipient name or bank and branch.</p>
           </div>
           <div>
-            <label for="s-account" class={label}>Bank account</label>
+            <label for="s-account" class={label}>Account number</label>
             <input id="s-account" name="bankAccount" class={`${input} tabular-nums`} value={company.bankAccount} inputmode="numeric" maxlength="24" required />
-            <p class={hint}>Shown for bank transfers in the app.</p>
+            <p class={hint}>Shown on Pay rent and bank transfers in the app.</p>
           </div>
         </div>
       </section>
@@ -293,9 +326,14 @@ const presets = [
           <p class="text-xs text-[#69847A] mt-1">
             Configure dedicated Paybill or bank accounts per property. Leave fields blank to inherit company defaults.
           </p>
+          {propertyPaymentsLocked && (
+            <p class="text-xs font-semibold text-[#0D382B] mt-2">
+              {PROPERTY_PAYMENTS_LOCKED_MESSAGE} <span class="font-normal text-[#5A6862]">{CHANGE_PLAN_HINT}</span>
+            </p>
+          )}
         </div>
 
-        <div class="space-y-3">
+        <div class="space-y-3" data-payments-locked={propertyPaymentsLocked ? 'true' : undefined}>
           {propertyViews.map((pv) => {
             const p = pv.property;
             const hasCustom = Boolean(p.mpesaPaybill || p.bankAccount || p.bankName);
@@ -342,6 +380,7 @@ const presets = [
                         id={`p-paybill-${p.id}`}
                         data-prop-id={p.id}
                         data-prop-field="mpesaPaybill"
+                        disabled={propertyPaymentsLocked}
                         class={`${input} bg-[#FAFBF9] tabular-nums`}
                         value={p.mpesaPaybill ?? ''}
                         placeholder={company.mpesaPaybill || 'Company default'}
@@ -356,6 +395,7 @@ const presets = [
                         id={`p-bank-${p.id}`}
                         data-prop-id={p.id}
                         data-prop-field="bankName"
+                        disabled={propertyPaymentsLocked}
                         class={`${input} bg-[#FAFBF9]`}
                         value={p.bankName ?? ''}
                         placeholder={company.bankName || 'Company default'}
@@ -369,6 +409,7 @@ const presets = [
                         id={`p-account-${p.id}`}
                         data-prop-id={p.id}
                         data-prop-field="bankAccount"
+                        disabled={propertyPaymentsLocked}
                         class={`${input} bg-[#FAFBF9] tabular-nums`}
                         value={p.bankAccount ?? ''}
                         placeholder={company.bankAccount || 'Company default'}
@@ -383,6 +424,7 @@ const presets = [
                         id={`p-pesalink-${p.id}`}
                         data-prop-id={p.id}
                         data-prop-field="pesalinkPhone"
+                        disabled={propertyPaymentsLocked}
                         class={`${input} bg-[#FAFBF9] tabular-nums`}
                         value={company.settings?.propertyPayments?.[p.id]?.pesalinkPhone ?? ''}
                         placeholder={company.settings?.pesalinkPhone || 'Company default'}
@@ -432,39 +474,6 @@ const presets = [
         </p>
       </section>
 
-      <section class={`${card} lg:col-span-2 bg-[#F8F9F6] border-[#DCE0D7]`}>
-        <div class="flex items-center justify-between mb-4">
-          <div>
-            <div class="flex items-center gap-2">
-              <h2 class="font-editorial text-2xl text-[#0D382B]">Makazi Partnership Plan</h2>
-              <span class="px-2.5 py-0.5 rounded-full bg-[#0D382B] text-[#C6EE58] text-[10px] font-bold uppercase tracking-wider">
-                Founding Landlord Partner
-              </span>
-            </div>
-            <p class="text-xs text-[#5A6862] mt-1">
-              Active cohort program for property managers and landlords scaling with Makazi.
-            </p>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-          <div class="p-4 rounded-2xl bg-white border border-[#E3E6DF]">
-            <span class="text-[10px] uppercase font-bold text-[#69847A] block">Current Pilot Status</span>
-            <span class="text-base font-semibold text-[#0A6B48] mt-1 block">100% Free Pilot Access</span>
-            <p class="text-[11px] text-[#73827C] mt-1">Zero per-unit or onboarding fees during your cohort pilot.</p>
-          </div>
-          <div class="p-4 rounded-2xl bg-white border border-[#E3E6DF]">
-            <span class="text-[10px] uppercase font-bold text-[#69847A] block">Concierge Onboarding</span>
-            <span class="text-base font-semibold text-[#0D382B] mt-1 block">Full Excel / CSV Support</span>
-            <p class="text-[11px] text-[#73827C] mt-1">Direct assistance importing 50–500 units with tenant history.</p>
-          </div>
-          <div class="p-4 rounded-2xl bg-white border border-[#E3E6DF]">
-            <span class="text-[10px] uppercase font-bold text-[#69847A] block">Marketplace Verification</span>
-            <span class="text-base font-semibold text-[#0D382B] mt-1 block">Ask Nyumbani Priority</span>
-            <p class="text-[11px] text-[#73827C] mt-1">Free listing verification and priority tenant exposure.</p>
-          </div>
-        </div>
-      </section>
     </fieldset>
 
     {canEdit && (
@@ -479,6 +488,52 @@ const presets = [
       </div>
     )}
   </form>
+
+  {isOwner && (
+    <section class={`${card} mt-6`} aria-labelledby="plan-heading">
+      <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-4">
+        <div>
+          <h2 id="plan-heading" class="font-editorial text-2xl text-[#0D382B]">Plan</h2>
+          <p class="text-xs text-[#69847A] mt-1">Set by Makazi support. {CHANGE_PLAN_HINT}</p>
+        </div>
+        {entitlements && (
+          <span class={`self-start text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${entitlements.readOnly ? 'bg-[#0A261F] text-[#C6EE58]' : entitlements.status === 'past_due' ? 'bg-[#F7FBE9] text-[#0D382B] border border-[#E3E6DF]' : 'bg-[#EBF0EC] text-[#0D382B]'}`}>
+            {STATUS_LABELS[entitlements.status]}
+          </span>
+        )}
+      </div>
+      {entitlements ? (
+        <dl class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="p-4 rounded-2xl bg-[#FAFBF9] border border-[#E3E6DF]">
+            <dt class={label}>Plan</dt>
+            <dd class={fixed}>{entitlements.planName}</dd>
+            {entitlements.billingExempt && <dd class={hint}>Billing exempt</dd>}
+            {trialEnd && entitlements.status === 'trial' && <dd class={hint}>Trial ends {trialEnd}</dd>}
+            {trialEnd && entitlements.status === 'past_due' && <dd class={hint}>Trial ended {trialEnd}</dd>}
+          </div>
+          <div class="p-4 rounded-2xl bg-[#FAFBF9] border border-[#E3E6DF]">
+            <dt class={label}>Units</dt>
+            <dd class={`${fixed} tabular-nums`}>{planUsage.unitsUsed.toLocaleString('en-KE')} of {entitlements.unitLimit.toLocaleString('en-KE')}</dd>
+            {overage && overage.extraUnits > 0 && (
+              <dd class={hint}>
+                {overage.extraUnits.toLocaleString('en-KE')} over your plan
+                {entitlements.billingExempt
+                  ? ', no extra charge.'
+                  : ` · ${formatKes(overage.monthlyKes)} a month extra (${formatKes(entitlements.extraUnitRateKes)} per unit).`}
+              </dd>
+            )}
+          </div>
+          <div class="p-4 rounded-2xl bg-[#FAFBF9] border border-[#E3E6DF]">
+            <dt class={label}>Staff seats</dt>
+            <dd class={`${fixed} tabular-nums`}>{planUsage.staffUsed} of {entitlements.staffLimit} used</dd>
+          </div>
+        </dl>
+      ) : (
+        <p class="text-xs font-medium text-[#C04A26]">Couldn't load your plan. Refresh to try again.</p>
+      )}
+    </section>
+  )}
+
 </DashboardLayout>
 
 <script>
@@ -540,7 +595,9 @@ const presets = [
       });
 
       const propertyPayments: Array<{ propertyId: string; mpesaPaybill: string; bankName: string; bankAccount: string; pesalinkPhone: string }> = [];
-      form.querySelectorAll<HTMLElement>('[data-property-payment]').forEach((el) => {
+      // Not on this plan: send none (the server refuses them).
+      const paymentsLocked = Boolean(form.querySelector('[data-payments-locked]'));
+      if (!paymentsLocked) form.querySelectorAll<HTMLElement>('[data-property-payment]').forEach((el) => {
         const propId = el.dataset.propertyPayment!;
         const paybill = (el.querySelector<HTMLInputElement>('[data-prop-field="mpesaPaybill"]'))?.value ?? '';
         const bankName = (el.querySelector<HTMLInputElement>('[data-prop-field="bankName"]'))?.value ?? '';
@@ -566,6 +623,7 @@ const presets = [
             name: value('name'),
             kraPin: value('kraPin'),
             mpesaPaybill: value('mpesaPaybill'),
+            paybillAccountMode: value('paybillAccountMode'),
             bankName: value('bankName'),
             bankAccount: value('bankAccount'),
             dueDay: value('dueDay'),

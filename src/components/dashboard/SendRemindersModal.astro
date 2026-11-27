@@ -1,6 +1,7 @@
 ---
 import { X, Send } from '@lucide/astro';
 import { getPortfolio, formatKes } from '../../data/portfolio';
+import { effectivePaymentDetails } from '../../lib/billing';
 import { paymentReminder } from '../../lib/reminders';
 
 // This company's data only (the signed-in user's).
@@ -8,14 +9,16 @@ const { arrears, company, lateLabel, asOf } = await getPortfolio(Astro.locals.us
 
 const totalArrears = arrears.reduce((acc, t) => acc + t.balance, 0);
 const sample = arrears[0];
+const samplePayment = sample ? effectivePaymentDetails(company, sample.accountNumber, sample.property) : null;
 // Exactly what the tenant will see (the server builds the same text).
-const preview = sample
+const preview = sample && samplePayment
   ? paymentReminder({
       tenantName: sample.tenant.name,
       balance: sample.balance,
-      accountNumber: sample.accountNumber,
+      accountNumber: samplePayment.paybillAccount,
+      accountName: samplePayment.accountHolderName,
       companyName: company.name,
-      mpesaPaybill: company.mpesaPaybill,
+      mpesaPaybill: samplePayment.mpesaPaybill,
       graceDay: company.settings.graceDay,
       asOf,
     })

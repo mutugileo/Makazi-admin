@@ -7,12 +7,13 @@ import EditRatesModal from '../components/dashboard/EditRatesModal.astro';
 import EditPropertyModal from '../components/dashboard/EditPropertyModal.astro';
 import EditUnitModal from '../components/dashboard/EditUnitModal.astro';
 import { getPortfolio, bedLabel, formatDate, formatKes, monthLabel } from '../data/portfolio';
+import { effectivePaymentDetails } from '../lib/billing';
 
 const shortMonth = (m: string) => monthLabel(m).replace(/^(\w{3})\w*/, '$1');
 import { Plus, ChevronDown, Image, ExternalLink, FileSpreadsheet, Pencil } from '@lucide/astro';
 
 // This company's data only (the signed-in user's).
-const { portfolioSummary, propertyViews, currentPeriod } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+const { company, portfolioSummary, propertyViews, currentPeriod } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
 ---
 
 <DashboardLayout title="Makazi — Properties" currentPath="/properties">
@@ -88,7 +89,12 @@ const { portfolioSummary, propertyViews, currentPeriod } = await getPortfolio(As
               </div>
               <p class="text-xs text-[#69847A] mt-0.5">{p.property.address}</p>
               <p class="text-[11px] text-[#69847A] mt-1.5 tabular-nums">
-                Water {formatKes(p.property.waterRate)} / unit · Garbage {formatKes(p.property.garbageFee)} / month · Paybill account {p.property.accountPrefix}-[unit]
+                {(() => {
+                  const pay = effectivePaymentDetails(company, `${p.property.accountPrefix}-[unit]`, p.property);
+                  return pay.usesFixedAccount
+                    ? `Water ${formatKes(p.property.waterRate)} / unit · Garbage ${formatKes(p.property.garbageFee)} / month · Unit code ${p.property.accountPrefix}-[unit] · Paybill ${pay.mpesaPaybill}, Acc ${pay.paybillAccount}`
+                    : `Water ${formatKes(p.property.waterRate)} / unit · Garbage ${formatKes(p.property.garbageFee)} / month · Paybill account ${p.property.accountPrefix}-[unit]`;
+                })()}
               </p>
               {p.rateHistory.length > 0 && (
                 <p class="text-[11px] text-[#69847A] mt-0.5">

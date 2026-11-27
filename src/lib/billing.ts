@@ -40,6 +40,8 @@ export interface CompanySettings {
   theme?: CompanyTheme;
   /** Company-wide PesaLink phone or alias, the default for every property. */
   pesalinkPhone?: string;
+  /** 'unit' uses unit code (e.g. RC-5A) as Paybill account; 'bank' uses the fixed bank/collection account for all units. */
+  paybillAccountMode?: 'unit' | 'bank';
   /** Per-property payment details that override the company's, by property id. */
   propertyPayments?: Record<string, PropertyPaymentDetails>;
 }
@@ -49,7 +51,39 @@ export interface PropertyPaymentDetails {
   bankName: string | null;
   bankAccount: string | null;
   pesalinkPhone: string | null;
+  paybillAccountMode?: 'unit' | 'bank' | null;
   updatedAt: string;
+}
+
+export interface EffectivePaymentDetails {
+  mpesaPaybill: string;
+  bankName: string;
+  bankAccount: string;
+  usesFixedAccount: boolean;
+  paybillAccount: string;
+  accountHolderName: string | null;
+}
+
+/** Resolves effective Paybill, account number, and account holder name for a tenant/property. */
+export function effectivePaymentDetails(
+  company: Company,
+  unitAccountNumber: string,
+  property?: Property,
+): EffectivePaymentDetails {
+  const mpesaPaybill = property?.mpesaPaybill?.trim() || company.mpesaPaybill;
+  const bankName = property?.bankName?.trim() || company.bankName;
+  const bankAccount = property?.bankAccount?.trim() || company.bankAccount;
+  const propMode = property ? company.settings.propertyPayments?.[property.id]?.paybillAccountMode : null;
+  const mode = propMode ?? company.settings.paybillAccountMode ?? 'unit';
+  const usesFixedAccount = mode === 'bank' && Boolean(bankAccount);
+  return {
+    mpesaPaybill,
+    bankName,
+    bankAccount,
+    usesFixedAccount,
+    paybillAccount: usesFixedAccount ? bankAccount : unitAccountNumber,
+    accountHolderName: usesFixedAccount && bankName ? bankName : null,
+  };
 }
 
 /** Last numbers issued; each company has its own series. */
@@ -58,16 +92,33 @@ export interface CompanySequences {
   repairTicket: number;
 }
 
-export type PlanId = 'starter' | 'growth' | 'pro';
-export type SubscriptionStatus = 'trial' | 'active' | 'past_due' | 'suspended';
+export type PlanId = 'starter' | 'growth' | 'enterprise' | 'custom';
+export type SubscriptionStatus = 'trial' | 'active' | 'past_due' | 'suspended' | 'cancelled';
+export type BillingCycle = 'monthly' | 'annual' | 'lifetime_exempt';
 
-/** Makazi subscription. Stored and shown; not enforced or billed yet. */
+/**
+ * Makazi subscription as stored in companies.subscription. Written only by
+ * Makazi support through superadmin_set_subscription(); PropAdmin never
+ * writes it. Every field may be missing on older rows, so read it through
+ * getEntitlements() (src/lib/entitlements.ts), which applies the plan
+ * defaults and the expired-trial rule.
+ */
 export interface Subscription {
-  plan: PlanId;
-  status: SubscriptionStatus;
-  unitLimit: number;
-  staffLimit: number;
-  trialEndsAt: IsoDate | null;
+  plan?: PlanId;
+  status?: SubscriptionStatus;
+  billingCycle?: BillingCycle;
+  /** Negotiated price; the plan's price when missing. */
+  priceKes?: number;
+  /** KES a month for each unit over unitLimit. */
+  extraUnitRateKes?: number;
+  /** ISO timestamp. */
+  trialEndsAt?: string | null;
+  billingExempt?: boolean;
+  exemptionReason?: string;
+  /** Feature switches that override the plan's, such as property_payment_details. */
+  featureOverrides?: Record<string, boolean>;
+  unitLimit?: number;
+  staffLimit?: number;
 }
 
 /** A landlord on the Makazi platform. Every record belongs to one. */
@@ -82,7 +133,8 @@ export interface Company {
   bankAccount: string;
   settings: CompanySettings;
   sequences: CompanySequences;
-  subscription: Subscription;
+  /** Null on rows created before subscriptions existed. */
+  subscription: Subscription | null;
 }
 
 /** Rates in force from a month onwards. */

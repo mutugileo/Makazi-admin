@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { errorMessage } from '../../lib/errors';
 import { makeSupabaseClient } from '../../lib/supabase';
 import { allowAction } from '../../lib/auth/rate-limit';
+import { getEntitlements, staffSeatsMessage } from '../../lib/entitlements';
 
 const json = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
@@ -36,6 +37,18 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     if (!ROLES.has(role)) return json({ error: 'Choose Owner or Manager.' }, 400);
     if (password.length < 12) return json({ error: 'Use a password of at least 12 characters.' }, 400);
 
+    // Seats are checked before the login exists, so a full plan never leaves
+    // an orphan login. The staff insert trigger is the hard limit.
+    const entitlements = await getEntitlements(supabase, user.companyId, locals);
+    const { count: staffCount, error: countErr } = await supabase
+      .from('staff')
+      .select('id', { count: 'exact', head: true })
+      .eq('company_id', user.companyId);
+    if (countErr) throw countErr;
+    if ((staffCount ?? 0) >= entitlements.staffLimit) {
+      return json({ error: staffSeatsMessage(entitlements.staffLimit) }, 403);
+    }
+
     const { data: created, error: createErr } = await supabase.auth.admin.createUser({
       email,
       password,
@@ -56,9 +69,12 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       .select('id, name, role')
       .single();
     if (staffErr || !staffRow) {
-      // No login without a membership: undo the auth user.
-      await supabase.auth.admin.deleteUser(created.user.id);
-      return json({ error: errorMessage(staffErr, "Couldn't add the user. Try again.") }, 500);
+      // No login without a membership: undo the auth user. A full plan
+      // (seat trigger, 22023) passes its message through.
+      const { error: undoErr } = await supabase.auth.admin.deleteUser(created.user.id);
+      if (undoErr) console.error('[create-staff-user] orphan login not removed:', created.user.id, undoErr.message);
+      const refused = staffErr?.code === '22023';
+      return json({ error: errorMessage(staffErr, "Couldn't add the user. Try again.") }, refused ? 403 : 500);
     }
 
     return json({ ok: true, user: { ...staffRow, email } });

@@ -7,6 +7,7 @@ export interface ReminderInput {
   tenantName: string;
   balance: number;
   accountNumber: string;
+  accountName?: string | null;
   companyName: string;
   mpesaPaybill: string;
   graceDay: number;
@@ -22,11 +23,12 @@ export function paymentReminder(r: ReminderInput): { title: string; body: string
   const month = MONTHS[Number(r.asOf.slice(5, 7)) - 1];
   // Past the grace day a "pay by" date would already be behind them.
   const when = day <= r.graceDay ? `Please pay by ${r.graceDay} ${month}` : 'Please pay as soon as you can';
+  const accountLabel = r.accountName ? `${r.accountNumber} (${r.accountName})` : r.accountNumber;
   return {
     title: `Payment reminder from ${r.companyName}`,
     body:
       `Habari ${firstName}, your balance is ${formatKes(r.balance)} ` +
       `(rent, water, garbage and any unpaid amount from earlier months). ` +
-      `${when} via M-Pesa Paybill ${r.mpesaPaybill}, Account ${r.accountNumber}.`,
+      `${when} via M-Pesa Paybill ${r.mpesaPaybill}, Account ${accountLabel}.`,
   };
 }

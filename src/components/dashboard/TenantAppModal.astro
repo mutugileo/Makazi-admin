@@ -2,14 +2,18 @@
 import { X, Smartphone, ExternalLink, CheckCircle2, Shield, ArrowUpRight } from '@lucide/astro';
 import { FEATURES } from '../../config/features';
 import { getPortfolio } from '../../data/portfolio';
+import { effectivePaymentDetails } from '../../lib/billing';
 
 // This company's data only (the signed-in user's).
 const { company } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+const pay = effectivePaymentDetails(company, 'unit code');
 
 // What the Makazi app does today; keep in step with the Flutter app.
 const appFeatures = [
   'Monthly bill: rent, water (units × rate), garbage and anything carried forward',
-  `Pay by M-Pesa Paybill ${company.mpesaPaybill} (account = unit code) or bank transfer`,
+  pay.usesFixedAccount
+    ? `Pay by M-Pesa Paybill ${pay.mpesaPaybill}, Account ${pay.paybillAccount}${pay.accountHolderName ? ` (${pay.accountHolderName})` : ''}`
+    : `Pay by M-Pesa Paybill ${pay.mpesaPaybill} (account = unit code) or bank transfer`,
   'Receipts for every payment and a statement of payments',
   'Repair requests with photos, tracked Open → In progress → Resolved',
   'Messages with their property manager',

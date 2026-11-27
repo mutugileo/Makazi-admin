@@ -2,6 +2,7 @@
 import DashboardLayout from '../layouts/DashboardLayout.astro';
 import { makeSupabaseClient } from '../lib/supabase';
 import { formatDate } from '../data/portfolio';
+import { CHANGE_PLAN_HINT, getEntitlements, type Entitlements } from '../lib/entitlements';
 import { UserCog, UserPlus, ShieldCheck } from '@lucide/astro';
 
 // People who can sign in to this company's admin: staff rows with a login.
@@ -46,10 +47,28 @@ if (supabase) {
   }
 }
 
+// Seats on the plan, read fresh each request. The server and the database
+// both refuse a user over the limit; this only explains it up front.
+let entitlements: Entitlements | null = null;
+if (supabase) {
+  try {
+    entitlements = await getEntitlements(supabase, user.companyId, Astro.locals);
+  } catch (err) {
+    console.error('[users] entitlements not loaded:', err);
+  }
+}
+const seatLimit = entitlements?.staffLimit ?? null;
+const seatsFull = !loadError && seatLimit !== null && staffUsers.length >= seatLimit;
+const readOnly = entitlements?.readOnly ?? false;
+const addLocked = seatsFull || readOnly;
+const lockedLine = readOnly
+  ? 'Changes are off while this Makazi account is suspended. Contact Makazi support to restore access.'
+  : `All ${seatLimit} seats on your plan are in use. ${CHANGE_PLAN_HINT}`;
+
 const roleLabel: Record<string, string> = { owner: 'Owner', manager: 'Manager', caretaker: 'Caretaker' };
 const label = 'block text-[11px] font-semibold uppercase tracking-wider text-[#69847A] mb-1.5';
 const input =
-  'w-full px-3.5 py-2.5 rounded-xl border border-[#E2E5DF] bg-[#FAFBF9] text-sm font-semibold text-[#0D382B] focus:outline-none focus:border-[#0D382B]';
+  'w-full px-3.5 py-2.5 rounded-xl border border-[#E2E5DF] bg-[#FAFBF9] text-sm font-semibold text-[#0D382B] focus:outline-none focus:border-[#0D382B] disabled:bg-[#F3F4F0] disabled:text-[#5A6862]';
 const hint = 'text-[11px] text-[#73827C] mt-1';
 const th = 'py-3.5 px-4 lg:px-6 text-left';
 const td = 'py-3.5 px-4 lg:px-6 whitespace-nowrap';
@@ -65,6 +84,9 @@ const td = 'py-3.5 px-4 lg:px-6 whitespace-nowrap';
     <p class="text-sm text-[#69847A] mt-1.5 max-w-2xl">
       People who can sign in to this admin. Owners can add users and change settings; managers run properties, bills and payments.
     </p>
+    {seatLimit !== null && !loadError && (
+      <p class="text-xs font-semibold text-[#0D382B] mt-2 tabular-nums">{staffUsers.length} of {seatLimit} seats used</p>
+    )}
   </div>
 
   <section class="bg-white rounded-3xl border border-[#E3E6DF] shadow-xs overflow-hidden mb-6">
@@ -116,7 +138,11 @@ const td = 'py-3.5 px-4 lg:px-6 whitespace-nowrap';
           <p class="text-xs text-[#5A6862]">They sign in at this page's address with the email and password you set here.</p>
         </div>
       </div>
+      {addLocked && (
+        <p class="mb-4 text-xs font-semibold text-[#0D382B]">{lockedLine}</p>
+      )}
       <form id="add-user-form" class="space-y-4" novalidate>
+        <fieldset disabled={addLocked} class="space-y-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label for="user-name" class={label}>Name</label>
@@ -147,6 +173,7 @@ const td = 'py-3.5 px-4 lg:px-6 whitespace-nowrap';
             <span>Add user</span>
           </button>
         </div>
+        </fieldset>
       </form>
     </section>
   ) : (

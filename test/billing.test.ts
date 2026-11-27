@@ -6,6 +6,7 @@ import {
   collectedByPayment,
   collectedFor,
   cycleOf,
+  effectivePaymentDetails,
   FIRST_CYCLE_ON_START_DAY,
   ordinal,
   statusFor,
@@ -14,6 +15,7 @@ import {
   type Seed,
   type Tenancy,
 } from '../src/lib/billing.ts';
+import { paymentReminder } from '../src/lib/reminders.ts';
 
 // ---------------------------------------------------------------------------
 // Small hand-built seeds. One company, one property, one unit.
@@ -269,5 +271,45 @@ describe('buildLedger', () => {
     assert.equal(final.depositRefund, 21000);
     assert.equal(final.outstanding, 0);
     assert.equal(final.status, 'Paid');
+  });
+
+  test('effectivePaymentDetails uses fixed bank account when paybillAccountMode is bank', () => {
+    const base = seed().companies[0];
+    const unitCompany = {
+      ...base,
+      mpesaPaybill: '522533',
+      bankName: 'NCBA Bank',
+      bankAccount: '1004558231',
+    };
+    const unitPay = effectivePaymentDetails(unitCompany, 'NKA-29A');
+    assert.equal(unitPay.usesFixedAccount, false);
+    assert.equal(unitPay.paybillAccount, 'NKA-29A');
+    assert.equal(unitPay.accountHolderName, null);
+
+    const bankCompany = {
+      ...base,
+      mpesaPaybill: '222111',
+      bankName: 'THE PHOENIX',
+      bankAccount: '404020',
+      settings: { ...base.settings, paybillAccountMode: 'bank' as const },
+    };
+    const bankPay = effectivePaymentDetails(bankCompany, 'NKA-29A');
+    assert.equal(bankPay.usesFixedAccount, true);
+    assert.equal(bankPay.mpesaPaybill, '222111');
+    assert.equal(bankPay.paybillAccount, '404020');
+    assert.equal(bankPay.accountHolderName, 'THE PHOENIX');
+
+    const reminder = paymentReminder({
+      tenantName: 'Elvis',
+      balance: 26000,
+      accountNumber: bankPay.paybillAccount,
+      accountName: bankPay.accountHolderName,
+      companyName: 'HarborRidge Limited',
+      mpesaPaybill: bankPay.mpesaPaybill,
+      graceDay: 20,
+      asOf: '2026-11-18',
+    });
+    assert.ok(reminder.body.includes('M-Pesa Paybill 222111, Account 404020 (THE PHOENIX).'));
+    assert.ok(!reminder.body.includes('NKA-29A'));
   });
 });

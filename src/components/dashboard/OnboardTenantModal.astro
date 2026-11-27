@@ -6,7 +6,8 @@ import { addMonths, cycleOf, CYCLE_START_DAY } from '../../lib/billing';
 import { FEATURES } from '../../config/features';
 
 // This company's data only (the signed-in user's).
-const { depositSchedule, lastReading, propertyViews, asOf } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+const { company, depositSchedule, lastReading, propertyViews, asOf } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+const fixedPaybillMode = company.settings.paybillAccountMode === 'bank';
 
 // Serialized property and unit preset data for client-side interactivity
 const propertiesData = propertyViews.map((p) => ({
@@ -170,7 +171,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
             <span id="badge-prefix">—</span>
           </div>
           <div>
-            <p class="text-[10px] uppercase font-bold text-[#69847A] tracking-wider">M-Pesa Account Reference</p>
+            <p class="text-[10px] uppercase font-bold text-[#69847A] tracking-wider">{fixedPaybillMode ? 'Unit Reference Code' : 'M-Pesa Account Reference'}</p>
             <p class="text-sm font-mono font-bold text-[#0D382B]" id="preview-account-ref">—</p>
           </div>
         </div>
@@ -178,7 +179,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-[#
           <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#DCFCE7] text-[#16A34A] border border-[#BBF7D0]">
             Alphanumerical
           </span>
-          <p class="text-[10px] text-[#73827C] mt-0.5">Paybill rent account</p>
+          <p class="text-[10px] text-[#73827C] mt-0.5">{fixedPaybillMode ? 'Internal unit code' : 'Paybill rent account'}</p>
         </div>
       </div>
 
