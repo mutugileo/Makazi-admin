@@ -85,15 +85,22 @@ const searchText = (parts: string[]) => parts.join(' ').toLowerCase();
           <h2 class="text-sm font-semibold text-[#0D382B]">Notices to vacate</h2>
           <p class="text-xs text-[#69847A]">Tenants have signed these notices and are awaiting your countersignature.</p>
         </div>
-        <span class="px-2.5 py-1 rounded-full bg-[#FFF8E1] text-[#8A5D00] text-xs font-semibold">
-          {pendingNotices.length} awaiting signature
-        </span>
+        <div class="flex items-center gap-2.5">
+          <span class="px-2.5 py-1 rounded-full bg-[#FFF8E1] text-[#8A5D00] text-xs font-semibold">
+            {pendingNotices.length} awaiting signature
+          </span>
+          <a href="/notices" class="text-xs font-semibold text-[#0D382B] hover:underline">
+            View all →
+          </a>
+        </div>
       </div>
       <div class="divide-y divide-[#E3E6DF]">
         {pendingNotices.map((n) => {
           const tv = tenancyById.get(n.tenancyId);
           const tenantName = tv?.tenant.name ?? 'Tenant';
           const unitLabel = tv?.unitLabel ?? n.tenancyId;
+          const depositStr = tv ? formatKes(tv.tenancy.deposit) : '';
+          const balanceStr = tv ? formatKes(Math.abs(tv.balance)) : '';
           return (
             <div class="px-6 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div class="text-xs">
@@ -106,14 +113,19 @@ const searchText = (parts: string[]) => parts.join(' ').toLowerCase();
                 type="button"
                 class="review-notice-btn px-4 py-2 rounded-full bg-[#0D382B] text-white text-xs font-semibold hover:bg-[#08221A] cursor-pointer self-start sm:self-auto"
                 data-notice-id={n.id}
+                data-status={n.status}
                 data-tenant={tenantName}
                 data-unit={unitLabel}
                 data-vacating={formatDate(n.vacatingDate)}
-                data-inspection={`${formatDate(n.inspectionDate)} (${n.inspectionSlot})`}
+                data-inspection={`${formatDate(n.inspectionDate)} · ${n.inspectionSlot}`}
                 data-reason={n.reason}
+                data-details={n.reasonDetails ?? ''}
                 data-phone={n.depositRefundPhone}
+                data-deposit={depositStr}
+                data-balance={balanceStr}
                 data-sig-type={n.tenantSignatureType ?? 'type'}
                 data-sig-data={n.tenantSignatureData ?? tenantName}
+                data-tenant-signed-at={formatDate(n.tenantSignedAt ?? n.createdAt)}
               >
                 Review &amp; sign
               </button>

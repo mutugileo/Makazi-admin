@@ -1,5 +1,5 @@
 ---
-// Modal for staff to review, countersign, or decline a tenant's Notice to Vacate.
+// Modal for staff to review, countersign, decline, or inspect a tenant's Notice to Vacate.
 ---
 
 <div
@@ -9,92 +9,145 @@
   aria-labelledby="review-notice-title"
   class="fixed inset-0 z-50 hidden items-center justify-center bg-[#0A261F]/45 backdrop-blur-xs p-4"
 >
-  <div class="w-full max-w-xl rounded-3xl bg-white border border-[#E3E6DF] shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
-    <div class="px-6 py-4 border-b border-[#E3E6DF] flex items-center justify-between">
-      <div>
-        <span class="text-[11px] font-semibold uppercase tracking-wider text-[#69847A]">Notice to Vacate</span>
-        <h2 id="review-notice-title" class="text-xl font-editorial text-[#0D382B]">Review &amp; countersign</h2>
+  <div class="w-full max-w-2xl rounded-3xl bg-white border border-[#E3E6DF] shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
+    <div class="px-6 py-4 border-b border-[#E3E6DF] flex items-center justify-between gap-3">
+      <div class="min-w-0">
+        <div class="flex items-center gap-2">
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-[#69847A]">Notice to Vacate</span>
+          <span id="rn-status-pill" class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#FFF8E1] text-[#8A5D00]">
+            Awaiting signature
+          </span>
+        </div>
+        <h2 id="review-notice-title" class="text-xl font-editorial text-[#0D382B] mt-0.5">Review &amp; countersign</h2>
       </div>
-      <button type="button" id="close-review-notice-modal" class="px-3 py-1.5 rounded-full text-xs font-semibold text-[#5A6862] hover:bg-[#F3F4F0] cursor-pointer">
+      <button type="button" id="close-review-notice-modal" class="px-3 py-1.5 rounded-full text-xs font-semibold text-[#5A6862] hover:bg-[#F3F4F0] cursor-pointer shrink-0">
         Close
       </button>
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto p-6 space-y-5 text-xs">
-      <div class="rounded-2xl bg-[#FAFBF9] border border-[#E3E6DF] p-4 grid grid-cols-2 gap-3">
-        <div>
-          <span class="text-[#69847A] block">Tenant</span>
-          <span id="rn-tenant" class="font-semibold text-[#0D382B] text-sm"></span>
-        </div>
-        <div>
-          <span class="text-[#69847A] block">Unit</span>
-          <span id="rn-unit" class="font-semibold text-[#0D382B] text-sm"></span>
-        </div>
-        <div>
-          <span class="text-[#69847A] block">Vacating date</span>
-          <span id="rn-vacating" class="font-semibold text-[#0D382B]"></span>
-        </div>
-        <div>
-          <span class="text-[#69847A] block">Inspection</span>
-          <span id="rn-inspection" class="font-semibold text-[#0D382B]"></span>
-        </div>
-        <div>
-          <span class="text-[#69847A] block">Reason</span>
-          <span id="rn-reason" class="font-semibold text-[#0D382B]"></span>
-        </div>
-        <div>
-          <span class="text-[#69847A] block">Deposit refund phone</span>
-          <span id="rn-phone" class="font-semibold text-[#0D382B]"></span>
-        </div>
-      </div>
-
-      <div class="rounded-2xl border border-[#E3E6DF] p-4">
-        <span class="text-[11px] font-semibold uppercase tracking-wider text-[#69847A] block mb-2">Tenant signature</span>
-        <div id="rn-tenant-sig" class="h-14 flex items-center"></div>
-      </div>
-
-      <div class="space-y-3">
-        <div class="flex items-center justify-between">
-          <span class="text-[11px] font-semibold uppercase tracking-wider text-[#69847A]">Your signature</span>
-          <div class="inline-flex rounded-full bg-[#F3F4F0] p-0.5 border border-[#E3E6DF]">
-            <button type="button" id="rn-tab-draw" class="px-3 py-1 rounded-full text-[11px] font-semibold bg-white text-[#0D382B] shadow-2xs cursor-pointer">Draw</button>
-            <button type="button" id="rn-tab-type" class="px-3 py-1 rounded-full text-[11px] font-semibold text-[#5A6862] cursor-pointer">Type</button>
+      <!-- Document Card -->
+      <div class="rounded-2xl bg-[#FAFBF9] border border-[#E3E6DF] p-4 space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <span class="text-[#69847A] block">Issued by (Tenant)</span>
+            <span id="rn-tenant" class="font-semibold text-[#0D382B] text-sm"></span>
+          </div>
+          <div>
+            <span class="text-[#69847A] block">Unit &amp; Property</span>
+            <span id="rn-unit" class="font-semibold text-[#0D382B] text-sm"></span>
           </div>
         </div>
 
-        <div id="rn-draw-wrap" class="relative rounded-2xl border border-[#E3E6DF] bg-[#FAFBF9] overflow-hidden">
-          <canvas id="rn-canvas" width="500" height="140" class="w-full h-36 cursor-crosshair touch-none block"></canvas>
-          <button type="button" id="rn-clear-canvas" class="absolute top-2 right-2 px-2.5 py-1 rounded-lg bg-white border border-[#E3E6DF] text-[11px] font-semibold text-[#0D382B] hover:bg-[#F3F4F0] cursor-pointer">
-            Clear
-          </button>
+        <div class="border-t border-[#E3E6DF] pt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <span class="text-[#69847A] block">Vacating date</span>
+            <span id="rn-vacating" class="font-semibold text-[#0D382B]"></span>
+          </div>
+          <div>
+            <span class="text-[#69847A] block">Inspection schedule</span>
+            <span id="rn-inspection" class="font-semibold text-[#0D382B]"></span>
+          </div>
+          <div>
+            <span class="text-[#69847A] block">Reason</span>
+            <span id="rn-reason" class="font-semibold text-[#0D382B]"></span>
+          </div>
+          <div>
+            <span class="text-[#69847A] block">Deposit refund phone</span>
+            <span id="rn-phone" class="font-semibold text-[#0D382B]"></span>
+          </div>
+          <div id="rn-deposit-wrap" class="hidden">
+            <span class="text-[#69847A] block">Deposit held</span>
+            <span id="rn-deposit" class="font-semibold text-[#0D382B]"></span>
+          </div>
+          <div id="rn-balance-wrap" class="hidden">
+            <span class="text-[#69847A] block">Current balance</span>
+            <span id="rn-balance" class="font-semibold text-[#0D382B]"></span>
+          </div>
         </div>
 
-        <div id="rn-type-wrap" class="hidden">
-          <input
-            type="text"
-            id="rn-typed-input"
-            placeholder="Type your full name"
-            class="w-full px-4 py-2.5 rounded-xl border border-[#DCE0D7] text-sm text-[#0D382B] focus:outline-none focus:border-[#0D382B]"
-          />
+        <div id="rn-details-wrap" class="hidden border-t border-[#E3E6DF] pt-3">
+          <span class="text-[#69847A] block mb-0.5">Additional notes</span>
+          <p id="rn-details" class="text-[#0D382B] leading-relaxed"></p>
         </div>
       </div>
 
-      <div class="pt-2 border-t border-[#E3E6DF]">
-        <label for="rn-decline-note" class="block text-[11px] font-semibold text-[#69847A] mb-1">
-          Decline reason (only needed if declining)
-        </label>
-        <input
-          type="text"
-          id="rn-decline-note"
-          placeholder="Notice period or inspection date issue"
-          class="w-full px-3.5 py-2 rounded-xl border border-[#DCE0D7] text-xs text-[#0D382B] focus:outline-none focus:border-[#0D382B]"
-        />
+      <!-- Acceptance Clause -->
+      <div class="rounded-2xl bg-[#FFF8E1]/65 border border-[#F0D99B] px-4 py-3 text-[#6E4B00] leading-relaxed">
+        <strong class="block text-[#0D382B] mb-0.5">Acceptance</strong>
+        By signing, both parties confirm the move-out date, inspection schedule, and deposit settlement terms.
+      </div>
+
+      <!-- Decline Banner (when declined) -->
+      <div id="rn-declined-banner" class="hidden rounded-2xl bg-[#FDEEE9] border border-[#F2C6B8] px-4 py-3 text-[#B5421F]">
+        <strong class="block mb-0.5">Decline reason</strong>
+        <span id="rn-declined-text"></span>
+      </div>
+
+      <!-- 2-Column Signatures Block -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="rounded-2xl border border-[#E3E6DF] p-4 flex flex-col justify-between">
+          <div>
+            <span class="text-[11px] font-semibold uppercase tracking-wider text-[#69847A] block mb-2">Tenant</span>
+            <div id="rn-tenant-sig" class="h-14 flex items-center"></div>
+          </div>
+          <span id="rn-tenant-signed-at" class="text-[11px] text-[#69847A] mt-2 block"></span>
+        </div>
+
+        <div class="rounded-2xl border border-[#E3E6DF] p-4 flex flex-col justify-between">
+          <div>
+            <span class="text-[11px] font-semibold uppercase tracking-wider text-[#69847A] block mb-2">Property Manager</span>
+            <div id="rn-landlord-sig" class="h-14 flex items-center text-[#69847A] italic">Awaiting countersignature</div>
+          </div>
+          <span id="rn-landlord-signed-at" class="text-[11px] text-[#69847A] mt-2 block"></span>
+        </div>
+      </div>
+
+      <!-- Countersignature Pad (only when awaiting signature) -->
+      <div id="rn-sign-controls" class="space-y-4">
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-semibold uppercase tracking-wider text-[#69847A]">Your signature</span>
+            <div class="inline-flex rounded-full bg-[#F3F4F0] p-0.5 border border-[#E3E6DF]">
+              <button type="button" id="rn-tab-draw" class="px-3 py-1 rounded-full text-[11px] font-semibold bg-white text-[#0D382B] shadow-2xs cursor-pointer">Draw</button>
+              <button type="button" id="rn-tab-type" class="px-3 py-1 rounded-full text-[11px] font-semibold text-[#5A6862] cursor-pointer">Type</button>
+            </div>
+          </div>
+
+          <div id="rn-draw-wrap" class="relative rounded-2xl border border-[#E3E6DF] bg-[#FAFBF9] overflow-hidden">
+            <canvas id="rn-canvas" width="500" height="140" class="w-full h-36 cursor-crosshair touch-none block"></canvas>
+            <button type="button" id="rn-clear-canvas" class="absolute top-2 right-2 px-2.5 py-1 rounded-lg bg-white border border-[#E3E6DF] text-[11px] font-semibold text-[#0D382B] hover:bg-[#F3F4F0] cursor-pointer">
+              Clear
+            </button>
+          </div>
+
+          <div id="rn-type-wrap" class="hidden">
+            <input
+              type="text"
+              id="rn-typed-input"
+              placeholder="Type your full name"
+              class="w-full px-4 py-2.5 rounded-xl border border-[#DCE0D7] text-sm text-[#0D382B] focus:outline-none focus:border-[#0D382B]"
+            />
+          </div>
+        </div>
+
+        <div class="pt-2 border-t border-[#E3E6DF]">
+          <label for="rn-decline-note" class="block text-[11px] font-semibold text-[#69847A] mb-1">
+            Decline reason (only needed if declining)
+          </label>
+          <input
+            type="text"
+            id="rn-decline-note"
+            placeholder="Notice period or inspection date issue"
+            class="w-full px-3.5 py-2 rounded-xl border border-[#DCE0D7] text-xs text-[#0D382B] focus:outline-none focus:border-[#0D382B]"
+          />
+        </div>
       </div>
 
       <p id="rn-error" class="hidden text-xs font-medium text-[#C04A26]"></p>
     </div>
 
-    <div class="px-6 py-4 border-t border-[#E3E6DF] bg-[#FAFBF9] flex items-center justify-between gap-3">
+    <div id="rn-footer-actions" class="px-6 py-4 border-t border-[#E3E6DF] bg-[#FAFBF9] flex items-center justify-between gap-3">
       <button
         type="button"
         id="rn-decline-btn"
@@ -131,6 +184,8 @@
     const errorEl = document.getElementById('rn-error');
     const countersignBtn = document.getElementById('rn-countersign-btn') as HTMLButtonElement | null;
     const declineBtn = document.getElementById('rn-decline-btn') as HTMLButtonElement | null;
+    const signControls = document.getElementById('rn-sign-controls');
+    const footerActions = document.getElementById('rn-footer-actions');
 
     let activeNoticeId = '';
     let sigMode: 'draw' | 'type' = 'draw';
@@ -219,6 +274,21 @@
       errorEl.classList.remove('hidden');
     }
 
+    function renderSignature(el: HTMLElement | null, sType: string | undefined, sData: string, fallback: string) {
+      if (!el) return;
+      el.innerHTML = '';
+      if (sType === 'draw' && sData) {
+        el.className = 'h-14 flex items-center';
+        el.innerHTML = `<svg viewBox="0 0 1 1" preserveAspectRatio="none" class="w-44 h-12"><path d="${sData}" fill="none" stroke="#0D382B" stroke-width="0.025" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+      } else if (sData) {
+        el.className = 'h-14 flex items-center font-editorial italic text-xl text-[#0D382B]';
+        el.textContent = sData;
+      } else {
+        el.className = 'h-14 flex items-center text-xs text-[#69847A] italic';
+        el.textContent = fallback;
+      }
+    }
+
     async function submitReview(action: 'countersign' | 'decline') {
       if (!activeNoticeId) return;
       errorEl?.classList.add('hidden');
@@ -264,10 +334,15 @@
     document.querySelectorAll<HTMLButtonElement>('.review-notice-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         activeNoticeId = btn.dataset.noticeId ?? '';
+        const status = btn.dataset.status ?? 'pending_landlord';
+        const isPending = status === 'pending_landlord';
+
         strokes = [];
         renderCanvas();
+        if (typedInput) typedInput.value = '';
         if (declineNote) declineNote.value = '';
         errorEl?.classList.add('hidden');
+        setMode('draw');
 
         const setText = (id: string, val: string) => {
           const el = document.getElementById(id);
@@ -280,17 +355,84 @@
         setText('rn-reason', btn.dataset.reason ?? '');
         setText('rn-phone', btn.dataset.phone ?? '');
 
-        const sigEl = document.getElementById('rn-tenant-sig');
-        if (sigEl) {
-          const sType = btn.dataset.sigType;
-          const sData = btn.dataset.sigData ?? '';
-          if (sType === 'draw' && sData) {
-            sigEl.innerHTML = `<svg viewBox="0 0 1 1" preserveAspectRatio="none" class="w-48 h-12"><path d="${sData}" fill="none" stroke="#0D382B" stroke-width="0.025" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+        const depositWrap = document.getElementById('rn-deposit-wrap');
+        const balanceWrap = document.getElementById('rn-balance-wrap');
+        const detailsWrap = document.getElementById('rn-details-wrap');
+        if (btn.dataset.deposit) {
+          setText('rn-deposit', btn.dataset.deposit);
+          depositWrap?.classList.remove('hidden');
+        } else {
+          depositWrap?.classList.add('hidden');
+        }
+        if (btn.dataset.balance) {
+          setText('rn-balance', btn.dataset.balance);
+          balanceWrap?.classList.remove('hidden');
+        } else {
+          balanceWrap?.classList.add('hidden');
+        }
+        if (btn.dataset.details) {
+          setText('rn-details', btn.dataset.details);
+          detailsWrap?.classList.remove('hidden');
+        } else {
+          detailsWrap?.classList.add('hidden');
+        }
+
+        const pill = document.getElementById('rn-status-pill');
+        const titleEl = document.getElementById('review-notice-title');
+        if (pill) {
+          if (status === 'countersigned') {
+            pill.textContent = 'Countersigned';
+            pill.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#E8F5E9] text-[#2E7D32]';
+            if (titleEl) titleEl.textContent = 'Signed Notice to Vacate';
+          } else if (status === 'declined') {
+            pill.textContent = 'Declined';
+            pill.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#FDEEE9] text-[#B5421F]';
+            if (titleEl) titleEl.textContent = 'Declined Notice to Vacate';
+          } else if (status === 'withdrawn') {
+            pill.textContent = 'Withdrawn';
+            pill.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#F3F4F0] text-[#5A6862]';
+            if (titleEl) titleEl.textContent = 'Withdrawn Notice to Vacate';
           } else {
-            sigEl.textContent = sData || 'Signed';
-            sigEl.className = 'h-14 flex items-center font-editorial italic text-xl text-[#0D382B]';
+            pill.textContent = 'Awaiting signature';
+            pill.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#FFF8E1] text-[#8A5D00]';
+            if (titleEl) titleEl.textContent = 'Review & countersign';
           }
         }
+
+        const declinedBanner = document.getElementById('rn-declined-banner');
+        if (status === 'declined' && btn.dataset.declineNote) {
+          setText('rn-declined-text', btn.dataset.declineNote);
+          declinedBanner?.classList.remove('hidden');
+        } else {
+          declinedBanner?.classList.add('hidden');
+        }
+
+        renderSignature(
+          document.getElementById('rn-tenant-sig'),
+          btn.dataset.sigType,
+          btn.dataset.sigData ?? '',
+          'Signed',
+        );
+        setText(
+          'rn-tenant-signed-at',
+          btn.dataset.tenantSignedAt ? `Signed ${btn.dataset.tenantSignedAt}` : '',
+        );
+
+        renderSignature(
+          document.getElementById('rn-landlord-sig'),
+          btn.dataset.landlordSigType,
+          btn.dataset.landlordSigData ?? '',
+          status === 'declined' ? 'Declined' : status === 'withdrawn' ? 'Withdrawn by tenant' : 'Awaiting countersignature',
+        );
+        setText(
+          'rn-landlord-signed-at',
+          btn.dataset.landlordSignedAt
+            ? `Signed by ${btn.dataset.landlordSignedBy || 'Management'} · ${btn.dataset.landlordSignedAt}`
+            : '',
+        );
+
+        signControls?.classList.toggle('hidden', !isPending);
+        footerActions?.classList.toggle('hidden', !isPending);
 
         modal.classList.remove('hidden');
         modal.classList.add('flex');

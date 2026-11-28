@@ -1,0 +1,276 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+import { getPortfolio, formatKes } from '../data/portfolio';
+import { makeSupabaseClient } from '../lib/supabase';
+import { fetchCompanyVacationNotices, type VacationNoticeRow } from '../lib/vacation-notices';
+import ReviewNoticeModal from '../components/dashboard/ReviewNoticeModal.astro';
+import { DoorOpen, Search, CheckCircle2, Clock, XCircle, FileCheck2 } from '@lucide/astro';
+
+const user = Astro.locals.user;
+if (!user) {
+  return Astro.redirect('/login');
+}
+
+const { activeTenancies, formerTenancies } = await getPortfolio(user.companyId, Astro.cookies);
+const allTenancies = [...activeTenancies, ...formerTenancies];
+const tenancyById = new Map(allTenancies.map((tv) => [tv.tenancy.id, tv]));
+
+const supabase = makeSupabaseClient(Astro.cookies);
+let notices: VacationNoticeRow[] = [];
+if (supabase) {
+  try {
+    notices = await fetchCompanyVacationNotices(supabase, user.companyId);
+  } catch (err) {
+    console.error('[notices] failed to fetch vacation notices:', err);
+  }
+}
+
+const formatDate = (iso?: string | null) => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso.slice(0, 10);
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+const pendingCount = notices.filter((n) => n.status === 'pending_landlord').length;
+const countersignedCount = notices.filter((n) => n.status === 'countersigned').length;
+const declinedCount = notices.filter((n) => n.status === 'declined').length;
+const withdrawnCount = notices.filter((n) => n.status === 'withdrawn').length;
+
+const statusMeta: Record<string, { label: string; cls: string }> = {
+  pending_landlord: { label: 'Awaiting signature', cls: 'bg-[#FFF8E1] text-[#8A5D00]' },
+  pending_tenant: { label: 'Awaiting tenant', cls: 'bg-[#FFF8E1] text-[#8A5D00]' },
+  countersigned: { label: 'Countersigned', cls: 'bg-[#E8F5E9] text-[#2E7D32]' },
+  declined: { label: 'Declined', cls: 'bg-[#FDEEE9] text-[#B5421F]' },
+  withdrawn: { label: 'Withdrawn', cls: 'bg-[#F3F4F0] text-[#5A6862]' },
+};
+---
+
+<DashboardLayout title="Notices to Vacate" currentPath="/notices">
+  <!-- Header -->
+  <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl sm:text-3xl font-editorial text-[#0D382B]">Notices to vacate</h1>
+      <p class="text-xs sm:text-sm text-[#5A6862] mt-1">
+        Review tenant move-out notices, verify inspection schedules, and countersign digitally.
+      </p>
+    </div>
+    <a
+      href="/tenants"
+      class="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#DCE0D7] bg-white text-xs font-semibold text-[#0D382B] hover:bg-[#FAFBF9] self-start sm:self-auto"
+    >
+      <span>Back to tenants</span>
+    </a>
+  </div>
+
+  <!-- Summary KPI Cards -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+    <div class="rounded-2xl bg-white border border-[#E3E6DF] p-4">
+      <div class="flex items-center justify-between text-[#69847A] text-xs mb-1">
+        <span>Awaiting signature</span>
+        <Clock class="w-4 h-4 text-[#8A5D00]" />
+      </div>
+      <p class="text-2xl font-editorial text-[#0D382B]">{pendingCount}</p>
+    </div>
+    <div class="rounded-2xl bg-white border border-[#E3E6DF] p-4">
+      <div class="flex items-center justify-between text-[#69847A] text-xs mb-1">
+        <span>Countersigned</span>
+        <CheckCircle2 class="w-4 h-4 text-[#2E7D32]" />
+      </div>
+      <p class="text-2xl font-editorial text-[#0D382B]">{countersignedCount}</p>
+    </div>
+    <div class="rounded-2xl bg-white border border-[#E3E6DF] p-4">
+      <div class="flex items-center justify-between text-[#69847A] text-xs mb-1">
+        <span>Declined</span>
+        <XCircle class="w-4 h-4 text-[#B5421F]" />
+      </div>
+      <p class="text-2xl font-editorial text-[#0D382B]">{declinedCount}</p>
+    </div>
+    <div class="rounded-2xl bg-white border border-[#E3E6DF] p-4">
+      <div class="flex items-center justify-between text-[#69847A] text-xs mb-1">
+        <span>Withdrawn</span>
+        <FileCheck2 class="w-4 h-4 text-[#5A6862]" />
+      </div>
+      <p class="text-2xl font-editorial text-[#0D382B]">{withdrawnCount}</p>
+    </div>
+  </div>
+
+  <!-- Filter & Search Bar -->
+  <div class="mb-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+    <div class="flex flex-wrap items-center gap-1.5" id="notice-filter-pills">
+      <button type="button" data-filter="all" class="notice-filter-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#0D382B] text-white cursor-pointer">
+        All ({notices.length})
+      </button>
+      <button type="button" data-filter="pending_landlord" class="notice-filter-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white border border-[#E3E6DF] text-[#5A6862] hover:bg-[#FAFBF9] cursor-pointer">
+        Awaiting signature ({pendingCount})
+      </button>
+      <button type="button" data-filter="countersigned" class="notice-filter-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white border border-[#E3E6DF] text-[#5A6862] hover:bg-[#FAFBF9] cursor-pointer">
+        Countersigned ({countersignedCount})
+      </button>
+      <button type="button" data-filter="declined" class="notice-filter-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white border border-[#E3E6DF] text-[#5A6862] hover:bg-[#FAFBF9] cursor-pointer">
+        Declined ({declinedCount})
+      </button>
+      <button type="button" data-filter="withdrawn" class="notice-filter-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white border border-[#E3E6DF] text-[#5A6862] hover:bg-[#FAFBF9] cursor-pointer">
+        Withdrawn ({withdrawnCount})
+      </button>
+    </div>
+
+    <div class="relative w-full md:w-72">
+      <Search class="w-4 h-4 text-[#69847A] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+      <input
+        id="notice-search-input"
+        type="search"
+        placeholder="Search tenant, unit, or reason"
+        class="w-full pl-9 pr-3.5 py-2 rounded-full bg-white border border-[#DCE0D7] text-xs text-[#0D382B] focus:outline-none focus:border-[#0D382B]"
+      />
+    </div>
+  </div>
+
+  <!-- Notices Table -->
+  {notices.length === 0 ? (
+    <div class="rounded-3xl bg-white border border-[#E3E6DF] p-12 text-center">
+      <div class="w-12 h-12 rounded-2xl bg-[#F3F4F0] text-[#0D382B] flex items-center justify-center mx-auto mb-3">
+        <DoorOpen class="w-6 h-6" />
+      </div>
+      <h2 class="text-lg font-editorial text-[#0D382B]">No notices to vacate yet</h2>
+      <p class="text-xs text-[#69847A] max-w-md mx-auto mt-1">
+        When a tenant signs and submits a Notice to Vacate in the Makazi tenant app, it will appear here for your review and countersignature.
+      </p>
+    </div>
+  ) : (
+    <div class="bg-white rounded-3xl border border-[#E3E6DF] overflow-hidden shadow-xs">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="border-b border-[#E3E6DF] bg-[#FAFBF9] text-[11px] font-semibold uppercase tracking-wider text-[#69847A]">
+              <th class="py-3.5 px-5">Tenant &amp; Unit</th>
+              <th class="py-3.5 px-4">Vacating Date</th>
+              <th class="py-3.5 px-4">Inspection</th>
+              <th class="py-3.5 px-4">Reason</th>
+              <th class="py-3.5 px-4">Deposit / Balance</th>
+              <th class="py-3.5 px-4">Signatures</th>
+              <th class="py-3.5 px-4">Status</th>
+              <th class="py-3.5 px-5 text-right sticky right-0 bg-[#FAFBF9]/95 backdrop-blur-xs">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[#E3E6DF]" id="notices-table-body">
+            {notices.map((n) => {
+              const tv = tenancyById.get(n.tenancyId);
+              const tenantName = tv?.tenant.name ?? 'Tenant';
+              const unitLabel = tv ? `${tv.property.name} · ${tv.unit.label}` : n.tenancyId;
+              const depositStr = tv ? formatKes(tv.tenancy.deposit) : '—';
+              const balanceStr = tv ? formatKes(Math.abs(tv.balance)) : '—';
+              const meta = statusMeta[n.status] ?? { label: n.status, cls: 'bg-[#F3F4F0] text-[#5A6862]' };
+              const searchBlob = `${tenantName} ${unitLabel} ${n.reason} ${n.reasonDetails ?? ''}`.toLowerCase();
+
+              return (
+                <tr class="notice-row hover:bg-[#FAFBF9]/70 transition-colors" data-status={n.status} data-search={searchBlob}>
+                  <td class="py-3.5 px-5 whitespace-nowrap">
+                    <div class="font-semibold text-[#0D382B] text-sm">{tenantName}</div>
+                    <div class="text-[#69847A]">{unitLabel}</div>
+                  </td>
+                  <td class="py-3.5 px-4 whitespace-nowrap font-semibold text-[#0D382B]">
+                    {formatDate(n.vacatingDate)}
+                  </td>
+                  <td class="py-3.5 px-4 whitespace-nowrap">
+                    <div class="text-[#0D382B] font-medium">{formatDate(n.inspectionDate)}</div>
+                    <div class="text-[#69847A]">{n.inspectionSlot}</div>
+                  </td>
+                  <td class="py-3.5 px-4 max-w-[220px]">
+                    <div class="font-medium text-[#0D382B] truncate">{n.reason}</div>
+                    {n.reasonDetails && <div class="text-[#69847A] truncate">{n.reasonDetails}</div>}
+                  </td>
+                  <td class="py-3.5 px-4 whitespace-nowrap">
+                    <div class="text-[#0D382B] font-medium">Dep: {depositStr}</div>
+                    <div class="text-[#69847A]">Bal: {balanceStr}</div>
+                  </td>
+                  <td class="py-3.5 px-4 whitespace-nowrap">
+                    <div class="text-[#2E7D32] font-medium">Tenant ✓</div>
+                    <div class={n.landlordSignedAt ? 'text-[#2E7D32] font-medium' : 'text-[#69847A]'}>
+                      {n.landlordSignedAt ? 'Manager ✓' : 'Manager pending'}
+                    </div>
+                  </td>
+                  <td class="py-3.5 px-4 whitespace-nowrap">
+                    <span class={`inline-flex px-2.5 py-1 rounded-full text-[11px] font-semibold ${meta.cls}`}>
+                      {meta.label}
+                    </span>
+                  </td>
+                  <td class="py-3.5 px-5 text-right whitespace-nowrap sticky right-0 bg-white/95 backdrop-blur-xs shadow-[-6px_0_12px_-8px_rgba(13,56,43,0.12)]">
+                    <button
+                      type="button"
+                      class={`review-notice-btn px-4 py-1.5 rounded-full text-xs font-semibold cursor-pointer ${
+                        n.status === 'pending_landlord'
+                          ? 'bg-[#0D382B] text-white hover:bg-[#08221A]'
+                          : 'border border-[#DCE0D7] bg-white text-[#0D382B] hover:bg-[#FAFBF9]'
+                      }`}
+                      data-notice-id={n.id}
+                      data-status={n.status}
+                      data-tenant={tenantName}
+                      data-unit={unitLabel}
+                      data-vacating={formatDate(n.vacatingDate)}
+                      data-inspection={`${formatDate(n.inspectionDate)} · ${n.inspectionSlot}`}
+                      data-reason={n.reason}
+                      data-details={n.reasonDetails ?? ''}
+                      data-phone={n.depositRefundPhone}
+                      data-deposit={depositStr}
+                      data-balance={balanceStr}
+                      data-sig-type={n.tenantSignatureType ?? 'type'}
+                      data-sig-data={n.tenantSignatureData ?? tenantName}
+                      data-tenant-signed-at={formatDate(n.tenantSignedAt ?? n.createdAt)}
+                      data-landlord-sig-type={n.landlordSignatureType ?? ''}
+                      data-landlord-sig-data={n.landlordSignatureData ?? ''}
+                      data-landlord-signed-by={n.landlordSignedBy ?? ''}
+                      data-landlord-signed-at={n.landlordSignedAt ? formatDate(n.landlordSignedAt) : ''}
+                      data-decline-note={n.declineNote ?? ''}
+                    >
+                      {n.status === 'pending_landlord' ? 'Review & sign' : 'View document'}
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )}
+
+  <ReviewNoticeModal slot="modals" />
+</DashboardLayout>
+
+<script>
+  function initNoticesPageFilters() {
+    const pills = document.querySelectorAll<HTMLButtonElement>('.notice-filter-pill');
+    const searchInput = document.getElementById('notice-search-input') as HTMLInputElement | null;
+    const rows = document.querySelectorAll<HTMLTableRowElement>('.notice-row');
+    if (!pills.length) return;
+
+    let activeFilter = 'all';
+
+    function applyFilters() {
+      const q = (searchInput?.value ?? '').trim().toLowerCase();
+      rows.forEach((row) => {
+        const statusMatch = activeFilter === 'all' || row.dataset.status === activeFilter;
+        const textMatch = !q || (row.dataset.search ?? '').includes(q);
+        row.classList.toggle('hidden', !(statusMatch && textMatch));
+      });
+    }
+
+    pills.forEach((pill) => {
+      pill.addEventListener('click', () => {
+        activeFilter = pill.dataset.filter ?? 'all';
+        pills.forEach((p) => {
+          const active = p === pill;
+          p.className = active
+            ? 'notice-filter-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#0D382B] text-white cursor-pointer'
+            : 'notice-filter-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white border border-[#E3E6DF] text-[#5A6862] hover:bg-[#FAFBF9] cursor-pointer';
+        });
+        applyFilters();
+      });
+    });
+
+    searchInput?.addEventListener('input', applyFilters);
+  }
+
+  document.addEventListener('astro:page-load', initNoticesPageFilters);
+</script>

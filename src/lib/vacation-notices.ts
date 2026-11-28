@@ -30,9 +30,9 @@ export async function fetchCompanyVacationNotices(
     .from('vacation_notices')
     .select('*')
     .eq('company_id', companyId)
-    .in('status', ['pending_landlord', 'countersigned'])
+    .in('status', ['pending_landlord', 'pending_tenant', 'countersigned', 'declined', 'withdrawn'])
     .order('created_at', { ascending: false })
-    .limit(50);
+    .limit(100);
 
   if (error) {
     // Graceful fallback if migration isn't applied yet
@@ -63,4 +63,23 @@ export async function fetchCompanyVacationNotices(
     declineNote: r.decline_note ?? null,
     createdAt: r.created_at,
   }));
+}
+
+export async function countPendingVacationNotices(
+  supabase: SupabaseClient,
+  companyId: string,
+): Promise<number> {
+  const { count, error } = await supabase
+    .from('vacation_notices')
+    .select('id', { count: 'exact', head: true })
+    .eq('company_id', companyId)
+    .eq('status', 'pending_landlord');
+
+  if (error) {
+    if (error.code === '42P01' || error.message?.includes('vacation_notices')) {
+      return 0;
+    }
+    return 0;
+  }
+  return count ?? 0;
 }
