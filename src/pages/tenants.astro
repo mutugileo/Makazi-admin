@@ -4,12 +4,27 @@ import MoveOutModal from '../components/dashboard/MoveOutModal.astro';
 import ResetPasswordModal from '../components/dashboard/ResetPasswordModal.astro';
 import EditTenantModal from '../components/dashboard/EditTenantModal.astro';
 import BulkImportModal from '../components/dashboard/BulkImportModal.astro';
+import ReviewNoticeModal from '../components/dashboard/ReviewNoticeModal.astro';
 import StatusBadge from '../components/ui/StatusBadge.astro';
 import { getPortfolio, bedLabel, formatDate, formatKes } from '../data/portfolio';
+import { makeSupabaseClient } from '../lib/supabase';
+import { fetchCompanyVacationNotices, type VacationNoticeRow } from '../lib/vacation-notices';
 import { Plus, FileText, KeyRound, Pencil, FileSpreadsheet } from '@lucide/astro';
 
 // This company's data only (the signed-in user's).
-const { activeTenancies, formerTenancies, lastReading, portfolioSummary, propertyViews, stats, asOf, currentPeriod } = await getPortfolio(Astro.locals.user!.companyId, Astro.cookies);
+const companyId = Astro.locals.user!.companyId;
+const { activeTenancies, formerTenancies, lastReading, portfolioSummary, propertyViews, stats, asOf, currentPeriod } = await getPortfolio(companyId, Astro.cookies);
+const tenancyById = new Map([...activeTenancies, ...formerTenancies].map((t) => [t.tenancy.id, t]));
+let notices: VacationNoticeRow[] = [];
+const sb = makeSupabaseClient(Astro.cookies);
+if (sb) {
+  try {
+    notices = await fetchCompanyVacationNotices(sb, companyId);
+  } catch {
+    notices = [];
+  }
+}
+const pendingNotices = notices.filter((n) => n.status === 'pending_landlord');
 
 const searchText = (parts: string[]) => parts.join(' ').toLowerCase();
 ---
@@ -61,6 +76,53 @@ const searchText = (parts: string[]) => parts.join(' ').toLowerCase();
       </button>
     </div>
   </div>
+
+  <!-- Notices to vacate awaiting countersignature -->
+  {pendingNotices.length > 0 && (
+    <section class="mb-6 bg-white rounded-3xl border border-[#E3E6DF] overflow-hidden shadow-xs">
+      <div class="px-6 py-4 border-b border-[#E3E6DF] flex items-center justify-between bg-[#FAFBF9]">
+        <div>
+          <h2 class="text-sm font-semibold text-[#0D382B]">Notices to vacate</h2>
+          <p class="text-xs text-[#69847A]">Tenants have signed these notices and are awaiting your countersignature.</p>
+        </div>
+        <span class="px-2.5 py-1 rounded-full bg-[#FFF8E1] text-[#8A5D00] text-xs font-semibold">
+          {pendingNotices.length} awaiting signature
+        </span>
+      </div>
+      <div class="divide-y divide-[#E3E6DF]">
+        {pendingNotices.map((n) => {
+          const tv = tenancyById.get(n.tenancyId);
+          const tenantName = tv?.tenant.name ?? 'Tenant';
+          const unitLabel = tv?.unitLabel ?? n.tenancyId;
+          return (
+            <div class="px-6 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div class="text-xs">
+                <p class="font-semibold text-[#0D382B] text-sm">{tenantName} · <span class="font-normal text-[#5A6862]">{unitLabel}</span></p>
+                <p class="text-[#69847A] mt-0.5">
+                  Vacating <strong class="text-[#0D382B]">{formatDate(n.vacatingDate)}</strong> · Inspection {formatDate(n.inspectionDate)} ({n.inspectionSlot}) · {n.reason}
+                </p>
+              </div>
+              <button
+                type="button"
+                class="review-notice-btn px-4 py-2 rounded-full bg-[#0D382B] text-white text-xs font-semibold hover:bg-[#08221A] cursor-pointer self-start sm:self-auto"
+                data-notice-id={n.id}
+                data-tenant={tenantName}
+                data-unit={unitLabel}
+                data-vacating={formatDate(n.vacatingDate)}
+                data-inspection={`${formatDate(n.inspectionDate)} (${n.inspectionSlot})`}
+                data-reason={n.reason}
+                data-phone={n.depositRefundPhone}
+                data-sig-type={n.tenantSignatureType ?? 'type'}
+                data-sig-data={n.tenantSignatureData ?? tenantName}
+              >
+                Review &amp; sign
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  )}
 
   <!-- Tabs + deposit total -->
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
@@ -311,6 +373,7 @@ const searchText = (parts: string[]) => parts.join(' ').toLowerCase();
   <ResetPasswordModal slot="modals" />
   <EditTenantModal slot="modals" />
   <BulkImportModal slot="modals" />
+  <ReviewNoticeModal slot="modals" />
 </DashboardLayout>
 
 <script>
